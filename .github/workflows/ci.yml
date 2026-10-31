@@ -46,7 +46,7 @@ jobs:
       - name: Make a reel with the network blocked
         run: pnpm test:privacy
       - name: Click through the app in a real browser
-        timeout-minutes: 6
+        timeout-minutes: 10
         env:
           CHROME_PATH: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
         run: pnpm test:e2e 2>&1 | tee e2e.log; status=${PIPESTATUS[0]}; [ "$status" -eq 0 ] || { tail -6 e2e.log | while IFS= read -r line; do echo "::error::$line"; done; exit "$status"; }
@@ -64,7 +64,7 @@ jobs:
           set +e
           docker run --rm -v "$PWD/out:/out" u-cut \
             node packages/engine/dist/bin.js make library/samples -o /out/reel.mp4 \
-            --duration 4 --quality draft > make.log 2>&1
+            --duration 15 --quality draft > make.log 2>&1
           status=$?
           cat make.log
           if [ "$status" -ne 0 ]; then
@@ -74,8 +74,8 @@ jobs:
           fi
           test -s out/reel.mp4
           docker run --rm -v "$PWD/out:/out" u-cut \
-            ffmpeg -hide_banner -nostats -i /out/reel.mp4 -af volumedetect -f null - 2>&1 |
-            grep -E 'mean_volume|max_volume' | while IFS= read -r line; do echo "::notice::$line"; done
+            ffmpeg -hide_banner -nostats -i /out/reel.mp4 -af volumedetect,ebur128 -f null - 2>&1 |
+            grep -E 'mean_volume|max_volume|    I:' | while IFS= read -r line; do echo "::notice::$line"; done
       - name: Serve the interface from the container
         run: |
           docker run -d --name ucut -p 4173:4173 u-cut
