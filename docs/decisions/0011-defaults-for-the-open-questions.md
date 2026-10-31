@@ -4,7 +4,7 @@ Status: accepted until the owner says otherwise
 
 | Brief §13 question               | Default                                                                              | Why                                                                       |
 | -------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| GitHub org or user               | `github.com/mayank29deo/u-cut`                                                       | The owner's SSH key authenticates as `mayank29deo`, and the name is free. |
+| GitHub org or user               | `github.com/mayank29deo/U-Cut`                                                       | The owner's SSH key authenticates as `mayank29deo`, and the name is free. |
 | Minimum macOS                    | macOS 15, Apple Silicon only                                                         | The brief's recommendation. Builds confirmed.                             |
 | Notarization                     | Unsigned until there's a paid Apple Developer account                                | The docs will explain how to open an unsigned app.                        |
 | In-app Claude subscription login | Not built                                                                            | See [0008](0008-claude-subscription-stays-with-the-user.md).              |

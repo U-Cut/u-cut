@@ -65,7 +65,7 @@ All run on the owner's Mac (A18 Pro, 8 GB, macOS 26.5) with throwaway projects.
 
 Nothing blocks Phases 0 to 2.
 
-1. Is `github.com/mayank29deo/u-cut`, public, the right home? Pushing needs an empty repo created at github.com/new, or `gh` installed and logged in.
+1. Is `github.com/mayank29deo/U-Cut`, public, the right home? Pushing needs an empty repo created at github.com/new, or `gh` installed and logged in.
 2. Is the libvips LGPL exception fine ([0009](decisions/0009-licence-exceptions.md))?
 3. By Phase 7: will there be a paid Apple Developer account for signed releases?
 

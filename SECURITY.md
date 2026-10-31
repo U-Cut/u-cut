@@ -2,7 +2,7 @@
 
 Please don't report security problems in public issues.
 
-Use GitHub's [private vulnerability reporting](https://github.com/mayank29deo/u-cut/security/advisories/new) instead. Include the steps to reproduce the problem and what an attacker could do with it.
+Use GitHub's [private vulnerability reporting](https://github.com/mayank29deo/U-Cut/security/advisories/new) instead. Include the steps to reproduce the problem and what an attacker could do with it.
 
 U-Cut is a pre-release project maintained in spare time, so replies may take a few days.
 

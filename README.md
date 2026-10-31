@@ -28,8 +28,8 @@ U-Cut learns the _structure_ of a reference reel. It never reuses that reel's fo
 You need macOS 15+ on Apple Silicon, Node 22+, FFmpeg, and the Xcode Command Line Tools. Xcode itself isn't required.
 
 ```bash
-git clone https://github.com/mayank29deo/u-cut.git
-cd u-cut
+git clone https://github.com/mayank29deo/U-Cut.git
+cd U-Cut
 corepack enable
 pnpm install
 pnpm check
