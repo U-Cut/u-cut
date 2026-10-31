@@ -11,13 +11,17 @@ export interface ServeOptions {
   bindAll?: boolean;
 }
 
+/** Wi-Fi and Ethernet addresses first. Tethering and VPNs can list odd ones ahead of them. */
 function lanAddress(): string | undefined {
-  for (const addresses of Object.values(networkInterfaces())) {
-    for (const address of addresses ?? []) {
-      if (address.family === "IPv4" && !address.internal) return address.address;
-    }
-  }
-  return undefined;
+  const candidates = Object.entries(networkInterfaces()).flatMap(([name, addresses]) =>
+    (addresses ?? [])
+      .filter((address) => address.family === "IPv4" && !address.internal)
+      .map((address) => ({ name, ip: address.address })),
+  );
+  const isPrivate = (ip: string) => /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip);
+  const rank = (candidate: { name: string; ip: string }) =>
+    (isPrivate(candidate.ip) ? 0 : 2) + (candidate.name.startsWith("en") ? 0 : 1);
+  return candidates.sort((a, b) => rank(a) - rank(b))[0]?.ip;
 }
 
 export async function serve(options: ServeOptions): Promise<{ url: string; lanUrl?: string }> {

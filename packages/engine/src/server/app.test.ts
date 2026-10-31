@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -93,6 +93,49 @@ describe("server", () => {
     expect((await shared.request(url, { headers })).status).toBe(401);
     expect((await shared.request(`${url}?code=wrong`, { headers })).status).toBe(401);
     expect((await shared.request(`${url}?code=secret`, { headers })).status).toBe(200);
+  });
+
+  describe("sharing on a network", () => {
+    const address = "http://192.168.1.5:4173";
+    const headers = { host: "192.168.1.5:4173" };
+    let webRoot: string;
+    let shared: ReturnType<typeof createApp>["app"];
+
+    beforeAll(() => {
+      webRoot = mkdtempSync(join(tmpdir(), "ucut-web-"));
+      writeFileSync(join(webRoot, "index.html"), "<!doctype html><title>U-Cut</title>");
+      shared = createApp({ hosts: ["192.168.1.5:4173"], accessCode: "secret", webRoot }).app;
+    });
+    afterAll(() => rmSync(webRoot, { recursive: true, force: true }));
+
+    it("lets someone in from the shared link, and keeps them in", async () => {
+      const opened = await shared.request(`${address}/?code=secret`, { headers });
+      expect(opened.status).toBe(302);
+      expect(opened.headers.get("location")).toBe("/");
+      const cookies = opened.headers.getSetCookie().map((cookie) => cookie.split(";")[0]);
+      const access = cookies.find((cookie) => cookie?.startsWith("ucut_access="));
+      expect(access).toBe("ucut_access=secret");
+
+      const cookie = cookies.join("; ");
+      const page = await shared.request(`${address}/`, { headers: { ...headers, cookie } });
+      expect(page.status).toBe(200);
+      const api = await shared.request(`${address}/api/status`, {
+        headers: { ...headers, cookie },
+      });
+      expect(api.status).toBe(200);
+    });
+
+    it("gives a file response its cookies too", async () => {
+      const page = await app.request(`${local}/index.html`, {
+        headers: { host: "localhost:4173" },
+      });
+      expect(page.status).toBeLessThan(500);
+      const served = await shared.request(`${address}/?other=1`, {
+        headers: { ...headers, cookie: "ucut_access=secret" },
+      });
+      expect(served.status).toBe(200);
+      expect(served.headers.getSetCookie().join()).toContain("ucut_session=");
+    });
   });
 
   it("keeps one person's reel private from another", async () => {

@@ -12,7 +12,7 @@ You need a Mac with Apple Silicon. Paste this into Terminal:
 curl -fsSL https://raw.githubusercontent.com/mayank29deo/U-Cut/main/install.sh | bash
 ```
 
-The installer sets everything up, including FFmpeg and Node if you don't have them. Then open **U-Cut** from your Applications folder, or type `ucut`.
+The installer sets everything up, and uses Homebrew to add FFmpeg and Node if they're missing. Then open **U-Cut** from your Applications folder, or type `ucut`.
 
 No files to hand? Press **Try it with sample photos**.
 

@@ -158,6 +158,7 @@ The tests in [`app.test.ts`](../packages/engine/src/server/app.test.ts) cover th
 
 - A failed render frees its slot and tells that person why. Nobody else is affected.
 - A bad file is skipped with a reason. It never stops a reel.
+- Exports finish with the screen asleep, and on a Mac U-Cut holds off system sleep while it renders.
 - Cancelling kills the child processes and frees the slot.
 - Renders are checked against the output spec before being offered.
 - Plans autosave, so a reload brings your reel back.

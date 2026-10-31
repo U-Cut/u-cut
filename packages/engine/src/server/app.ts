@@ -106,6 +106,8 @@ export function createApp(options: ServerOptions) {
       const code = c.req.query("code");
       if (code === options.accessCode) {
         setCookie(c, accessCookie, code, { httpOnly: true, sameSite: "Strict", path: "/" });
+        // Lands on a clean address, so the code isn't left on screen or in history.
+        if (c.req.path === "/") return c.redirect("/");
       } else if (getCookie(c, accessCookie) !== options.accessCode) {
         return c.json({ error: "Ask the person running U-Cut for the access link." }, 401);
       }

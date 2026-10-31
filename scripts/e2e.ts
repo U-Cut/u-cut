@@ -65,6 +65,9 @@ async function clickButton(page: Page, name: string) {
 
 async function main() {
   if (shots) mkdirSync(shots, { recursive: true });
+  // Chrome draws no frames on a sleeping display, which looks exactly like a frozen page.
+  const awake =
+    process.platform === "darwin" ? spawn("caffeinate", ["-u", "-t", "300"]) : undefined;
   const home = mkdtempSync(join(tmpdir(), "ucut-e2e-"));
   const server = spawn(
     process.execPath,
@@ -83,6 +86,7 @@ async function main() {
   const browser = await puppeteer.launch({
     executablePath: chromePath(),
     headless: true,
+    protocolTimeout: 40_000,
     args: ["--autoplay-policy=no-user-gesture-required", "--no-sandbox"],
   });
 
@@ -238,6 +242,7 @@ async function main() {
       process.exitCode = 1;
     }
   } finally {
+    awake?.kill();
     await browser.close();
     server.kill("SIGTERM");
     await new Promise((resolve) => setTimeout(resolve, 400));

@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { copyFile, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
@@ -137,6 +138,9 @@ export async function renderPlan(
   }
 
   report({ stage: "preparing", progress: 0 });
+  // A screen can sleep during an export, but the Mac itself has to stay awake to finish it.
+  const awake =
+    platform() === "darwin" ? spawn("caffeinate", ["-i"], { stdio: "ignore" }) : undefined;
   await mkdir(rendersDir(), { recursive: true });
   const { width, height } = await writeProject(plan, items, options.projectDir);
   const raw = join(rendersDir(), `${key}.raw.mp4`);
@@ -185,6 +189,7 @@ export async function renderPlan(
     report({ stage: "finishing", progress: 1 });
     return { path: finalPath, key, cached: false };
   } finally {
+    awake?.kill();
     await rm(raw, { force: true });
     await rm(mastered, { force: true });
   }

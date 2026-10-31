@@ -29,16 +29,15 @@ export async function sendFile(c: Context, path: string, options: SendOptions): 
   const info = await stat(path).catch(() => undefined);
   if (!info?.isFile()) return c.json({ error: "That file isn't here any more." }, 404);
 
-  const headers = new Headers({
+  // Sent through the context, so cookies set earlier in the request aren't lost.
+  const headers: Record<string, string> = {
     "Accept-Ranges": "bytes",
     "Content-Type": options.type,
     "Cache-Control": options.cacheForever ? immutable : "no-cache",
-  });
+  };
   if (options.download) {
-    headers.set(
-      "Content-Disposition",
-      `attachment; filename*=UTF-8''${encodeURIComponent(options.download)}`,
-    );
+    headers["Content-Disposition"] =
+      `attachment; filename*=UTF-8''${encodeURIComponent(options.download)}`;
   }
 
   const range = /^bytes=(\d*)-(\d*)$/.exec(c.req.header("range") ?? "");
@@ -46,15 +45,16 @@ export async function sendFile(c: Context, path: string, options: SendOptions): 
     const start = range[1] ? Number(range[1]) : Math.max(0, info.size - Number(range[2]));
     const end = range[1] && range[2] ? Math.min(Number(range[2]), info.size - 1) : info.size - 1;
     if (start >= info.size || start > end) {
-      headers.set("Content-Range", `bytes */${info.size}`);
-      return new Response(null, { status: 416, headers });
+      return c.body(null, 416, { ...headers, "Content-Range": `bytes */${info.size}` });
     }
-    headers.set("Content-Range", `bytes ${start}-${end}/${info.size}`);
-    headers.set("Content-Length", String(end - start + 1));
     const stream = Readable.toWeb(createReadStream(path, { start, end }));
-    return new Response(stream as ReadableStream, { status: 206, headers });
+    return c.body(stream as ReadableStream, 206, {
+      ...headers,
+      "Content-Range": `bytes ${start}-${end}/${info.size}`,
+      "Content-Length": String(end - start + 1),
+    });
   }
 
-  headers.set("Content-Length", String(info.size));
-  return new Response(Readable.toWeb(createReadStream(path)) as ReadableStream, { headers });
+  const stream = Readable.toWeb(createReadStream(path));
+  return c.body(stream as ReadableStream, 200, { ...headers, "Content-Length": String(info.size) });
 }
