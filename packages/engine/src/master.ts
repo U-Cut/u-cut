@@ -4,6 +4,8 @@ const target = { loudness: -14, truePeak: -2, range: 11 };
 // Encoding to AAC can raise peaks, so the limiter sits a little below the −1 dBTP spec.
 const limiter = "alimiter=limit=0.76:attack=2:release=60:level=false:asc=1";
 const quiet = ["-hide_banner", "-nostats"];
+// Stated outright, because older FFmpeg builds won't choose a channel layout on their own.
+const outputFormat = "aformat=sample_rates=48000:channel_layouts=stereo";
 
 interface LoudnessReport {
   input_i: string;
@@ -20,7 +22,7 @@ export async function master(input: string, output: string, signal?: AbortSignal
   const measured = await measure(input, filter, options);
   // A silent track measures as -inf, which FFmpeg refuses as a setting, and it needs no balancing.
   const silent = !Number.isFinite(Number(measured.input_i));
-  const balance = `${filter}:linear=true:measured_I=${measured.input_i}:measured_TP=${measured.input_tp}:measured_LRA=${measured.input_lra}:measured_thresh=${measured.input_thresh}:offset=${measured.target_offset},${limiter},aresample=48000`;
+  const balance = `${filter}:linear=true:measured_I=${measured.input_i}:measured_TP=${measured.input_tp}:measured_LRA=${measured.input_lra}:measured_thresh=${measured.input_thresh}:offset=${measured.target_offset},${limiter},${outputFormat}`;
   await run(
     "ffmpeg",
     [
@@ -32,7 +34,8 @@ export async function master(input: string, output: string, signal?: AbortSignal
       input,
       "-c:v",
       "copy",
-      ...(silent ? [] : ["-af", balance]),
+      "-af",
+      silent ? outputFormat : balance,
       "-c:a",
       "aac",
       "-b:a",
