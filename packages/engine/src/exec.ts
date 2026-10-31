@@ -86,7 +86,11 @@ export function run(command: string, args: string[], options: ExecOptions = {}):
     child.on("close", (code) => {
       finish(() => {
         if (code === 0) resolve(stdout);
-        else reject(new ExecError(`${command} stopped with code ${code}.`, code, stderr));
+        else {
+          const reason = stderr.trim().split("\n").at(-1)?.trim();
+          const detail = reason ? `: ${reason.slice(0, 300)}` : ".";
+          reject(new ExecError(`${command} stopped with code ${code}${detail}`, code, stderr));
+        }
       });
     });
   });
