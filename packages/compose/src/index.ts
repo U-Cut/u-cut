@@ -10,6 +10,8 @@ export interface ComposeInput {
     media(item: MediaItem): string;
     music(src: string): string;
   };
+  /** The live preview plays the music itself, so it leaves the audio tags out. */
+  omitAudio?: boolean;
 }
 
 export interface Composition {
@@ -153,7 +155,12 @@ export function composeParts(input: ComposeInput): Composition {
     .filter(Boolean)
     .join("\n");
 
-  const children = [shotHtml(input), textHtml(plan), fadeHtml(plan), musicHtml(input)]
+  const children = [
+    shotHtml(input),
+    textHtml(plan),
+    fadeHtml(plan),
+    input.omitAudio ? "" : musicHtml(input),
+  ]
     .filter(Boolean)
     .join("\n");
   const root = `<div id="root" class="vibe-${plan.vibe}" data-composition-id="main" data-start="0" data-duration="${plan.duration}" data-fps="${plan.fps}" data-width="${width}" data-height="${height}" data-no-timeline>\n${children}\n</div>`;

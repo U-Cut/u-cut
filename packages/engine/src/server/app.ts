@@ -88,6 +88,7 @@ export function createApp(options: ServerOptions) {
   const maxUpload = options.maxUploadBytes ?? defaultMaxUpload;
   /** Seconds of work per second of finished reel, learned from real renders on this machine. */
   let renderCost = 1.6;
+  let samples: MediaItem[] = [];
 
   // A website open in the same browser can reach localhost. Checking Host stops DNS rebinding,
   // and checking Origin stops other sites from posting here.
@@ -222,6 +223,7 @@ export function createApp(options: ServerOptions) {
       templates: loadTemplates(),
       tracks: loadTracks().map((track) => ({ ...track, beats: trackBeats(track) })),
       fontCss: fontCss((file) => `/fonts/${file}`),
+      samples: samples.map(publicItem),
     }),
   );
 
@@ -485,5 +487,12 @@ export function createApp(options: ServerOptions) {
     return sendFile(c, join(webRoot, "index.html"), { type: "text/html; charset=utf-8" });
   });
 
-  return { app, capacity };
+  /** Gets the sample photos ready, so the first screen can play a real reel. */
+  async function prepareSamples() {
+    const { items } = await ingest([samplesDir]);
+    await Promise.all(items.map((item) => deriveMedia(item)));
+    samples = items;
+  }
+
+  return { app, capacity, prepareSamples };
 }

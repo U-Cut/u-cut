@@ -16,6 +16,7 @@ export const offlineEnv = {
 const allowed = new Set([
   "audio",
   "beats",
+  "browser",
   "check",
   "doctor",
   "lint",

@@ -1,6 +1,8 @@
 import { readFileSync } from "node:fs";
 import type { Aspect, Vibe } from "@u-cut/schema";
 import { defineCommand, renderUsage, runCommand } from "citty";
+import { doctor } from "./doctor.ts";
+import { hf } from "./hf.ts";
 import { make } from "./make.ts";
 import type { Quality } from "./render.ts";
 import { serve } from "./server/serve.ts";
@@ -81,7 +83,11 @@ const serveCommand = defineCommand({
     json: { type: "boolean", default: false, description: "Print the address as JSON" },
   },
   async run({ args }) {
-    const { url, lanUrl } = await serve({ port: Number(args.port), lan: args.lan });
+    const { url, lanUrl } = await serve({
+      port: Number(args.port),
+      lan: args.lan,
+      bindAll: Boolean(process.env.UCUT_BIND_ALL),
+    });
     if (args.json) {
       console.log(JSON.stringify({ url, lanUrl }));
     } else {
@@ -97,16 +103,41 @@ const serveCommand = defineCommand({
   },
 });
 
+const setupCommand = defineCommand({
+  meta: { name: "setup", description: "Download the browser U-Cut renders with." },
+  async run() {
+    console.log("Getting the rendering browser ready. This only happens once.");
+    await hf(["browser", "ensure"], { timeoutMs: 600_000 });
+    console.log("Done.");
+  },
+});
+
+const doctorCommand = defineCommand({
+  meta: { name: "doctor", description: "Check that this computer can run U-Cut." },
+  async run() {
+    const checks = await doctor();
+    for (const check of checks)
+      console.log(`${check.ok ? "ok " : "NO "} ${check.name}: ${check.detail}`);
+    if (checks.some((check) => !check.ok))
+      throw new Error("Fix the items marked NO, then try again.");
+  },
+});
+
 const main = defineCommand({
   meta: {
     name: "ucut",
     version,
     description: "Turn your photos, clips and recordings into finished reels on your own Mac.",
   },
-  subCommands: { make: makeCommand, serve: serveCommand },
+  subCommands: {
+    make: makeCommand,
+    serve: serveCommand,
+    setup: setupCommand,
+    doctor: doctorCommand,
+  },
 });
 
-const commands = ["make", "serve"];
+const commands = ["make", "serve", "setup", "doctor"];
 
 export async function run(argv: string[]): Promise<RunResult> {
   const [first] = argv;

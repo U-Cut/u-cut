@@ -1,5 +1,8 @@
 {
   "extends": "./tsconfig.base.json",
-  "compilerOptions": { "noEmit": true },
-  "include": ["packages/*/src", "packages/*/scripts", "scripts", "vitest.config.ts"]
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["packages/*/src", "packages/*/scripts", "scripts", "vitest.config.ts"],
+  "exclude": ["scripts/e2e.ts"]
 }

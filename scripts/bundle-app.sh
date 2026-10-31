@@ -27,7 +27,9 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>CFBundleShortVersionString</key><string>$version</string>
   <key>CFBundleVersion</key><string>$version</string>
   <key>LSMinimumSystemVersion</key><string>15.0</string>
+  <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
   <key>NSHighResolutionCapable</key><true/>
+  <key>UCutRoot</key><string>$root</string>
 </dict>
 </plist>
 PLIST

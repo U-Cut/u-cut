@@ -9,22 +9,25 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "tsc -p packages/schema && tsc -p packages/planner-rules && tsc -p packages/compose && tsc -p packages/engine",
-    "typecheck": "tsc -p tsconfig.check.json --noEmit",
+    "build": "tsc -p packages/schema && tsc -p packages/planner-rules && tsc -p packages/compose && tsc -p packages/engine && vite build apps/web",
+    "typecheck": "tsc -p tsconfig.check.json --noEmit && tsc -p apps/web",
     "lint": "biome check .",
     "format": "biome check --write .",
     "test": "vitest run",
     "license-scan": "tsx scripts/license-scan.ts",
     "gen:swift": "tsx packages/schema/scripts/gen-swift.ts",
-    "check": "biome check . && tsc -p tsconfig.check.json --noEmit && vitest run && tsx scripts/license-scan.ts",
+    "check": "biome check . && tsc -p tsconfig.check.json --noEmit && tsc -p apps/web && vitest run && tsx scripts/license-scan.ts",
     "test:int": "vitest run --config vitest.int.config.ts",
-    "load-test": "tsx --conditions=source scripts/load-test.ts"
+    "load-test": "tsx --conditions=source scripts/load-test.ts",
+    "start": "node --conditions=source --import tsx packages/engine/src/bin.ts",
+    "test:e2e": "tsx --conditions=source scripts/e2e.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",
     "@types/node": "^22",
     "@u-cut/planner-rules": "workspace:*",
     "@u-cut/schema": "workspace:*",
+    "puppeteer-core": "25.16.0",
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vitest": "5.0.5"

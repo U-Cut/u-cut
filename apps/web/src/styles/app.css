@@ -1,0 +1,877 @@
+/* U-Cut is a darkroom: true black, white type, and one violet safelight behind the reel. */
+:root {
+  color-scheme: dark;
+  --black: #000;
+  --white: #fff;
+  --ash: #a1a1a6;
+  --smoke: rgba(255, 255, 255, 0.14);
+  --haze: rgba(255, 255, 255, 0.06);
+  --safelight: #7b5cff;
+  --safelight-deep: #2a1466;
+  --spring: cubic-bezier(0.2, 0.9, 0.25, 1.05);
+  --ease: cubic-bezier(0.25, 0.8, 0.3, 1);
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  --display:
+    -apple-system-headline, -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", system-ui,
+    sans-serif;
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.86' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .62 0 0 0 0 .52 0 0 0 0 1 0 0 0 .9 -.28'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--black);
+  color: var(--white);
+  font: 400 15px / 1.45 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--white);
+  outline-offset: 3px;
+  border-radius: 6px;
+  box-shadow: 0 0 0 6px rgba(123, 92, 255, 0.45);
+}
+
+/* The room: black, with a faint violet light leak and film grain over everything. */
+.room {
+  position: relative;
+  height: 100%;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(90vmax 70vmax at 82% 112%, rgba(66, 34, 150, 0.62), transparent 62%),
+    radial-gradient(70vmax 50vmax at 4% -14%, rgba(44, 20, 110, 0.5), transparent 60%), var(--black);
+}
+
+.room::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  background-image: var(--grain);
+  opacity: 0.2;
+}
+
+/* Buttons */
+.button-solid {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--black);
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    transform 0.18s var(--spring),
+    opacity 0.18s;
+}
+
+.button-solid:hover {
+  transform: scale(1.03);
+}
+
+.button-solid:active {
+  transform: scale(0.97);
+}
+
+.button-quiet {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 4px;
+  color: var(--ash);
+  font-weight: 500;
+  transition: color 0.15s;
+}
+
+.button-quiet:hover {
+  color: var(--white);
+}
+
+.button-text {
+  color: var(--ash);
+  transition: color 0.15s;
+}
+
+.button-text:hover {
+  color: var(--white);
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  color: var(--white);
+  transition:
+    background 0.15s,
+    opacity 0.15s,
+    transform 0.18s var(--spring);
+}
+
+.icon-button:hover:not(:disabled) {
+  background: var(--haze);
+}
+
+.icon-button:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.icon-button:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+
+/* First screen */
+.start {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: clamp(32px, 6vw, 96px);
+  align-items: center;
+  height: 100%;
+  padding: clamp(24px, 6vw, 88px);
+}
+
+.start-copy {
+  max-width: 13em;
+  font-size: clamp(44px, 7.4vw, 104px);
+}
+
+.headline {
+  margin: 0;
+  font: 700 1em / 0.98 var(--display);
+  letter-spacing: -0.045em;
+}
+
+.lede {
+  max-width: 34ch;
+  margin: 28px 0 0;
+  font-size: clamp(17px, 1.5vw, 21px);
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  color: var(--ash);
+}
+
+.start-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  margin-top: 36px;
+  font-size: 17px;
+}
+
+.start-actions .button-solid {
+  height: 52px;
+  padding: 0 28px;
+}
+
+.start-reel {
+  position: relative;
+  justify-self: center;
+  width: min(100%, 44vh);
+  animation: rise 0.9s var(--ease) both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+}
+
+.meter {
+  height: 2px;
+  margin-top: 32px;
+  max-width: 420px;
+  background: var(--smoke);
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.meter span {
+  display: block;
+  height: 100%;
+  background: var(--white);
+  transition: width 0.3s var(--ease);
+}
+
+.arrivals {
+  display: flex;
+  gap: 6px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.arrivals li {
+  width: 44px;
+  height: 58px;
+  border-radius: 6px;
+  background: var(--haze);
+  overflow: hidden;
+}
+
+.arrivals img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: rise 0.35s var(--ease) both;
+}
+
+/* The safelight sits behind the reel and breathes with the beat. */
+.stage-glow {
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: 46%;
+  width: 150%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(123, 92, 255, 0.42),
+    rgba(70, 40, 170, 0.16) 52%,
+    transparent
+  );
+  filter: blur(8px);
+  pointer-events: none;
+}
+
+.stage-glow.is-breathing {
+  top: 44%;
+  width: min(92vh, 78vw);
+  opacity: calc(0.8 + var(--beat, 0) * 0.2);
+  transform: translate(-50%, -50%) scale(calc(1 + var(--beat, 0) * 0.035));
+  will-change: transform, opacity;
+}
+
+.stage-frame {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #000;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.16),
+    0 30px 90px rgba(10, 0, 40, 0.8);
+}
+
+.stage-host {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+
+/* Studio: the reel in the middle, words either side, the cut along the bottom. */
+.studio {
+  position: relative;
+  display: grid;
+  grid-template:
+    "top top top" auto
+    "vibes center controls" minmax(0, 1fr)
+    "film film film" auto
+    / minmax(190px, 1fr) minmax(0, auto) minmax(190px, 1fr);
+  gap: 10px clamp(24px, 4vw, 72px);
+  height: 100%;
+  padding: 14px 24px 20px;
+  overflow: hidden;
+}
+
+.topbar {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+}
+
+.topbar-start {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+}
+
+.wordmark {
+  font: 700 19px / 1 var(--display);
+  letter-spacing: -0.03em;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.topbar-actions .button-solid {
+  margin-left: 10px;
+}
+
+/* Vibes are the interface's loudest words. */
+.vibes {
+  grid-area: vibes;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.vibes button {
+  font: 700 clamp(26px, 2.9vw, 42px) / 1.16 var(--display);
+  letter-spacing: -0.035em;
+  color: rgba(255, 255, 255, 0.34);
+  transition:
+    color 0.2s,
+    transform 0.28s var(--spring);
+  transform-origin: left center;
+}
+
+.vibes button:hover {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.vibes button[aria-pressed="true"] {
+  color: var(--white);
+  transform: scale(1.04);
+}
+
+.center {
+  grid-area: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 0;
+}
+
+.stage-wrap {
+  position: relative;
+  flex: 0 1 auto;
+  min-height: 0;
+  border-radius: 22px;
+}
+
+.shape-9x16 {
+  width: calc((100vh - 280px) * 0.5625);
+}
+
+.shape-1x1 {
+  width: min(calc(100vh - 280px), 46vw);
+}
+
+.shape-16x9 {
+  width: min(52vw, calc((100vh - 280px) * 1.7778));
+}
+
+.stage-button {
+  display: block;
+  width: 100%;
+  position: relative;
+  border-radius: 22px;
+}
+
+.paused {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 22px;
+}
+
+.paused svg {
+  width: 56px;
+  height: 56px;
+}
+
+/* A camera shutter blink, so a Remix feels like taking a new shot. */
+.shutter {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: 22px;
+  background: var(--white);
+  pointer-events: none;
+  animation: shutter 0.34s ease-out both;
+}
+
+@keyframes shutter {
+  from {
+    opacity: 0.92;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.remix {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 11px 0 26px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--white);
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.36),
+    0 0 34px rgba(123, 92, 255, 0.5);
+  transition:
+    background 0.15s,
+    box-shadow 0.2s,
+    transform 0.2s var(--spring);
+}
+
+.remix:hover {
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 0 46px rgba(123, 92, 255, 0.7);
+}
+
+kbd {
+  display: inline-grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.18);
+  font: 600 12px / 1 var(--sans);
+}
+
+.remix:active {
+  transform: scale(0.94);
+}
+
+.controls {
+  grid-area: controls;
+  align-self: center;
+  justify-self: end;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: min(100%, 260px);
+}
+
+.title-field span,
+.choice legend {
+  display: block;
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--ash);
+}
+
+.title-field input {
+  width: 100%;
+  padding: 6px 0;
+  border: 0;
+  border-bottom: 1px solid var(--smoke);
+  border-radius: 0;
+  background: none;
+  outline: none;
+  font: 600 20px / 1.3 var(--display);
+  letter-spacing: -0.02em;
+  transition: border-color 0.15s;
+}
+
+.title-field input::placeholder {
+  color: rgba(255, 255, 255, 0.34);
+}
+
+.title-field input:focus,
+.title-field input:focus-visible {
+  border-color: var(--white);
+  outline: none;
+  box-shadow: 0 1px 0 var(--white);
+}
+
+.choice {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.choice div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+}
+
+.choice button {
+  padding: 3px 0;
+  color: rgba(255, 255, 255, 0.46);
+  transition: color 0.15s;
+}
+
+.choice button:hover {
+  color: var(--white);
+}
+
+.choice button[aria-pressed="true"] {
+  color: var(--white);
+  font-weight: 600;
+}
+
+.media-note {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.media-note p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.46);
+}
+
+.media-note .button-text {
+  color: var(--white);
+  font-weight: 500;
+}
+
+/* The cut, as it plays. */
+.film {
+  grid-area: film;
+  position: relative;
+}
+
+.strip {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  height: 64px;
+}
+
+.shot-tile {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 5px;
+  transition:
+    opacity 0.15s,
+    box-shadow 0.15s;
+}
+
+.shot-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+.shot-tile:hover {
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+.shot-tile.is-selected,
+.shot-tile.is-over {
+  box-shadow: 0 0 0 2px var(--white);
+  z-index: 1;
+}
+
+.shot-tile.is-dragging {
+  opacity: 0.35;
+}
+
+.playhead {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  left: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--white);
+  border-radius: 2px;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.swap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 12px);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(20, 16, 34, 0.92);
+  box-shadow:
+    0 0 0 1px var(--smoke),
+    0 16px 40px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+}
+
+.swap p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ash);
+  white-space: nowrap;
+}
+
+.swap ul {
+  flex: 1;
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+}
+
+.swap ul button {
+  display: block;
+  width: 42px;
+  height: 56px;
+  border-radius: 5px;
+  overflow: hidden;
+  transition: transform 0.18s var(--spring);
+}
+
+.swap ul button:hover {
+  transform: scale(1.08);
+}
+
+.swap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Export */
+.sheet {
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  border: 0;
+  border-radius: 24px;
+  background: rgba(14, 11, 26, 0.94);
+  color: var(--white);
+  box-shadow:
+    0 0 0 1px var(--smoke),
+    0 40px 120px rgba(40, 10, 120, 0.5);
+}
+
+.sheet::backdrop {
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(14px);
+}
+
+.sheet h2 {
+  margin: 0;
+  font: 700 clamp(32px, 5vw, 56px) / 1.04 var(--display);
+  letter-spacing: -0.04em;
+}
+
+.sheet p {
+  margin: 12px 0 0;
+  color: var(--ash);
+}
+
+.sheet-progress {
+  padding: 56px;
+}
+
+.sheet-progress .meter {
+  max-width: none;
+  margin-bottom: 28px;
+}
+
+.sheet-progress .button-solid {
+  margin-top: 24px;
+}
+
+.sheet-done {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  padding: 24px 40px 24px 24px;
+}
+
+.final {
+  height: min(72vh, 620px);
+  max-width: 50%;
+  border-radius: 16px;
+  background: #000;
+}
+
+.sheet-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.sheet-side .button-solid {
+  margin-top: 16px;
+}
+
+/* Dropping files */
+.drop-veil {
+  position: absolute;
+  inset: 12px;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  background: rgba(30, 14, 80, 0.7);
+  box-shadow: inset 0 0 0 2px var(--white);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.drop-veil p {
+  margin: 0;
+  font: 700 clamp(36px, 6vw, 72px) / 1 var(--display);
+  letter-spacing: -0.04em;
+}
+
+.notice {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  z-index: 50;
+  transform: translateX(-50%);
+  max-width: min(560px, calc(100vw - 32px));
+}
+
+.notice button {
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: var(--white);
+  color: var(--black);
+  font-weight: 500;
+  text-align: left;
+  animation: rise 0.25s var(--ease) both;
+}
+
+@media (max-width: 860px) {
+  body {
+    overflow: auto;
+  }
+  .room {
+    height: auto;
+    min-height: 100%;
+  }
+  .start {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
+  }
+  .start-reel {
+    width: min(70vw, 300px);
+  }
+  .studio {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    padding: 12px 16px 24px;
+    gap: 20px;
+  }
+  .vibes {
+    order: 3;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 2px 16px;
+    align-self: stretch;
+  }
+  .vibes button {
+    font-size: 28px;
+  }
+  .center {
+    order: 2;
+  }
+  .film {
+    order: 4;
+  }
+  .controls {
+    order: 5;
+    width: 100%;
+  }
+  .shape-9x16,
+  .shape-1x1,
+  .shape-16x9 {
+    width: min(100%, 62vh);
+  }
+  .shape-9x16 {
+    width: min(78vw, 46vh);
+  }
+  .strip {
+    height: 52px;
+  }
+  .sheet-done {
+    flex-direction: column;
+    padding: 20px;
+  }
+  .final {
+    max-width: 100%;
+    height: 52vh;
+  }
+  .sheet-progress {
+    padding: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .stage-glow.is-breathing {
+    opacity: 0.8;
+    transform: translate(-50%, -50%);
+  }
+  .shutter {
+    display: none;
+  }
+}
