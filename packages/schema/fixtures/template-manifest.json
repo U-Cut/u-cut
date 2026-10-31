@@ -1,0 +1,22 @@
+{
+  "id": "travel-montage",
+  "name": "Travel montage",
+  "version": "1.0.0",
+  "author": "U-Cut contributors",
+  "licence": "Apache-2.0",
+  "aspects": ["9:16", "1:1"],
+  "durationRange": { "min": 10, "max": 45 },
+  "sections": [
+    {
+      "name": "opening",
+      "slots": [{ "accepts": ["beach", "mountains"], "count": 2, "minDur": 1, "maxDur": 3 }]
+    }
+  ],
+  "variables": [
+    { "id": "title", "type": "string", "label": "Title", "default": "Goa" },
+    { "id": "showDate", "type": "boolean", "label": "Show the date", "default": true }
+  ],
+  "vibes": ["chill", "cinematic"],
+  "preview": "preview.gif",
+  "requires": []
+}

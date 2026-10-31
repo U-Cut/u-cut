@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "template": "travel-montage",
+  "vibe": "chill",
+  "aspect": "9:16",
+  "fps": 30,
+  "seed": 1337,
+  "duration": 4,
+  "music": { "src": "library/music/chill-01.m4a", "bpm": 120, "start": 0 },
+  "shots": [
+    {
+      "media": "3f9a1c04b2de7781",
+      "in": 0,
+      "out": 2,
+      "start": 0,
+      "end": 2,
+      "motion": {
+        "type": "push-in",
+        "from": { "x": 0.5, "y": 0.5, "scale": 1 },
+        "to": { "x": 0.5, "y": 0.45, "scale": 1.14 }
+      },
+      "crop": { "x": 0, "y": 0.1, "w": 1, "h": 0.8 }
+    },
+    {
+      "media": "9b1e22c0a4f05d13",
+      "in": 1.5,
+      "out": 3.5,
+      "start": 2,
+      "end": 4,
+      "motion": {
+        "type": "none",
+        "from": { "x": 0.5, "y": 0.5, "scale": 1 },
+        "to": { "x": 0.5, "y": 0.5, "scale": 1 }
+      },
+      "crop": { "x": 0, "y": 0, "w": 1, "h": 1 }
+    }
+  ],
+  "texts": [{ "text": "Goa, day one", "start": 0.2, "end": 1.9, "style": "title" }],
+  "transitions": [{ "type": "cut", "at": 2, "duration": 0 }],
+  "sfx": [{ "src": "library/sfx/whoosh.m4a", "at": 2, "vol": 0.3 }]
+}
