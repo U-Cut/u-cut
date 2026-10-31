@@ -64,6 +64,12 @@ async function clickButton(page: Page, name: string) {
 }
 
 async function main() {
+  // A stuck browser must fail the run, not hang it.
+  setTimeout(() => {
+    console.log(results.join("\n"));
+    console.error("\nFAILED: the browser test took longer than 4 minutes.");
+    process.exit(1);
+  }, 240_000).unref();
   if (shots) mkdirSync(shots, { recursive: true });
   // Chrome draws no frames on a sleeping display, which looks exactly like a frozen page.
   const awake =

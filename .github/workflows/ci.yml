@@ -49,7 +49,8 @@ jobs:
           installed="$(npx --yes @puppeteer/browsers install chrome@stable --path "$RUNNER_TEMP/chrome" | tail -1)"
           echo "CHROME_PATH=${installed#* }" >> "$GITHUB_ENV"
       - name: Click through the app in a real browser
-        run: pnpm test:e2e
+        timeout-minutes: 6
+        run: pnpm test:e2e 2>&1 | tee e2e.log; status=${PIPESTATUS[0]}; [ "$status" -eq 0 ] || { tail -6 e2e.log | while IFS= read -r line; do echo "::error::$line"; done; exit "$status"; }
       - name: Five people at once
         run: pnpm load-test --users 5 --seconds 3
 
@@ -61,9 +62,17 @@ jobs:
       - run: docker build -t u-cut .
       - name: Make a reel inside the container
         run: |
+          set +e
           docker run --rm -v "$PWD/out:/out" u-cut \
             node packages/engine/dist/bin.js make library/samples -o /out/reel.mp4 \
-            --duration 4 --quality draft
+            --duration 4 --quality draft > make.log 2>&1
+          status=$?
+          cat make.log
+          if [ "$status" -ne 0 ]; then
+            # Logs need a login, but annotations are public, so the reason can be read by anyone.
+            tail -6 make.log | cut -c1-400 | while IFS= read -r line; do echo "::error::$line"; done
+            exit "$status"
+          fi
           test -s out/reel.mp4
       - name: Serve the interface from the container
         run: |
