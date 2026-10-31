@@ -1,0 +1,39 @@
+# Starter taxonomy. `core: true` marks the 10 categories measured against the
+# 85% top-1 target. To add a category, see classifiers/README.md.
+version: 1
+groups:
+  places:
+    - { id: cafe, label: "Café", core: true }
+    - { id: restaurant, label: "Restaurant" }
+    - { id: food, label: "Food close-up", core: true }
+    - { id: home, label: "Home interior", core: true }
+    - { id: bedroom, label: "Bedroom / cosy" }
+    - { id: office, label: "Office / desk" }
+    - { id: gym, label: "Gym" }
+    - { id: mountains, label: "Mountains", core: true }
+    - { id: hills, label: "Hills / trek" }
+    - { id: beach, label: "Beach", core: true }
+    - { id: lake, label: "Lake / river" }
+    - { id: forest, label: "Forest" }
+    - { id: desert, label: "Desert" }
+    - { id: snow, label: "Snow" }
+    - { id: city-street, label: "City street", core: true }
+    - { id: night-city, label: "Night city", core: true }
+    - { id: market, label: "Market" }
+    - { id: temple, label: "Temple / heritage" }
+    - { id: museum, label: "Museum" }
+  transport:
+    - { id: flight, label: "Flight (cabin, wing, airport)", core: true }
+    - { id: railway-station, label: "Railway station", core: true }
+    - { id: train, label: "Train interior" }
+    - { id: metro, label: "Metro / subway", core: true }
+    - { id: road-trip, label: "Road trip / car" }
+    - { id: bike, label: "Bike" }
+  people:
+    - { id: selfie, label: "Selfie" }
+    - { id: group, label: "Group" }
+    - { id: pets, label: "Pets" }
+  other:
+    - { id: sky, label: "Sky / sunset" }
+    - { id: event, label: "Concert / event" }
+    - { id: documents, label: "Screenshots and documents", exclude_by_default: true }

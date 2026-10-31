@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.build/
+.swiftpm/
+*.tsbuildinfo
+.DS_Store
+.hyperframes/
+coverage/
+
+# No video in git. See docs/decisions/0007-media-in-the-repo.md
+*.mp4
+*.mov
+*.m4v
+*.webm
+*.mkv
