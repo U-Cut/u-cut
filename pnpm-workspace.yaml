@@ -1,4 +1,7 @@
 packages:
   - "packages/*"
+  - "apps/web"
 allowBuilds:
   esbuild: true
+minimumReleaseAgeExclude:
+  - hyperframes@0.8.223

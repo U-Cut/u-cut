@@ -1,0 +1,34 @@
+[
+  {
+    "file": "chill.m4a",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-music.ts",
+    "vibe": "chill",
+    "bpm": 84,
+    "length": 61
+  },
+  {
+    "file": "hype.m4a",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-music.ts",
+    "vibe": "hype",
+    "bpm": 128,
+    "length": 61
+  },
+  {
+    "file": "cinematic.m4a",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-music.ts",
+    "vibe": "cinematic",
+    "bpm": 72,
+    "length": 61
+  },
+  {
+    "file": "nostalgic.m4a",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-music.ts",
+    "vibe": "nostalgic",
+    "bpm": 96,
+    "length": 61
+  }
+]

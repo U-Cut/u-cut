@@ -1,0 +1,52 @@
+[
+  {
+    "file": "sunset-ridge.jpg",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-samples.ts"
+  },
+  {
+    "file": "blue-hour-lake.jpg",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-samples.ts"
+  },
+  {
+    "file": "night-city.jpg",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-samples.ts"
+  },
+  {
+    "file": "desert-dunes.jpg",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-samples.ts"
+  },
+  {
+    "file": "snow-peaks.jpg",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-samples.ts"
+  },
+  {
+    "file": "open-ocean.jpg",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-samples.ts"
+  },
+  {
+    "file": "forest-mist.jpg",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-samples.ts"
+  },
+  {
+    "file": "violet-dusk.jpg",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-samples.ts"
+  },
+  {
+    "file": "golden-fields.jpg",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-samples.ts"
+  },
+  {
+    "file": "rainy-lights.jpg",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-samples.ts"
+  }
+]

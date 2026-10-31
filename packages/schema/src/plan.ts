@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { Aspect, positive, seconds, TransitionType, unit, Vibe } from "./common.ts";
 
+const adjustment = z.number().min(-1).max(1);
+
 const Framing = z.strictObject({ x: unit, y: unit, scale: positive });
 
 const Shot = z.strictObject({
@@ -35,7 +37,13 @@ export const EditPlan = z
     fps: z.number().int().positive(),
     seed: z.number().int().min(0),
     duration: positive,
-    music: z.strictObject({ src: z.string().min(1), bpm: positive.nullable(), start: seconds }),
+    music: z.strictObject({
+      src: z.string().min(1),
+      bpm: positive.nullable(),
+      start: seconds,
+      length: positive,
+    }),
+    grade: z.strictObject({ temp: adjustment, contrast: adjustment, sat: adjustment }),
     voice: z.array(Sound.extend({ text: z.string().min(1) })).optional(),
     shots: z.array(Shot).min(1),
     texts: z.array(Overlay),

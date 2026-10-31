@@ -1,0 +1,58 @@
+{
+  "id": "travel-montage",
+  "name": "Travel montage",
+  "version": "1.0.0",
+  "author": "U-Cut contributors",
+  "licence": "Apache-2.0",
+  "aspects": ["9:16", "1:1", "16:9"],
+  "durationRange": {
+    "min": 3,
+    "max": 60
+  },
+  "sections": [
+    {
+      "name": "hook",
+      "slots": [
+        {
+          "accepts": ["any"],
+          "count": 2,
+          "minDur": 0.4,
+          "maxDur": 2.2
+        }
+      ]
+    },
+    {
+      "name": "body",
+      "slots": [
+        {
+          "accepts": ["any"],
+          "count": 24,
+          "minDur": 0.4,
+          "maxDur": 4
+        }
+      ]
+    },
+    {
+      "name": "close",
+      "slots": [
+        {
+          "accepts": ["any"],
+          "count": 1,
+          "minDur": 1.2,
+          "maxDur": 5.5
+        }
+      ]
+    }
+  ],
+  "variables": [
+    {
+      "id": "title",
+      "type": "string",
+      "label": "Title",
+      "default": ""
+    }
+  ],
+  "vibes": ["chill", "hype", "cinematic", "nostalgic"],
+  "preview": "preview.gif",
+  "requires": []
+}

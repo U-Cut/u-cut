@@ -1,0 +1,58 @@
+{
+  "id": "city-walk",
+  "name": "City walk",
+  "version": "1.0.0",
+  "author": "U-Cut contributors",
+  "licence": "Apache-2.0",
+  "aspects": ["9:16", "1:1", "16:9"],
+  "durationRange": {
+    "min": 3,
+    "max": 60
+  },
+  "sections": [
+    {
+      "name": "hook",
+      "slots": [
+        {
+          "accepts": ["any"],
+          "count": 3,
+          "minDur": 0.3,
+          "maxDur": 1.6
+        }
+      ]
+    },
+    {
+      "name": "body",
+      "slots": [
+        {
+          "accepts": ["any"],
+          "count": 28,
+          "minDur": 0.3,
+          "maxDur": 3
+        }
+      ]
+    },
+    {
+      "name": "close",
+      "slots": [
+        {
+          "accepts": ["any"],
+          "count": 1,
+          "minDur": 1,
+          "maxDur": 4
+        }
+      ]
+    }
+  ],
+  "variables": [
+    {
+      "id": "title",
+      "type": "string",
+      "label": "Title",
+      "default": ""
+    }
+  ],
+  "vibes": ["chill", "hype", "cinematic", "nostalgic"],
+  "preview": "preview.gif",
+  "requires": []
+}

@@ -9,14 +9,15 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "tsc -p packages/schema && tsc -p packages/engine",
+    "build": "tsc -p packages/schema && tsc -p packages/planner-rules && tsc -p packages/compose && tsc -p packages/engine",
     "typecheck": "tsc -p tsconfig.check.json --noEmit",
     "lint": "biome check .",
     "format": "biome check --write .",
     "test": "vitest run",
     "license-scan": "tsx scripts/license-scan.ts",
     "gen:swift": "tsx packages/schema/scripts/gen-swift.ts",
-    "check": "biome check . && tsc -p tsconfig.check.json --noEmit && vitest run && tsx scripts/license-scan.ts"
+    "check": "biome check . && tsc -p tsconfig.check.json --noEmit && vitest run && tsx scripts/license-scan.ts",
+    "test:int": "vitest run --config vitest.int.config.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",

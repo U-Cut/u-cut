@@ -1,0 +1,31 @@
+.text-title {
+  left: 10%;
+  right: 10%;
+  top: 50%;
+  margin-top: calc(-70 * var(--unit));
+  text-align: center;
+  color: #fff;
+  font-size: calc(80 * var(--unit));
+  line-height: 1.06;
+  text-shadow: 0 0 calc(40 * var(--unit)) rgba(0, 0, 0, 0.5);
+}
+.vibe-chill .text-title {
+  font-family: "Inter", "Noto Sans Devanagari", sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.vibe-hype .text-title {
+  font-family: "Archivo Black", "Noto Sans Devanagari", sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+.vibe-cinematic .text-title {
+  font-family: "Playfair Display", "Noto Sans Devanagari", serif;
+  font-style: italic;
+  font-weight: 500;
+}
+.vibe-nostalgic .text-title {
+  font-family: "Caveat", "Noto Sans Devanagari", cursive;
+  font-weight: 700;
+}

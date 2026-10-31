@@ -1,0 +1,19 @@
+{
+  "name": "@u-cut/compose",
+  "version": "0.0.0",
+  "description": "Turns an EditPlan into the composition that both the preview and the render use.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@u-cut/schema": "workspace:*"
+  }
+}

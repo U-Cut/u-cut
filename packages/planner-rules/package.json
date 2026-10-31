@@ -1,0 +1,19 @@
+{
+  "name": "@u-cut/planner-rules",
+  "version": "0.0.0",
+  "description": "The free, deterministic planner. Runs anywhere, including the browser.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@u-cut/schema": "workspace:*"
+  }
+}

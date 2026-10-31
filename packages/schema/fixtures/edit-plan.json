@@ -6,7 +6,8 @@
   "fps": 30,
   "seed": 1337,
   "duration": 4,
-  "music": { "src": "library/music/chill-01.m4a", "bpm": 120, "start": 0 },
+  "music": { "src": "chill.m4a", "bpm": 120, "start": 0, "length": 60 },
+  "grade": { "temp": 0.1, "contrast": 0.05, "sat": 0 },
   "shots": [
     {
       "media": "3f9a1c04b2de7781",

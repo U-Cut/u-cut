@@ -1,0 +1,42 @@
+[
+  {
+    "file": "inter-latin-600-normal.woff2",
+    "licence": "OFL-1.1",
+    "source": "https://www.npmjs.com/package/@fontsource/inter",
+    "family": "Inter",
+    "weight": 600,
+    "style": "normal"
+  },
+  {
+    "file": "archivo-black-latin-400-normal.woff2",
+    "licence": "OFL-1.1",
+    "source": "https://www.npmjs.com/package/@fontsource/archivo-black",
+    "family": "Archivo Black",
+    "weight": 400,
+    "style": "normal"
+  },
+  {
+    "file": "playfair-display-latin-500-italic.woff2",
+    "licence": "OFL-1.1",
+    "source": "https://www.npmjs.com/package/@fontsource/playfair-display",
+    "family": "Playfair Display",
+    "weight": 500,
+    "style": "italic"
+  },
+  {
+    "file": "caveat-latin-700-normal.woff2",
+    "licence": "OFL-1.1",
+    "source": "https://www.npmjs.com/package/@fontsource/caveat",
+    "family": "Caveat",
+    "weight": 700,
+    "style": "normal"
+  },
+  {
+    "file": "noto-sans-devanagari-devanagari-600-normal.woff2",
+    "licence": "OFL-1.1",
+    "source": "https://www.npmjs.com/package/@fontsource/noto-sans-devanagari",
+    "family": "Noto Sans Devanagari",
+    "weight": 600,
+    "style": "normal"
+  }
+]

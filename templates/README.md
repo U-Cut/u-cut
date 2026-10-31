@@ -1,23 +1,27 @@
 # Templates
 
-Each template is a folder that turns an `EditPlan` into a HyperFrames project.
+A template decides how a reel is paced and how its words look. U-Cut writes the actual composition from your plan, so the live preview and the final MP4 always match.
 
 ```
 templates/<id>/
-  template.json      TemplateManifest
-  index.html         Root composition, with slots and variables as data-var-*
-  compositions/      One scene per file
-  preview.gif        Under 2 MB, rendered by CI
-  README.md          What it's for, slot rules, credits
+  template.json   Name, sections, shot lengths and supported shapes
+  style.css       How the words look, for all four vibes
+  README.md       What it's for, and credits
+  preview.gif     Under 2 MB (added when we publish the template gallery)
 ```
 
-Rules:
+## Add a template in five minutes
 
-- `hyperframes check` must pass.
-- No network fetches at render time.
-- Seeded randomness only.
-- Copy and colours are variables.
-- No GSAP. Use CSS keyframes, WAAPI or the seek protocol.
+1. Copy `templates/travel-montage` and rename the folder.
+2. Set a new `id` and `name` in `template.json`.
+3. Change the shot lengths under `sections`. The first section is the hook, the last is the closer.
+4. Restyle `.text-title` in `style.css`. Use `calc(N * var(--unit))` for sizes so every shape stays in proportion.
+5. Run `ucut make library/samples --template <id> -o test.mp4` and watch it.
+
+## Rules
+
+- `hyperframes check` must pass on the composed reel. `pnpm test:int` does this for you.
+- Keep all words inside the middle 80% of the frame.
+- No GSAP and nothing from the network. Motion uses CSS keyframes.
+- Fonts come from `library/fonts`.
 - Bundled media needs licence metadata in `assets.json`.
-
-The first template arrives in Phase 1.

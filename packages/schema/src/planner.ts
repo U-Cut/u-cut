@@ -19,7 +19,8 @@ export interface PlannerInput {
   vibe: Vibe;
   aspect: Aspect;
   duration: number;
-  music: { src: string; beats: BeatGrid };
+  music: { src: string; length: number; beats: BeatGrid };
+  copy: { title: string };
   recipe: StyleRecipe | null;
   seed: number;
 }
