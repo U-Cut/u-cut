@@ -18,6 +18,9 @@ export async function master(input: string, output: string, signal?: AbortSignal
   const filter = `loudnorm=I=${target.loudness}:TP=${target.truePeak}:LRA=${target.range}`;
   const options = signal ? { signal } : {};
   const measured = await measure(input, filter, options);
+  // A silent track measures as -inf, which FFmpeg refuses as a setting, and it needs no balancing.
+  const silent = !Number.isFinite(Number(measured.input_i));
+  const balance = `${filter}:linear=true:measured_I=${measured.input_i}:measured_TP=${measured.input_tp}:measured_LRA=${measured.input_lra}:measured_thresh=${measured.input_thresh}:offset=${measured.target_offset},${limiter},aresample=48000`;
   await run(
     "ffmpeg",
     [
@@ -29,8 +32,7 @@ export async function master(input: string, output: string, signal?: AbortSignal
       input,
       "-c:v",
       "copy",
-      "-af",
-      `${filter}:linear=true:measured_I=${measured.input_i}:measured_TP=${measured.input_tp}:measured_LRA=${measured.input_lra}:measured_thresh=${measured.input_thresh}:offset=${measured.target_offset},${limiter},aresample=48000`,
+      ...(silent ? [] : ["-af", balance]),
       "-c:a",
       "aac",
       "-b:a",

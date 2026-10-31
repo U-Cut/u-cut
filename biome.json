@@ -1,7 +1,15 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.6.4/schema.json",
   "files": {
-    "includes": ["**", "!**/dist", "!**/.build", "!registry/index.json", "!docs/BRIEF.md"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/.build",
+      "!registry/index.json",
+      "!docs/BRIEF.md",
+      "!classifiers/scene-model.json",
+      "!classifiers/eval"
+    ]
   },
   "formatter": {
     "indentStyle": "space",

@@ -40,16 +40,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: node packages/engine/dist/bin.js setup
+      - run: swift build --package-path apps/mac -c release --product ucut-vision
       - name: Real reels, messy phone media, every template
         run: pnpm test:int
       - name: Make a reel with the network blocked
         run: pnpm test:privacy
-      - name: Install Chrome for the browser test
-        run: |
-          installed="$(npx --yes @puppeteer/browsers install chrome@stable --path "$RUNNER_TEMP/chrome" | tail -1)"
-          echo "CHROME_PATH=${installed#* }" >> "$GITHUB_ENV"
       - name: Click through the app in a real browser
         timeout-minutes: 6
+        env:
+          CHROME_PATH: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
         run: pnpm test:e2e 2>&1 | tee e2e.log; status=${PIPESTATUS[0]}; [ "$status" -eq 0 ] || { tail -6 e2e.log | while IFS= read -r line; do echo "::error::$line"; done; exit "$status"; }
       - name: Five people at once
         run: pnpm load-test --users 5 --seconds 3
@@ -74,6 +73,9 @@ jobs:
             exit "$status"
           fi
           test -s out/reel.mp4
+          docker run --rm -v "$PWD/out:/out" u-cut \
+            ffmpeg -hide_banner -nostats -i /out/reel.mp4 -af volumedetect -f null - 2>&1 |
+            grep -E 'mean_volume|max_volume' | while IFS= read -r line; do echo "::notice::$line"; done
       - name: Serve the interface from the container
         run: |
           docker run -d --name ucut -p 4173:4173 u-cut
