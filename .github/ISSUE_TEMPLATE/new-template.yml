@@ -1,0 +1,26 @@
+name: New template
+description: Propose a template you plan to build.
+labels: [new-template]
+body:
+  - type: input
+    id: name
+    attributes:
+      label: Template name
+    validations:
+      required: true
+  - type: textarea
+    id: plan
+    attributes:
+      label: Sections and pacing
+      description: What sections it has, what media each one accepts, and how long it runs.
+    validations:
+      required: true
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Template rules
+      options:
+        - label: It uses no GSAP and fetches nothing at render time.
+          required: true
+        - label: Any bundled media has a CC0, CC-BY, OFL, Apache-2.0 or MIT licence.
+          required: true

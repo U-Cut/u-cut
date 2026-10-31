@@ -1,0 +1,25 @@
+name: Asset submission
+description: Offer music, sound, a font or a colour look for the library.
+labels: [asset]
+body:
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of asset
+      options: [Music, Sound effect, Font, Colour look]
+    validations:
+      required: true
+  - type: dropdown
+    id: licence
+    attributes:
+      label: Licence
+      options: [CC0-1.0, CC-BY-4.0, OFL-1.1, Apache-2.0, MIT]
+    validations:
+      required: true
+  - type: input
+    id: proof
+    attributes:
+      label: Licence proof
+      description: A link to where the licence is stated, or confirm that you made it yourself.
+    validations:
+      required: true

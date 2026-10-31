@@ -1,0 +1,16 @@
+name: Template request
+description: Ask for a style of reel that U-Cut doesn't have.
+labels: [template-request]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What should the reel look like?
+      description: Describe it, and link an example if you have one.
+    validations:
+      required: true
+  - type: textarea
+    id: media
+    attributes:
+      label: What would you put into it?
+      description: For example, photos from a trip or a screen recording.

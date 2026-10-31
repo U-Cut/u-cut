@@ -1,0 +1,17 @@
+name: Classifier category
+description: Propose a new scene category for sorting media.
+labels: [classifier]
+body:
+  - type: input
+    id: category
+    attributes:
+      label: Category name
+    validations:
+      required: true
+  - type: textarea
+    id: prompts
+    attributes:
+      label: Example prompts
+      description: 'Short descriptions of images in this category, such as "a latte on a café table".'
+    validations:
+      required: true
