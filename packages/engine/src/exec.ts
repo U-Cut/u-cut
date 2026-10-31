@@ -87,8 +87,9 @@ export function run(command: string, args: string[], options: ExecOptions = {}):
       finish(() => {
         if (code === 0) resolve(stdout);
         else {
-          const reason = stderr.trim().split("\n").at(-1)?.trim();
-          const detail = reason ? `: ${reason.slice(0, 300)}` : ".";
+          // Tools often end with a generic line, and the real cause sits just above it.
+          const reason = stderr.trim().split("\n").slice(-4).join(" / ").trim();
+          const detail = reason ? `: ${reason.slice(-600)}` : ".";
           reject(new ExecError(`${command} stopped with code ${code}${detail}`, code, stderr));
         }
       });
