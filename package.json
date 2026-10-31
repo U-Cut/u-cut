@@ -9,7 +9,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "tsc -p packages/schema && tsc -p packages/planner-rules && tsc -p packages/compose && tsc -p packages/engine && vite build apps/web",
+    "build": "tsc -p packages/schema && tsc -p packages/planner-rules && tsc -p packages/classify && tsc -p packages/compose && tsc -p packages/engine && vite build apps/web",
     "typecheck": "tsc -p tsconfig.check.json --noEmit && tsc -p apps/web",
     "lint": "biome check .",
     "format": "biome check --write .",
@@ -21,11 +21,13 @@
     "load-test": "tsx --conditions=source scripts/load-test.ts",
     "start": "node --conditions=source --import tsx packages/engine/src/bin.ts",
     "test:e2e": "tsx --conditions=source scripts/e2e.ts",
-    "test:privacy": "scripts/privacy-test.sh"
+    "test:privacy": "scripts/privacy-test.sh",
+    "train:scenes": "tsx --conditions=source scripts/train-scenes.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",
     "@types/node": "^22",
+    "@u-cut/classify": "workspace:*",
     "@u-cut/planner-rules": "workspace:*",
     "@u-cut/schema": "workspace:*",
     "puppeteer-core": "25.16.0",

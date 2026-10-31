@@ -61,6 +61,12 @@ pnpm_run install --frozen-lockfile
 say "Building"
 pnpm_run build
 
+if [ "$(uname)" = "Darwin" ] && have swift; then
+  say "Building the photo sorter"
+  swift build --package-path apps/mac -c release --product ucut-vision >/dev/null 2>&1 ||
+    echo "The sorter didn't build. U-Cut still works, without sorting by scene."
+fi
+
 say "Getting the rendering browser"
 node packages/engine/dist/bin.js setup
 

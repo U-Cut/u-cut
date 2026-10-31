@@ -76,7 +76,8 @@ export async function probe(
   const base = {
     id: hash,
     path,
-    quality: { sharpness: null, exposure: null, faces: null, dupGroup: null },
+    quality: { sharpness: null, exposure: null, faces: null, dupGroup: null, score: null },
+    focus: null,
     labels: [],
     moment: null,
   };

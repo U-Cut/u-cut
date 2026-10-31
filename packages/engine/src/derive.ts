@@ -47,7 +47,7 @@ async function resizePhoto(source: string, target: string, size: number) {
   ]);
 }
 
-async function grabFrame(source: string, at: number, target: string, size: number) {
+export async function grabFrame(source: string, at: number, target: string, size: number) {
   await run("ffmpeg", [
     ...quiet,
     "-ss",
@@ -114,6 +114,12 @@ export async function deriveMedia(item: MediaItem, signal?: AbortSignal): Promis
   const middle = (item.duration ?? 0) / 2;
   await derived(item.id, thumbName, (partial) => grabFrame(item.path, middle, partial, 360));
   await derived(item.id, previewName, (partial) => makePreview(item.path, partial, signal));
+}
+
+/** The sorter only needs a photo's display copy. Clips sample their own frames. */
+export async function deriveForSorting(item: MediaItem): Promise<void> {
+  if (item.kind !== "photo") return;
+  await derived(item.id, displayName, (partial) => resizePhoto(item.path, partial, 1440));
 }
 
 /** Photos are shrunk before rendering, because 48 MP images cost Chrome far more than they show. */

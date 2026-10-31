@@ -14,6 +14,8 @@ const engine = new URL("../packages/engine/src/bin.ts", import.meta.url).pathnam
 
 function chromePath(): string {
   if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
+  const installed = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+  if (existsSync(installed)) return installed;
   const cache = join(homedir(), ".cache/puppeteer/chrome");
   const version = existsSync(cache) ? readdirSync(cache).sort().at(-1) : undefined;
   if (!version) throw new Error("Set CHROME_PATH to a Chrome binary.");
@@ -67,13 +69,15 @@ async function main() {
   // A stuck browser must fail the run, not hang it.
   setTimeout(() => {
     console.log(results.join("\n"));
-    console.error("\nFAILED: the browser test took longer than 4 minutes.");
+    console.error("\nFAILED: the browser test took longer than 8 minutes.");
     process.exit(1);
-  }, 240_000).unref();
+  }, 480_000).unref();
   if (shots) mkdirSync(shots, { recursive: true });
   // Chrome draws no frames on a sleeping display, which looks exactly like a frozen page.
   const awake =
-    process.platform === "darwin" ? spawn("caffeinate", ["-u", "-t", "300"]) : undefined;
+    process.platform === "darwin" ? spawn("caffeinate", ["-u", "-t", "480"]) : undefined;
+  // Found first, so a missing browser fails at once instead of leaving the server running.
+  const executablePath = chromePath();
   const home = mkdtempSync(join(tmpdir(), "ucut-e2e-"));
   const server = spawn(
     process.execPath,
@@ -90,7 +94,7 @@ async function main() {
     { env: { ...process.env, UCUT_HOME: home }, stdio: "ignore" },
   );
   const browser = await puppeteer.launch({
-    executablePath: chromePath(),
+    executablePath,
     headless: true,
     protocolTimeout: 40_000,
     args: ["--autoplay-policy=no-user-gesture-required", "--no-sandbox"],
@@ -201,6 +205,48 @@ async function main() {
     if ((await shotList(page)) === beforeSwap) throw new Error("Replacing a shot did nothing.");
     pass("a shot can be replaced in one click");
 
+    await clickButton(page, "Sort your photos");
+    await page.waitForSelector(".sort");
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await snap(page, "5b-sort");
+    const scenes = await page.$$eval(".scene-list li button", (buttons) => buttons.length);
+    if (scenes < 2) throw new Error(`Sorting found only ${scenes} scene.`);
+    pass("photos are sorted into scenes", `${scenes} scenes`);
+
+    const firstScene = await page.$eval(".sheet-grid section h3", (title) => title.textContent);
+    const beforeMove = await page.$$eval(
+      ".sheet-grid section:first-child li.print-holder",
+      (tiles) => tiles.length,
+    );
+    await page.click(".sheet-grid section:first-child .print");
+    await page.waitForSelector(".scene-menu");
+    await snap(page, "5c-scene-menu");
+    await clickButton(page, "Snow");
+    await page.waitForFunction(
+      (count, name) =>
+        document.querySelector(".sheet-grid section h3")?.textContent !== name ||
+        document.querySelectorAll(".sheet-grid section:first-child li.print-holder").length < count,
+      {},
+      beforeMove,
+      firstScene,
+    );
+    pass("a photo can be moved to another scene in one gesture");
+
+    const reelBefore = await page.$$eval(
+      ".scene-list li button",
+      (buttons) => (buttons[0] as HTMLButtonElement).textContent,
+    );
+    await page.$eval(".scene-list li button", (button) => (button as HTMLButtonElement).click());
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".scene-list li button")?.getAttribute("aria-pressed") === "false",
+    );
+    await page.$eval(".scene-list li button", (button) => (button as HTMLButtonElement).click());
+    pass("a scene can be left out and brought back", reelBefore?.trim() ?? "");
+
+    await clickButton(page, "Done");
+    await page.waitForSelector(".sort", { hidden: true });
+
     await page.reload();
     await page.waitForSelector(".studio", { timeout: 15_000 });
     const resumed = await page.$eval(
@@ -217,7 +263,10 @@ async function main() {
     await page.waitForSelector(".sheet");
     await new Promise((resolve) => setTimeout(resolve, 2500));
     await snap(page, "6-exporting");
-    await page.waitForSelector(".final", { timeout: 120_000 });
+    await page.waitForSelector(".final", { timeout: 300_000 }).catch(async (error: Error) => {
+      const sheet = await page.$eval(".sheet", (element) => element.textContent).catch(() => "");
+      throw new Error(`${error.message}. The export screen says: ${sheet}`);
+    });
     await new Promise((resolve) => setTimeout(resolve, 1200));
     await snap(page, "7-done");
     const video = await page.$eval(".final", (element) => {

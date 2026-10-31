@@ -27,6 +27,7 @@ const validPlan = {
         to: { x: 0.5, y: 0.5, scale: 1 },
       },
       crop: { x: 0, y: 0, w: 1, h: 1 },
+      focus: { x: 0.5, y: 0.5 },
     },
   ],
   texts: [],

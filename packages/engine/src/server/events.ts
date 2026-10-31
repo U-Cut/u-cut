@@ -1,5 +1,12 @@
 export type ServerEvent =
-  | { type: "media"; job: string; id: string; state: "ready" | "failed"; reason?: string }
+  | {
+      type: "media";
+      job: string;
+      id: string;
+      state: "ready" | "failed";
+      reason?: string;
+      item?: unknown;
+    }
   | {
       type: "render";
       id: string;

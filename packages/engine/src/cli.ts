@@ -3,9 +3,11 @@ import type { Aspect, Vibe } from "@u-cut/schema";
 import { defineCommand, renderUsage, runCommand } from "citty";
 import { doctor } from "./doctor.ts";
 import { hf } from "./hf.ts";
+import { ingest } from "./ingest.ts";
 import { make } from "./make.ts";
 import type { Quality } from "./render.ts";
 import { serve } from "./server/serve.ts";
+import { sortMedia } from "./sort.ts";
 
 const { version } = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -113,6 +115,33 @@ const serveCommand = defineCommand({
   },
 });
 
+const sortCommand = defineCommand({
+  meta: { name: "sort", description: "Sort photos and clips into scenes, and list them." },
+  args: {
+    inputs: { type: "positional", description: "Files or folders", required: true },
+    json: { type: "boolean", default: false, description: "Print the result as JSON" },
+  },
+  async run({ args }) {
+    const { items } = await ingest([args.inputs, ...args._.slice(1)]);
+    const sorted = await sortMedia(items);
+    if (args.json) {
+      console.log(JSON.stringify(sorted, null, 2));
+      return;
+    }
+    const scenes = new Map<string, number>();
+    for (const item of sorted) {
+      const scene = item.labels[0]?.id ?? "unsorted";
+      scenes.set(scene, (scenes.get(scene) ?? 0) + 1);
+    }
+    for (const [scene, count] of [...scenes].sort((a, b) => b[1] - a[1])) {
+      console.log(`${String(count).padStart(5)}  ${scene}`);
+    }
+    const moments = new Set(sorted.map((item) => item.moment)).size;
+    const copies = sorted.filter((item) => item.quality.dupGroup).length;
+    console.log(`${sorted.length} items, ${moments} moments, ${copies} near-duplicates.`);
+  },
+});
+
 const setupCommand = defineCommand({
   meta: { name: "setup", description: "Download the browser U-Cut renders with." },
   async run() {
@@ -141,13 +170,14 @@ const main = defineCommand({
   },
   subCommands: {
     make: makeCommand,
+    sort: sortCommand,
     serve: serveCommand,
     setup: setupCommand,
     doctor: doctorCommand,
   },
 });
 
-const commands = ["make", "serve", "setup", "doctor"];
+const commands = ["make", "sort", "serve", "setup", "doctor"];
 
 export async function run(argv: string[]): Promise<RunResult> {
   const [first] = argv;

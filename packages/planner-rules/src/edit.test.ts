@@ -10,7 +10,8 @@ function item(id: string, kind: "photo" | "video", duration?: number): MediaItem
     w: 1080,
     h: 1920,
     orientation: 1,
-    quality: { sharpness: null, exposure: null, faces: null, dupGroup: null },
+    quality: { sharpness: null, exposure: null, faces: null, dupGroup: null, score: null },
+    focus: null,
     labels: [],
     moment: null,
     ...(duration ? { duration } : {}),
@@ -26,6 +27,7 @@ const shot = (media: string, start: number, end: number) => ({
   end,
   motion: { type: "none" as const, from: still, to: still },
   crop: { x: 0, y: 0, w: 1, h: 1 },
+  focus: { x: 0.5, y: 0.5 },
 });
 
 const plan: EditPlan = {
@@ -65,6 +67,11 @@ describe("replaceShot", () => {
   it("swaps in a photo and keeps the timing", () => {
     const edited = replaceShot(plan, 1, item("c", "photo"));
     expect(edited.shots[1]).toMatchObject({ media: "c", start: 2, end: 6, in: 0, out: 4 });
+  });
+
+  it("keeps the new photo's subject in view", () => {
+    const photo = { ...item("c", "photo"), focus: { x: 0.2, y: 0.7 } };
+    expect(replaceShot(plan, 1, photo).shots[1]?.focus).toEqual({ x: 0.2, y: 0.7 });
   });
 
   it("takes a clip from its middle", () => {

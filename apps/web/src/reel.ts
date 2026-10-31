@@ -19,6 +19,7 @@ export interface Settings {
   duration: number;
   seed: number;
   title: string;
+  excludedScenes: string[];
 }
 
 interface Snapshot {
@@ -44,7 +45,7 @@ type Action =
   | { type: "arriving"; count: number }
   | { type: "item"; item: MediaItem }
   | { type: "items"; items: MediaItem[] }
-  | { type: "ready"; id: string }
+  | { type: "ready"; id: string; item?: MediaItem | undefined }
   | { type: "failed"; id: string; reason: string }
   | { type: "commit"; snapshot: Snapshot }
   | { type: "replace"; snapshot: Snapshot }
@@ -79,10 +80,16 @@ function reducer(state: State, action: Action): State {
         : { ...state, items: [...state.items, action.item] };
     case "items":
       return { ...state, items: action.items };
-    case "ready":
-      return state.ready.includes(action.id)
-        ? state
-        : { ...state, ready: [...state.ready, action.id] };
+    case "ready": {
+      const { item } = action;
+      return {
+        ...state,
+        items: item
+          ? state.items.map((known) => (known.id === item.id ? item : known))
+          : state.items,
+        ready: state.ready.includes(action.id) ? state.ready : [...state.ready, action.id],
+      };
+    }
     case "failed":
       return {
         ...state,
@@ -129,6 +136,7 @@ const defaults: Settings = {
   duration: 20,
   seed: 1,
   title: "",
+  excludedScenes: ["documents"],
 };
 
 export function planWith(catalog: Catalog, items: MediaItem[], settings: Settings): EditPlan {
@@ -143,6 +151,7 @@ export function planWith(catalog: Catalog, items: MediaItem[], settings: Setting
     duration: settings.duration,
     music: { src: track.file, length: track.length, beats: track.beats },
     copy: { title: settings.title },
+    excludedScenes: settings.excludedScenes,
     recipe: null,
     seed: settings.seed,
   });
@@ -160,13 +169,14 @@ export function compositionFor(catalog: Catalog, items: MediaItem[], plan: EditP
   });
 }
 
-const settingsFrom = (plan: EditPlan): Settings => ({
+const settingsFrom = (plan: EditPlan, excludedScenes: string[]): Settings => ({
   vibe: plan.vibe,
   template: plan.template,
   aspect: plan.aspect,
   duration: Math.round(plan.duration),
   seed: plan.seed,
   title: plan.texts.find((text) => text.style === "title")?.text ?? "",
+  excludedScenes,
 });
 
 const jobKey = "ucut-job";
@@ -183,7 +193,7 @@ export function useReel(catalog: Catalog | null) {
       connectEvents((event: ServerEvent) => {
         if (event.type === "media") {
           if (event.job !== latest.current.job?.id) return;
-          if (event.state === "ready") dispatch({ type: "ready", id: event.id });
+          if (event.state === "ready") dispatch({ type: "ready", id: event.id, item: event.item });
           else
             dispatch({
               type: "failed",
@@ -210,7 +220,7 @@ export function useReel(catalog: Catalog | null) {
         for (const item of job.items) dispatch({ type: "ready", id: item.id });
         dispatch({
           type: "commit",
-          snapshot: { plan: job.plan, settings: settingsFrom(job.plan) },
+          snapshot: { plan: job.plan, settings: settingsFrom(job.plan, job.excludedScenes) },
         });
       },
       () => window.localStorage.removeItem(jobKey),
@@ -329,6 +339,40 @@ export function useReel(catalog: Catalog | null) {
     });
   }, []);
 
+  /** Moves a photo to the right scene, and re-cuts because that can change what's in the reel. */
+  const setScene = useCallback(
+    async (item: MediaItem, scene: string) => {
+      const { job, now, items } = latest.current;
+      if (!job) return;
+      const updated = {
+        ...item,
+        labels: [
+          { id: scene, score: 1 },
+          ...item.labels.filter((label) => label.id !== scene),
+        ].slice(0, 3),
+      };
+      const next = items.map((known) => (known.id === item.id ? updated : known));
+      dispatch({ type: "items", items: next });
+      latest.current = { ...latest.current, items: next };
+      try {
+        await api.setScene(job.id, item.id, scene);
+      } catch (error) {
+        dispatch({ type: "notice", notice: (error as Error).message });
+      }
+      if (now) change({});
+    },
+    [change],
+  );
+
+  const setExcluded = useCallback(
+    (excludedScenes: string[]) => {
+      const { job } = latest.current;
+      change({ excludedScenes });
+      if (job) void api.setExcluded(job.id, excludedScenes).catch(() => {});
+    },
+    [change],
+  );
+
   const replace = useCallback(
     (index: number, item: MediaItem) => editPlan((plan) => replaceShot(plan, index, item)),
     [editPlan],
@@ -375,6 +419,8 @@ export function useReel(catalog: Catalog | null) {
       rename,
       replace,
       swap,
+      setScene,
+      setExcluded,
       exportReel,
       cancelExport,
       startOver,
@@ -390,6 +436,8 @@ export function useReel(catalog: Catalog | null) {
       rename,
       replace,
       swap,
+      setScene,
+      setExcluded,
       exportReel,
       cancelExport,
       startOver,

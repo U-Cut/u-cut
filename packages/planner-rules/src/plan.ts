@@ -15,6 +15,7 @@ interface Source {
 }
 
 const evenBeat = 0.6;
+const varietyWeight = 0.6;
 const shortestClip = 0.3;
 const windowsPerVideo = 6;
 const secondsPerWindow = 8;
@@ -46,17 +47,55 @@ function sourcesFrom(items: MediaItem[]): Source[] {
   });
 }
 
-/** Keeps the story in order while taking a different spread of media for each seed. */
+/**
+ * Keeps the story in order, taking the better shots from each stretch of it. The random part is
+ * larger than the quality gap between most photos, so every seed gives a different spread.
+ */
 function pickInOrder(sources: Source[], count: number, rng: () => number): Source[] {
-  if (sources.length <= count) return sources;
+  if (sources.length <= count) return openOnBest(sources);
   const stride = sources.length / count;
   const picked = new Set<number>();
   for (let index = 0; index < count; index += 1) {
-    picked.add(Math.floor((index + rng()) * stride));
+    let best = -1;
+    let bestScore = Number.NEGATIVE_INFINITY;
+    for (let at = Math.floor(index * stride); at < Math.floor((index + 1) * stride); at += 1) {
+      const score = (sources[at]?.item.quality.score ?? 0) + rng() * varietyWeight;
+      if (score > bestScore) {
+        bestScore = score;
+        best = at;
+      }
+    }
+    picked.add(best);
   }
   const chosen = sources.filter((_, index) => picked.has(index));
   const spare = sources.filter((_, index) => !picked.has(index));
-  return [...chosen, ...spare];
+  return [...openOnBest(chosen), ...spare];
+}
+
+/** The first frame is the hook, so the best shot goes first when we know which it is. */
+function openOnBest(sources: Source[]): Source[] {
+  const scored = sources.filter((source) => source.item.quality.score !== null);
+  if (scored.length === 0) return sources;
+  const best = scored.reduce((a, b) =>
+    (b.item.quality.score ?? 0) > (a.item.quality.score ?? 0) ? b : a,
+  );
+  return [best, ...sources.filter((source) => source !== best)];
+}
+
+/** Leaves out hidden scenes, and keeps only the best of a run of near-identical photos. */
+function usableItems(items: MediaItem[], excluded: string[]): MediaItem[] {
+  const shown = items.filter((item) => !excluded.includes(item.labels[0]?.id ?? ""));
+  const best = new Map<string, MediaItem>();
+  for (const item of shown) {
+    const group = item.quality.dupGroup;
+    if (!group) continue;
+    const current = best.get(group);
+    if (!current || (item.quality.score ?? 0) > (current.quality.score ?? 0)) best.set(group, item);
+  }
+  return shown.filter((item) => {
+    const group = item.quality.dupGroup;
+    return !group || best.get(group) === item;
+  });
 }
 
 /** Beat times measured from the start of the reel, carried on past the end of the track. */
@@ -115,10 +154,13 @@ function fitBeats(
   return length(count) > available ? 0 : count;
 }
 
-function framing(rng: () => number, scale: number) {
+function framing(rng: () => number, scale: number, focus: MediaItem["focus"]) {
   const margin = (scale - 1) / (2 * scale);
-  const offset = () => round((rng() * 2 - 1) * margin);
-  return { x: round(0.5 + offset()), y: round(0.5 + offset()), scale: round(scale) };
+  const towards = (point: number | undefined) => {
+    const offset = point === undefined ? (rng() * 2 - 1) * margin : point - 0.5;
+    return round(0.5 + Math.max(-margin, Math.min(margin, offset)));
+  };
+  return { x: towards(focus?.x), y: towards(focus?.y), scale: round(scale) };
 }
 
 function motionFor(source: Source, profile: VibeProfile, rng: () => number): Shot["motion"] {
@@ -129,9 +171,10 @@ function motionFor(source: Source, profile: VibeProfile, rng: () => number): Sho
   }
   const roll = rng();
   const scale = 1 + profile.motion;
-  if (roll < 0.4) return { type: "push-in", from: still, to: framing(rng, scale) };
-  if (roll < 0.8) return { type: "pull-out", from: framing(rng, scale), to: still };
-  return { type: "pan", from: framing(rng, scale), to: framing(rng, scale) };
+  const { focus } = source.item;
+  if (roll < 0.4) return { type: "push-in", from: still, to: framing(rng, scale, focus) };
+  if (roll < 0.8) return { type: "pull-out", from: framing(rng, scale, focus), to: still };
+  return { type: "pan", from: framing(rng, scale, null), to: framing(rng, scale, focus) };
 }
 
 function monthOf(items: MediaItem[]): string {
@@ -143,10 +186,14 @@ function monthOf(items: MediaItem[]): string {
 
 export function planRules(input: PlannerInput): EditPlan {
   const { template, vibe, aspect, seed, music, copy } = input;
-  const items = [...input.items].sort(byTimeThenId);
+  const items = usableItems([...input.items].sort(byTimeThenId), input.excludedScenes);
   const allSources = sourcesFrom(items);
   if (allSources.length === 0) {
-    throw new PlanError("There's nothing to edit yet. Add at least one photo or clip.");
+    throw new PlanError(
+      input.items.length === 0
+        ? "There's nothing to edit yet. Add at least one photo or clip."
+        : "Every photo is hidden. Turn a scene back on in Sort, or add more photos.",
+    );
   }
 
   const rng = seededRng(seed);
@@ -187,6 +234,7 @@ export function planRules(input: PlannerInput): EditPlan {
       end: round(end),
       motion: motionFor(source, profile, rng),
       crop: { x: 0, y: 0, w: 1, h: 1 },
+      focus: source.item.focus ?? { x: 0.5, y: 0.5 },
     });
     beat += count;
     if (end >= target - interval / 2) break;

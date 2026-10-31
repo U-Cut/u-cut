@@ -78,6 +78,14 @@ Left is how it feels. Right is how it's built. The bottom is what's in it. On a 
 
 The strip along the bottom shows each shot at its real length, so the rhythm of the cut is visible at a glance.
 
+## The sort view
+
+The sort view is a contact sheet, the sheet of small prints a photographer marks up in a darkroom. Scenes run down the left as big words, using the same language as the vibes, and every photo sits to the right.
+
+- Pressing a scene leaves it out of the reel, and the word is struck through so you can see why.
+- Dragging a photo onto a scene fixes it. Pressing a photo opens the same choice as a menu, so it also works by keyboard and on a phone.
+- Nothing is ever deleted. Screenshots start out left out, and one press brings them back.
+
 ## Keyboard
 
 | Key         | Action                |

@@ -21,6 +21,8 @@ export interface PlannerInput {
   duration: number;
   music: { src: string; length: number; beats: BeatGrid };
   copy: { title: string };
+  /** Scenes left out of this reel, such as screenshots. */
+  excludedScenes: string[];
   recipe: StyleRecipe | null;
   seed: number;
 }

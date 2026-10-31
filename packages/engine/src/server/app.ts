@@ -3,25 +3,37 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { extname, join, normalize, resolve } from "node:path";
 import { Readable } from "node:stream";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
+import { decodePrint, duplicateOf, type Printed } from "@u-cut/classify";
 import { EditPlan, type MediaItem, validate } from "@u-cut/schema";
 import { type Context, Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { streamSSE } from "hono/streaming";
+import {
+  addLearned,
+  applySignals,
+  firstPrint,
+  loadLearned,
+  readSignals,
+  sceneModel,
+} from "../analyse.ts";
 import { deriveMedia, displayName, previewName, thumbName } from "../derive.ts";
 import { ingest } from "../ingest.ts";
 import {
   fontCss,
   fontsDir,
+  loadScenes,
   loadTemplates,
   loadTracks,
   musicDir,
   samplesDir,
   trackBeats,
 } from "../library.ts";
+import { defaultExcludedScenes } from "../make.ts";
 import { homeDir, jobsDir, repoRoot } from "../paths.ts";
 import { mediaKind, probe } from "../probe.ts";
 import { type Quality, renderKey, renderPlan } from "../render.ts";
 import { isHash, storedFolder, storeStream } from "../store.ts";
+import { vision } from "../vision.ts";
 import {
   type Capacity,
   freeDisk,
@@ -39,6 +51,7 @@ export interface Job {
   createdAt: string;
   items: MediaItem[];
   plan: EditPlan | null;
+  excludedScenes: string[];
 }
 
 interface RenderState {
@@ -89,6 +102,7 @@ export function createApp(options: ServerOptions) {
   /** Seconds of work per second of finished reel, learned from real renders on this machine. */
   let renderCost = 1.6;
   let samples: MediaItem[] = [];
+  const jobPrints = new Map<string, Printed[]>();
 
   // A website open in the same browser can reach localhost. Checking Host stops DNS rebinding,
   // and checking Origin stops other sites from posting here.
@@ -139,7 +153,10 @@ export function createApp(options: ServerOptions) {
     if (!/^[a-f0-9-]{36}$/.test(id)) return undefined;
     const text = await readFile(join(jobsDir(), id, "job.json"), "utf8").catch(() => undefined);
     if (!text) return undefined;
-    const job = JSON.parse(text) as Job;
+    const job = {
+      excludedScenes: defaultExcludedScenes,
+      ...(JSON.parse(text) as Partial<Job>),
+    } as Job;
     jobs.set(id, job);
     return job;
   }
@@ -162,29 +179,78 @@ export function createApp(options: ServerOptions) {
       createdAt: job.createdAt,
       items: job.items.map(publicItem),
       plan: job.plan,
+      excludedScenes: job.excludedScenes,
     };
   }
 
-  /** Small copies are made in the fair queue, so a huge upload can't slow anyone else down. */
+  /** Near-duplicates are found as photos arrive, by comparing each new one to the job so far. */
+  function findDuplicates(job: Job, item: MediaItem, print: string): MediaItem[] {
+    const seen = jobPrints.get(job.id) ?? [];
+    jobPrints.set(job.id, seen);
+    const vector = decodePrint(print);
+    const match = duplicateOf(
+      vector,
+      seen.filter((other) => other.id !== item.id),
+    );
+    seen.push({ id: item.id, print: vector, group: match ? (match.group ?? match.id) : null });
+    if (!match) return [];
+    const group = match.group ?? match.id;
+    match.group = group;
+    return [item.id, match.id].flatMap((id) => {
+      const member = job.items.find((candidate) => candidate.id === id);
+      if (!member) return [];
+      const updated = { ...member, quality: { ...member.quality, dupGroup: group } };
+      job.items = job.items.map((candidate) => (candidate.id === id ? updated : candidate));
+      return [updated];
+    });
+  }
+
+  /** Small copies and sorting happen in the fair queue, so a huge upload can't slow anyone down. */
   function prepare(job: Job, item: MediaItem) {
     analysis
       .submit({
-        id: `derive-${item.id}`,
+        id: `prepare-${item.id}`,
         owner: job.owner,
         run: ({ signal }) => deriveMedia(item, signal),
       })
-      .then(
-        () => hub.publish(job.owner, { type: "media", job: job.id, id: item.id, state: "ready" }),
-        (error: Error) => {
+      .then(async () => {
+        const frames = await readSignals(item).catch(() => undefined);
+        let ready = item;
+        const changed: MediaItem[] = [];
+        if (frames) {
+          ready = applySignals(item, frames, await loadLearned());
+          job.items = job.items.map((candidate) => (candidate.id === item.id ? ready : candidate));
+          const print = firstPrint(frames);
+          if (print) changed.push(...findDuplicates(job, ready, print));
+          ready = job.items.find((candidate) => candidate.id === item.id) ?? ready;
+          await persist(job);
+        }
+        hub.publish(job.owner, {
+          type: "media",
+          job: job.id,
+          id: item.id,
+          state: "ready",
+          item: publicItem(ready),
+        });
+        for (const other of changed.filter((candidate) => candidate.id !== item.id)) {
           hub.publish(job.owner, {
             type: "media",
             job: job.id,
-            id: item.id,
-            state: "failed",
-            reason: error.message,
+            id: other.id,
+            state: "ready",
+            item: publicItem(other),
           });
-        },
-      );
+        }
+      })
+      .catch((error: Error) => {
+        hub.publish(job.owner, {
+          type: "media",
+          job: job.id,
+          id: item.id,
+          state: "failed",
+          reason: error.message,
+        });
+      });
   }
 
   function addItem(job: Job, item: MediaItem) {
@@ -226,6 +292,8 @@ export function createApp(options: ServerOptions) {
       tracks: loadTracks().map((track) => ({ ...track, beats: trackBeats(track) })),
       fontCss: fontCss((file) => `/fonts/${file}`),
       samples: samples.map(publicItem),
+      scenes: [...loadScenes(), { id: "other", label: "Other", group: "other" }],
+      sorting: Boolean(vision() && sceneModel()),
     }),
   );
 
@@ -281,6 +349,7 @@ export function createApp(options: ServerOptions) {
       createdAt: new Date().toISOString(),
       items: [],
       plan: null,
+      excludedScenes: defaultExcludedScenes,
     };
     jobs.set(job.id, job);
     await persist(job);
@@ -339,6 +408,39 @@ export function createApp(options: ServerOptions) {
     job.items = job.items.filter((item) => item.id !== c.req.param("media"));
     await persist(job);
     return c.json(publicJob(job));
+  });
+
+  // One drag fixes a photo here, and teaches U-Cut for next time.
+  app.put("/api/jobs/:id/media/:media/scene", async (c) => {
+    const job = await ownedJob(c);
+    if (!job) return notFound(c);
+    const item = job.items.find((candidate) => candidate.id === c.req.param("media"));
+    if (!item) return notFound(c);
+    const { scene } = (await c.req.json().catch(() => ({}))) as { scene?: string };
+    const known = [...loadScenes().map((entry) => entry.id), "other"];
+    if (!scene || !known.includes(scene))
+      return c.json({ error: "That isn't a scene U-Cut knows." }, 422);
+
+    const others = item.labels.filter((label) => label.id !== scene).slice(0, 2);
+    const updated = { ...item, labels: [{ id: scene, score: 1 }, ...others] };
+    job.items = job.items.map((candidate) => (candidate.id === item.id ? updated : candidate));
+    await persist(job);
+    const frames = await readSignals(item).catch(() => undefined);
+    const print = frames ? firstPrint(frames) : undefined;
+    if (print && scene !== "other") await addLearned(scene, print);
+    return c.json(publicItem(updated));
+  });
+
+  app.put("/api/jobs/:id/scenes", async (c) => {
+    const job = await ownedJob(c);
+    if (!job) return notFound(c);
+    const { excluded } = (await c.req.json().catch(() => ({}))) as { excluded?: unknown };
+    if (!Array.isArray(excluded) || excluded.some((scene) => typeof scene !== "string")) {
+      return c.json({ error: "That isn't a list of scenes." }, 422);
+    }
+    job.excludedScenes = excluded as string[];
+    await persist(job);
+    return c.json({ ok: true });
   });
 
   app.put("/api/jobs/:id/plan", async (c) => {

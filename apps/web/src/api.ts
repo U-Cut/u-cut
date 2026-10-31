@@ -13,6 +13,9 @@ export interface Catalog {
   tracks: Track[];
   fontCss: string;
   samples: MediaItem[];
+  scenes: { id: string; label: string; group: string; hiddenByDefault?: boolean }[];
+  /** False without Apple's on-device helper, such as on Linux. */
+  sorting: boolean;
 }
 
 export interface Job {
@@ -20,6 +23,7 @@ export interface Job {
   createdAt: string;
   items: MediaItem[];
   plan: EditPlan | null;
+  excludedScenes: string[];
 }
 
 export interface RenderEvent {
@@ -42,6 +46,7 @@ export interface MediaEvent {
   id: string;
   state: "ready" | "failed";
   reason?: string;
+  item?: MediaItem;
 }
 
 export type ServerEvent = RenderEvent | MediaEvent;
@@ -72,6 +77,13 @@ export const api = {
     }),
   savePlan: (id: string, plan: EditPlan) =>
     request(`/api/jobs/${id}/plan`, { method: "PUT", ...json(plan) }),
+  setScene: (id: string, media: string, scene: string) =>
+    request<MediaItem>(`/api/jobs/${id}/media/${media}/scene`, {
+      method: "PUT",
+      ...json({ scene }),
+    }),
+  setExcluded: (id: string, excluded: string[]) =>
+    request(`/api/jobs/${id}/scenes`, { method: "PUT", ...json({ excluded }) }),
   exportReel: (id: string, name: string) =>
     request<RenderEvent>(`/api/jobs/${id}/export`, { method: "POST", ...json({ name }) }),
   cancelRender: (id: string) => request(`/api/renders/${id}`, { method: "DELETE" }),

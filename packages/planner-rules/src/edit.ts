@@ -21,13 +21,14 @@ export function setTitle(plan: EditPlan, title: string): EditPlan {
 
 function cutFrom(shot: EditPlan["shots"][number], item: MediaItem): EditPlan["shots"][number] {
   const length = round(shot.end - shot.start);
-  if (item.kind === "photo") return { ...shot, media: item.id, in: 0, out: length };
+  const focus = item.focus ?? { x: 0.5, y: 0.5 };
+  if (item.kind === "photo") return { ...shot, media: item.id, in: 0, out: length, focus };
   const available = item.duration ?? 0;
   if (available < length) {
     throw new PlanError("That clip is shorter than this shot. Pick a photo or a longer clip.");
   }
   const clipIn = round((available - length) / 2);
-  return { ...shot, media: item.id, in: clipIn, out: round(clipIn + length) };
+  return { ...shot, media: item.id, in: clipIn, out: round(clipIn + length), focus };
 }
 
 export function replaceShot(plan: EditPlan, index: number, item: MediaItem): EditPlan {

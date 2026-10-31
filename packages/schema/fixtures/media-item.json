@@ -7,7 +7,8 @@
   "takenAt": "2026-03-14T09:21:07+05:30",
   "gps": { "lat": 15.5527, "lon": 73.7517 },
   "orientation": 6,
-  "quality": { "sharpness": 0.82, "exposure": 0.55, "faces": 2, "dupGroup": null },
+  "quality": { "sharpness": 0.82, "exposure": 0.55, "faces": 2, "dupGroup": null, "score": 0.4 },
+  "focus": { "x": 0.5, "y": 0.42 },
   "labels": [{ "id": "beach", "score": 0.91 }, { "id": "sky", "score": 0.44 }],
   "moment": "m-0001"
 }

@@ -34,6 +34,7 @@ export PATH="$HOME/.local/bin:$PATH"
 | Browser                | Run `ucut`, which opens <http://localhost:4173> |
 | Different port         | Run `ucut serve --port 8080`                    |
 | One reel, no interface | Run `ucut make <folder> -o reel.mp4`            |
+| See how photos sort    | Run `ucut sort <folder>`                        |
 
 ## On Linux or anywhere else
 

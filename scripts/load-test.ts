@@ -127,6 +127,7 @@ async function user(index: number, catalog: Catalog, files: string[]) {
     duration: seconds,
     music: { src: track.file, length: track.length, beats: track.beats },
     copy: { title: `User ${index}` },
+    excludedScenes: [],
     recipe: null,
     seed: index + 1,
   });

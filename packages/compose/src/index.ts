@@ -78,7 +78,7 @@ function shotCss(plan: EditPlan): string {
       const id = `s${index}`;
       const length = round(shot.end - shot.start);
       return [
-        `#${id}{animation:${id} ${length}s linear both;z-index:${index + 1}}`,
+        `#${id}{animation:${id} ${length}s linear both;z-index:${index + 1};object-position:${round(shot.focus.x * 100)}% ${round(shot.focus.y * 100)}%}`,
         `@keyframes ${id}{from{transform:${transformFor(shot.motion.from)}}`,
         `to{transform:${transformFor(shot.motion.to)}}}`,
       ].join("");

@@ -9,6 +9,7 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@u-cut/classify": "workspace:*",
     "@u-cut/compose": "workspace:*",
     "@u-cut/planner-rules": "workspace:*",
     "@u-cut/schema": "workspace:*",

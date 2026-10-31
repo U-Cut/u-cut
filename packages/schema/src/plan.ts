@@ -17,6 +17,8 @@ const Shot = z.strictObject({
     to: Framing,
   }),
   crop: z.strictObject({ x: unit, y: unit, w: unit, h: unit }),
+  /** The point of the frame to keep in view when a photo is cropped to fit. */
+  focus: z.strictObject({ x: unit, y: unit }),
 });
 
 const Overlay = z.strictObject({

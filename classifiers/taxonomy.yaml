@@ -1,39 +1,39 @@
-# Starter taxonomy. `core: true` marks the 10 categories measured against the
-# 85% top-1 target. To add a category, see classifiers/README.md.
-version: 1
+# Every scene a photo can be sorted into. `core: true` marks the 10 categories measured against
+# the 85% target. Bedrooms count as Home, hills as Mountains, and selfies as People.
+#
+# To add a category, see classifiers/README.md. `documents` is decided by Apple's on-device
+# signals rather than the scene model, and everything uncertain goes to Other.
+version: 2
 groups:
   places:
-    - { id: cafe, label: "Café", core: true }
-    - { id: restaurant, label: "Restaurant" }
-    - { id: food, label: "Food close-up", core: true }
-    - { id: home, label: "Home interior", core: true }
-    - { id: bedroom, label: "Bedroom / cosy" }
-    - { id: office, label: "Office / desk" }
+    - { id: cafe, label: "Cafés", core: true }
+    - { id: restaurant, label: "Restaurants" }
+    - { id: food, label: "Food", core: true }
+    - { id: home, label: "Home", core: true }
+    - { id: office, label: "Work" }
     - { id: gym, label: "Gym" }
     - { id: mountains, label: "Mountains", core: true }
-    - { id: hills, label: "Hills / trek" }
     - { id: beach, label: "Beach", core: true }
-    - { id: lake, label: "Lake / river" }
+    - { id: lake, label: "Lakes and rivers" }
     - { id: forest, label: "Forest" }
     - { id: desert, label: "Desert" }
     - { id: snow, label: "Snow" }
-    - { id: city-street, label: "City street", core: true }
-    - { id: night-city, label: "Night city", core: true }
-    - { id: market, label: "Market" }
-    - { id: temple, label: "Temple / heritage" }
-    - { id: museum, label: "Museum" }
+    - { id: city-street, label: "City streets", core: true }
+    - { id: night-city, label: "City at night", core: true }
+    - { id: market, label: "Markets" }
+    - { id: temple, label: "Temples" }
+    - { id: museum, label: "Museums" }
   transport:
-    - { id: flight, label: "Flight (cabin, wing, airport)", core: true }
-    - { id: railway-station, label: "Railway station", core: true }
-    - { id: train, label: "Train interior" }
-    - { id: metro, label: "Metro / subway", core: true }
-    - { id: road-trip, label: "Road trip / car" }
-    - { id: bike, label: "Bike" }
+    - { id: flight, label: "Flights", core: true }
+    - { id: railway-station, label: "Railway stations", core: true }
+    - { id: train, label: "On the train" }
+    - { id: metro, label: "Metro", core: true }
+    - { id: road-trip, label: "Road trips" }
+    - { id: bike, label: "Bikes" }
   people:
-    - { id: selfie, label: "Selfie" }
-    - { id: group, label: "Group" }
+    - { id: group, label: "People" }
     - { id: pets, label: "Pets" }
   other:
-    - { id: sky, label: "Sky / sunset" }
-    - { id: event, label: "Concert / event" }
+    - { id: sky, label: "Skies and sunsets" }
+    - { id: event, label: "Concerts and events" }
     - { id: documents, label: "Screenshots and documents", exclude_by_default: true }

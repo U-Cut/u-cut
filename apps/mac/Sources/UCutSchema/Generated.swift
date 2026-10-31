@@ -49,12 +49,14 @@ public struct MediaItem: Codable, Sendable, Equatable {
         public var exposure: Double?
         public var faces: Int?
         public var dupGroup: String?
+        public var score: Double?
 
-        public init(sharpness: Double? = nil, exposure: Double? = nil, faces: Int? = nil, dupGroup: String? = nil) {
+        public init(sharpness: Double? = nil, exposure: Double? = nil, faces: Int? = nil, dupGroup: String? = nil, score: Double? = nil) {
             self.sharpness = sharpness
             self.exposure = exposure
             self.faces = faces
             self.dupGroup = dupGroup
+            self.score = score
         }
 
         private enum CodingKeys: String, CodingKey {
@@ -62,6 +64,7 @@ public struct MediaItem: Codable, Sendable, Equatable {
             case exposure
             case faces
             case dupGroup
+            case score
         }
 
         public func encode(to encoder: any Encoder) throws {
@@ -70,6 +73,17 @@ public struct MediaItem: Codable, Sendable, Equatable {
             try container.encode(exposure, forKey: .exposure)
             try container.encode(faces, forKey: .faces)
             try container.encode(dupGroup, forKey: .dupGroup)
+            try container.encode(score, forKey: .score)
+        }
+    }
+
+    public struct Focu: Codable, Sendable, Equatable {
+        public var x: Double
+        public var y: Double
+
+        public init(x: Double, y: Double) {
+            self.x = x
+            self.y = y
         }
     }
 
@@ -93,10 +107,11 @@ public struct MediaItem: Codable, Sendable, Equatable {
     public var gps: Gps?
     public var orientation: Int
     public var quality: Quality
+    public var focus: Focu?
     public var labels: [Label]
     public var moment: String?
 
-    public init(id: String, path: String, kind: Kind, w: Int, h: Int, duration: Double? = nil, takenAt: String? = nil, gps: Gps? = nil, orientation: Int, quality: Quality, labels: [Label], moment: String? = nil) {
+    public init(id: String, path: String, kind: Kind, w: Int, h: Int, duration: Double? = nil, takenAt: String? = nil, gps: Gps? = nil, orientation: Int, quality: Quality, focus: Focu? = nil, labels: [Label], moment: String? = nil) {
         self.id = id
         self.path = path
         self.kind = kind
@@ -107,6 +122,7 @@ public struct MediaItem: Codable, Sendable, Equatable {
         self.gps = gps
         self.orientation = orientation
         self.quality = quality
+        self.focus = focus
         self.labels = labels
         self.moment = moment
     }
@@ -122,6 +138,7 @@ public struct MediaItem: Codable, Sendable, Equatable {
         case gps
         case orientation
         case quality
+        case focus
         case labels
         case moment
     }
@@ -138,6 +155,7 @@ public struct MediaItem: Codable, Sendable, Equatable {
         try container.encodeIfPresent(gps, forKey: .gps)
         try container.encode(orientation, forKey: .orientation)
         try container.encode(quality, forKey: .quality)
+        try container.encode(focus, forKey: .focus)
         try container.encode(labels, forKey: .labels)
         try container.encode(moment, forKey: .moment)
     }
@@ -392,6 +410,16 @@ public struct EditPlan: Codable, Sendable, Equatable {
             }
         }
 
+        public struct Focu: Codable, Sendable, Equatable {
+            public var x: Double
+            public var y: Double
+
+            public init(x: Double, y: Double) {
+                self.x = x
+                self.y = y
+            }
+        }
+
         public var media: String
         public var `in`: Double
         public var out: Double
@@ -399,8 +427,9 @@ public struct EditPlan: Codable, Sendable, Equatable {
         public var end: Double
         public var motion: Motion
         public var crop: Crop
+        public var focus: Focu
 
-        public init(media: String, `in`: Double, out: Double, start: Double, end: Double, motion: Motion, crop: Crop) {
+        public init(media: String, `in`: Double, out: Double, start: Double, end: Double, motion: Motion, crop: Crop, focus: Focu) {
             self.media = media
             self.in = `in`
             self.out = out
@@ -408,6 +437,7 @@ public struct EditPlan: Codable, Sendable, Equatable {
             self.end = end
             self.motion = motion
             self.crop = crop
+            self.focus = focus
         }
     }
 

@@ -71,6 +71,16 @@ The preview and the export use the same composer output, so they match. Only the
 5. An event tells the browser when it's ready.
 6. Once everything has arrived, the browser plans the reel and it starts playing, with no button to press.
 
+## How sorting works
+
+Apple's Vision framework looks at each photo in a small helper, `ucut-vision`, which stays open while there's work to do, because loading its models is the slow part. It gives a feature print, labels, faces, an aesthetics score and where the subject is. Clips are sampled at up to five frames, and the scene they show most wins.
+
+[`packages/classify`](../packages/classify) turns those signals into scenes, finds near-copies and groups moments. These results are stored with the file, so each photo is read once. Without the helper, such as on Linux, everything else still works and the sort view shows moments only.
+
+The planner then uses the results: it leaves out hidden scenes, keeps only the best of a run of near-copies, favours better photos, opens on the best shot, and keeps each photo's subject in frame.
+
+A correction made in the sort view is saved on your computer, so nearly identical photos sort themselves next time. [ADR 0016](decisions/0016-scenes-from-apple-vision.md) has the accuracy figures.
+
 ## What happens when you export
 
 1. The browser saves the plan and calls `POST /api/jobs/:id/export`.

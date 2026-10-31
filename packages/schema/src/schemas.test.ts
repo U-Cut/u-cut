@@ -93,7 +93,8 @@ describe("MediaItem", () => {
 
   it("treats null as not analysed yet", () => {
     const item = fixture("media-item");
-    item.quality = { sharpness: null, exposure: null, faces: null, dupGroup: null };
+    item.quality = { sharpness: null, exposure: null, faces: null, dupGroup: null, score: null };
+    item.focus = null;
     item.moment = null;
     item.labels = [];
     expect(validate(MediaItem, item, "media.json")).toMatchObject({ ok: true });

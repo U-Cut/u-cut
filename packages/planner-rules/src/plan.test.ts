@@ -11,7 +11,8 @@ function photo(id: string, takenAt?: string): MediaItem {
     w: 3024,
     h: 4032,
     orientation: 1,
-    quality: { sharpness: null, exposure: null, faces: null, dupGroup: null },
+    quality: { sharpness: null, exposure: null, faces: null, dupGroup: null, score: null },
+    focus: null,
     labels: [],
     moment: null,
     ...(takenAt ? { takenAt } : {}),
@@ -56,6 +57,7 @@ function input(items: MediaItem[], overrides: Partial<PlannerInput> = {}): Plann
     duration: 15,
     music: { src: "hype.m4a", length: 60, beats: beats(120) },
     copy: { title: "" },
+    excludedScenes: [],
     recipe: null,
     seed: 7,
     ...overrides,
@@ -197,6 +199,75 @@ describe("planRules", () => {
 
   it("shows no text when there is nothing true to say", () => {
     expect(planRules(input(many(4))).texts).toEqual([]);
+  });
+
+  describe("with sorted media", () => {
+    const labelled = (id: string, scene: string, score: number | null = null): MediaItem => ({
+      ...photo(id),
+      labels: [{ id: scene, score: 0.9 }],
+      quality: { sharpness: null, exposure: null, faces: null, dupGroup: null, score },
+    });
+
+    it("leaves out hidden scenes", () => {
+      const items = [labelled("a", "beach"), labelled("b", "documents"), labelled("c", "food")];
+      const plan = planRules(input(items, { excludedScenes: ["documents", "food"] }));
+      expect(plan.shots.map((shot) => shot.media)).toEqual(["a"]);
+    });
+
+    it("explains when every photo is hidden", () => {
+      const items = [labelled("a", "documents")];
+      expect(() => planRules(input(items, { excludedScenes: ["documents"] }))).toThrow(
+        "Every photo is hidden",
+      );
+    });
+
+    it("uses only the best of a run of near-identical photos", () => {
+      const twin = (id: string, score: number): MediaItem => ({
+        ...photo(id),
+        quality: { sharpness: null, exposure: null, faces: null, dupGroup: "burst", score },
+      });
+      const plan = planRules(input([twin("a", 0.1), twin("b", 0.8), twin("c", 0.3)]));
+      expect(plan.shots.map((shot) => shot.media)).toEqual(["b"]);
+    });
+
+    it("opens on the best shot", () => {
+      const items = [...many(20), labelled("star", "beach", 0.99)];
+      const scored = items.map((item, index) =>
+        item.id === "star"
+          ? item
+          : { ...item, quality: { ...item.quality, score: (index % 5) / 10 } },
+      );
+      expect(planRules(input(scored, { duration: 45 })).shots[0]?.media).toBe("star");
+    });
+
+    it("favours better photos without always picking the same ones", () => {
+      const items = many(60).map((item, index) => ({
+        ...item,
+        quality: { ...item.quality, score: index % 2 === 0 ? 0.9 : -0.9 },
+      }));
+      const good = new Set(
+        items.filter((item) => item.quality.score === 0.9).map((item) => item.id),
+      );
+      const plan = planRules(input(items, { duration: 15 }));
+      const share = plan.shots.filter((shot) => good.has(shot.media)).length / plan.shots.length;
+      expect(share).toBeGreaterThan(0.8);
+      const other = planRules(input(items, { duration: 15, seed: 8 }));
+      expect(other.shots.map((shot) => shot.media)).not.toEqual(
+        plan.shots.map((shot) => shot.media),
+      );
+    });
+
+    it("keeps the subject in frame when cropping", () => {
+      const item = { ...photo("a"), focus: { x: 0.2, y: 0.7 } };
+      expect(planRules(input([item])).shots[0]?.focus).toEqual({ x: 0.2, y: 0.7 });
+    });
+
+    it("pushes in towards the subject, not off to one side", () => {
+      const items = many(30).map((item) => ({ ...item, focus: { x: 0.9, y: 0.5 } }));
+      const pushes = planRules(input(items)).shots.filter((shot) => shot.motion.type === "push-in");
+      expect(pushes.length).toBeGreaterThan(0);
+      for (const shot of pushes) expect(shot.motion.to.x).toBeGreaterThan(0.5);
+    });
   });
 
   it("keeps a photo framed so the edges never show", () => {

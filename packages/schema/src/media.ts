@@ -19,7 +19,11 @@ export const MediaItem = z.strictObject({
     exposure: unit.nullable(),
     faces: z.number().int().min(0).nullable(),
     dupGroup: z.string().min(1).nullable(),
+    /** How good a photo this is, from Apple's aesthetics model. */
+    score: z.number().min(-1).max(1).nullable(),
   }),
+  /** Where the subject is, from 0 to 1 across and down the frame. */
+  focus: z.strictObject({ x: unit, y: unit }).nullable(),
   labels: z.array(z.strictObject({ id: z.string().min(1), score: unit })).max(3),
   moment: z.string().min(1).nullable(),
 });

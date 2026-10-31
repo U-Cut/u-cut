@@ -6,6 +6,7 @@ import type { useReel } from "../reel";
 import { ExportSheet } from "./ExportSheet";
 import { Filmstrip } from "./Filmstrip";
 import { MuteIcon, PauseIcon, PlayIcon, RedoIcon, SoundIcon, UndoIcon } from "./icons";
+import { Sort } from "./Sort";
 import { Stage, type StageHandle } from "./Stage";
 
 type Reel = ReturnType<typeof useReel>;
@@ -69,6 +70,7 @@ export function Studio({ catalog, reel }: Props) {
   const [playing, setPlaying] = useState(true);
   const [muted, setMuted] = useState(false);
   const [flash, setFlash] = useState(0);
+  const [sorting, setSorting] = useState(false);
 
   const plan = now?.plan;
   const onTime = useCallback(
@@ -91,7 +93,7 @@ export function Studio({ catalog, reel }: Props) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
-      if (["INPUT", "TEXTAREA"].includes(target.tagName) || state.render) return;
+      if (["INPUT", "TEXTAREA"].includes(target.tagName) || state.render || sorting) return;
       const command = event.metaKey || event.ctrlKey;
       if (event.code === "Space" && target.tagName !== "BUTTON") {
         event.preventDefault();
@@ -114,7 +116,7 @@ export function Studio({ catalog, reel }: Props) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [actions, plan, remix, state.render]);
+  }, [actions, plan, remix, sorting, state.render]);
 
   if (!now || !plan) return null;
   const { settings } = now;
@@ -266,6 +268,9 @@ export function Studio({ catalog, reel }: Props) {
           <p>
             {Math.round(plan.duration)} seconds, {plan.shots.length} shots
           </p>
+          <button type="button" className="button-text" onClick={() => setSorting(true)}>
+            Sort your photos
+          </button>
           <button type="button" className="button-text" onClick={() => picker.current?.click()}>
             Add photos or clips
           </button>
@@ -294,6 +299,16 @@ export function Studio({ catalog, reel }: Props) {
       />
 
       {state.render ? <ExportSheet render={state.render} onClose={actions.cancelExport} /> : null}
+      {sorting ? (
+        <Sort
+          catalog={catalog}
+          items={state.items}
+          excluded={settings.excludedScenes}
+          onExcluded={actions.setExcluded}
+          onScene={(item, scene) => void actions.setScene(item, scene)}
+          onClose={() => setSorting(false)}
+        />
+      ) : null}
     </div>
   );
 }

@@ -16,7 +16,8 @@ function item(id: string, kind: "photo" | "video"): MediaItem {
     w: 1080,
     h: 1920,
     orientation: 1,
-    quality: { sharpness: null, exposure: null, faces: null, dupGroup: null },
+    quality: { sharpness: null, exposure: null, faces: null, dupGroup: null, score: null },
+    focus: null,
     labels: [],
     moment: null,
     ...(kind === "video" ? { duration: 10 } : {}),
@@ -46,6 +47,7 @@ const plan: EditPlan = {
         to: { x: 0.6, y: 0.5, scale: 1.2 },
       },
       crop: { x: 0, y: 0, w: 1, h: 1 },
+      focus: { x: 0.5, y: 0.3 },
     },
     {
       media: "b",
@@ -59,6 +61,7 @@ const plan: EditPlan = {
         to: { x: 0.5, y: 0.5, scale: 1 },
       },
       crop: { x: 0, y: 0, w: 1, h: 1 },
+      focus: { x: 0.5, y: 0.3 },
     },
   ],
   texts: [{ text: 'Rock & "roll" <3', start: 0.1, end: 1.9, style: "title" }],
@@ -92,7 +95,7 @@ describe("composeHtml", () => {
     expect(html).toContain(
       '<img id="s0" class="clip shot" src="assets/a.bin" data-start="0" data-duration="2"',
     );
-    expect(html).toContain("#s0{animation:s0 2s linear both;z-index:1}");
+    expect(html).toContain("#s0{animation:s0 2s linear both;z-index:1;object-position:50% 30%}");
     expect(html).toContain("@keyframes s0{from{transform:translate(0%,0%) scale(1)}");
     expect(html).toContain("to{transform:translate(-12%,0%) scale(1.2)}");
   });

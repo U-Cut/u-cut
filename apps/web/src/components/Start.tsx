@@ -30,6 +30,7 @@ export function Start({ catalog, items, ready, arriving, onFiles, onSamples }: P
       duration: 14,
       seed: 4,
       title: "Your reel",
+      excludedScenes: [],
     });
   }, [catalog]);
 

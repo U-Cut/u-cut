@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type BeatGrid, TemplateManifest, type Vibe, validate } from "@u-cut/schema";
+import { parse } from "yaml";
 import { repoRoot } from "./paths.ts";
 
 export interface Track {
@@ -69,6 +70,31 @@ export function loadTemplates(): Template[] {
       return { manifest: result.value, css: readFileSync(join(folder, "style.css"), "utf8") };
     })
     .sort((a, b) => a.manifest.name.localeCompare(b.manifest.name));
+}
+
+export interface Scene {
+  id: string;
+  label: string;
+  group: string;
+  hiddenByDefault?: boolean;
+}
+
+interface Taxonomy {
+  groups: Record<string, { id: string; label: string; exclude_by_default?: boolean }[]>;
+}
+
+/** Every scene a photo can be sorted into, from classifiers/taxonomy.yaml. */
+export function loadScenes(): Scene[] {
+  const text = readFileSync(join(repoRoot, "classifiers/taxonomy.yaml"), "utf8");
+  const { groups } = parse(text) as Taxonomy;
+  return Object.entries(groups).flatMap(([group, scenes]) =>
+    scenes.map((scene) => ({
+      id: scene.id,
+      label: scene.label,
+      group,
+      ...(scene.exclude_by_default ? { hiddenByDefault: true } : {}),
+    })),
+  );
 }
 
 export function findTemplate(id: string): Template {

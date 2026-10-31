@@ -9,6 +9,7 @@ import { ingest, type Skipped } from "./ingest.ts";
 import { findTemplate, loadTracks, trackBeats } from "./library.ts";
 import { jobsDir } from "./paths.ts";
 import { type Quality, renderPlan } from "./render.ts";
+import { sortMedia } from "./sort.ts";
 import { storeFile } from "./store.ts";
 
 export interface MakeOptions {
@@ -23,7 +24,11 @@ export interface MakeOptions {
   quality: Quality;
   music?: string;
   workers?: number;
+  excludedScenes?: string[];
 }
+
+/** Screenshots rarely belong in a reel, so they're left out until someone adds them back. */
+export const defaultExcludedScenes = ["documents"];
 
 export type MakeEvent =
   | { type: "stage"; stage: string }
@@ -33,7 +38,9 @@ export type MakeEvent =
 
 export function planFor(
   items: MediaItem[],
-  options: Pick<MakeOptions, "template" | "vibe" | "aspect" | "duration" | "seed" | "title">,
+  options: Pick<MakeOptions, "template" | "vibe" | "aspect" | "duration" | "seed" | "title"> & {
+    excludedScenes?: string[];
+  },
   music: Parameters<typeof planRules>[0]["music"],
 ): EditPlan {
   const plan = planRules({
@@ -44,6 +51,7 @@ export function planFor(
     duration: options.duration,
     music,
     copy: { title: options.title },
+    excludedScenes: options.excludedScenes ?? defaultExcludedScenes,
     recipe: null,
     seed: options.seed,
   });
@@ -80,17 +88,22 @@ export async function make(
   });
   logSkipped(skipped, onEvent);
 
+  onEvent({ type: "stage", stage: "Sorting your media" });
+  const sorted = await sortMedia(items, (done, total) => {
+    onEvent({ type: "progress", stage: "Sorting your media", progress: done / total });
+  });
+
   onEvent({ type: "stage", stage: "Planning the edit" });
   const music = await musicFor(options);
-  const plan = planFor(items, options, music);
+  const plan = planFor(sorted, options, music);
   const job = createHash("sha256").update(JSON.stringify(plan)).digest("hex").slice(0, 12);
   const jobDir = join(jobsDir(), job);
   await mkdir(jobDir, { recursive: true });
   await writeFile(join(jobDir, "plan.json"), `${JSON.stringify(plan, null, 2)}\n`);
-  await writeFile(join(jobDir, "media.json"), `${JSON.stringify(items, null, 2)}\n`);
+  await writeFile(join(jobDir, "media.json"), `${JSON.stringify(sorted, null, 2)}\n`);
 
   onEvent({ type: "stage", stage: "Rendering" });
-  const result = await renderPlan(plan, items, {
+  const result = await renderPlan(plan, sorted, {
     quality: options.quality,
     projectDir: join(jobDir, "project"),
     ...(options.workers ? { workers: options.workers } : {}),
