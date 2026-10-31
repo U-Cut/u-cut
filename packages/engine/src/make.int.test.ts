@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -181,5 +181,34 @@ describe("composed projects", () => {
       { encoding: "utf8" },
     );
     expect(Number(/average:([\d.]+)/.exec(diff)?.[1])).toBeLessThan(45);
+  });
+});
+
+describe("repeatability", () => {
+  it("makes a byte-identical plan and a visually identical render", async () => {
+    const homes = [join(home, "first"), join(home, "second")];
+    const outputs: string[] = [];
+    const plans: string[] = [];
+    for (const [index, folder] of homes.entries()) {
+      process.env.UCUT_HOME = folder;
+      const output = join(home, `repeat-${index}.mp4`);
+      let job = "";
+      await make({ ...defaults, seed: 9, inputs: [samplesDir], output }, (event) => {
+        if (event.type === "done") job = event.job;
+      });
+      outputs.push(output);
+      plans.push(readFileSync(join(job, "plan.json"), "utf8"));
+    }
+    process.env.UCUT_HOME = home;
+    expect(plans[0]).toBe(plans[1]);
+    const report = execFileSync(
+      "bash",
+      [
+        "-c",
+        `ffmpeg -hide_banner -i "${outputs[0]}" -i "${outputs[1]}" -lavfi ssim -f null - 2>&1 | grep All`,
+      ],
+      { encoding: "utf8" },
+    );
+    expect(Number(/All:([\d.]+)/.exec(report)?.[1])).toBeGreaterThanOrEqual(0.995);
   });
 });

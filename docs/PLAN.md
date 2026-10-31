@@ -10,6 +10,23 @@
 
 **Spec:** [docs/BRIEF.md](BRIEF.md). Where this plan differs, [docs/decisions/](decisions/) records why.
 
+## Status
+
+Updated 2026-11-01.
+
+| Phase                                  | State                                                                                                                                                                                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0. Scaffold                            | Done                                                                                                                                                                                                                            |
+| 1. Engine MVP, no AI                   | Done, except a golden render stored between commits. Repeat renders are compared in `pnpm test:int` instead. Not yet run on real phone media                                                                                    |
+| 2. Classification                      | Not started. Next                                                                                                                                                                                                               |
+| 3. Mac app MVP                         | Partly done, and changed. One web interface runs in the browser and the Mac app ([ADR 0012](decisions/0012-one-interface-everywhere.md)). Still to do: the sort view, job history, and a first-run setup that needs no Terminal |
+| 4. Reference reels                     | Not started                                                                                                                                                                                                                     |
+| 5. Screen recordings and plain English | Not started                                                                                                                                                                                                                     |
+| 6. Planner lanes                       | Not started                                                                                                                                                                                                                     |
+| 7. Ship                                | Partly done: three of eight templates, and an install script. No `.dmg` yet                                                                                                                                                     |
+
+**Added since the brief:** `ucut serve` with a fair export queue, `--lan` sharing, Docker, and a 20-person load test ([ADR 0013](decisions/0013-browser-plans-server-exports.md)).
+
 ## Global Constraints
 
 - Local-first: zero network calls during analysis, planning and rendering in default lanes.
@@ -63,11 +80,10 @@ All run on the owner's Mac (A18 Pro, 8 GB, macOS 26.5) with throwaway projects.
 
 ## Questions for the owner
 
-Nothing blocks Phases 0 to 2.
+Nothing blocks Phase 2.
 
-1. Is `github.com/mayank29deo/U-Cut`, public, the right home? Pushing needs an empty repo created at github.com/new, or `gh` installed and logged in.
-2. Is the libvips LGPL exception fine ([0009](decisions/0009-licence-exceptions.md))?
-3. By Phase 7: will there be a paid Apple Developer account for signed releases?
+1. Is the libvips LGPL exception fine ([0009](decisions/0009-licence-exceptions.md))?
+2. By Phase 7: will there be a paid Apple Developer account for signed releases?
 
 ---
 

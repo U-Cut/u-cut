@@ -1,65 +1,133 @@
 # U-Cut
 
-**Turn what's already on your phone into a finished vertical reel. Free, open source, and entirely on your Mac.**
+**Drop in your photos and clips. Get a finished reel, cut to music, in seconds. Free, open source, and it all runs on your own computer.**
 
-> **Status: early scaffold.** U-Cut can't make a video yet. The engine arrives in Phase 1 of the [plan](docs/PLAN.md).
+![U-Cut's editing screen: four vibes on the left, the reel playing in the middle, its settings on the right and a strip of shots along the bottom](docs/images/studio.jpg)
 
-## What it will do
+## Get started
 
-Drop in any of these and get an MP4 back, with no timeline to learn:
+You need a Mac with Apple Silicon. Paste this into Terminal:
 
-| You bring                   | U-Cut                                                                                 |
-| --------------------------- | ------------------------------------------------------------------------------------- |
-| A pile of photos and clips  | Sorts them into scenes, picks the best shots, and cuts them to music                  |
-| A reel you admire           | Studies its rhythm, text and colour, then rebuilds that structure with your own media |
-| A screen recording          | Makes a product demo with zooms, captions and an end card                             |
-| A sentence in plain English | Writes a script, voices it locally, and builds the reel                               |
+```bash
+curl -fsSL https://raw.githubusercontent.com/mayank29deo/U-Cut/main/install.sh | bash
+```
 
-## What makes it different
+The installer sets everything up, including FFmpeg and Node if you don't have them. Then open **U-Cut** from your Applications folder, or type `ucut`.
 
-- **Local.** Your media stays on your Mac. Analysis, voice and rendering all run on your machine.
-- **Free.** No per-render fees and no account needed. Claude is optional: if you already use Claude Code, U-Cut's plugin lets you direct your reels with it.
-- **Open.** Apache-2.0 code, and community templates that anyone can add.
+No files to hand? Press **Try it with sample photos**.
 
-U-Cut learns the _structure_ of a reference reel. It never reuses that reel's footage or audio.
+## What it does today
 
-## Set up for development
+| You want to                                                                      | Status                    |
+| -------------------------------------------------------------------------------- | ------------------------- |
+| Turn photos and clips into a reel cut to music                                   | **Works today**           |
+| Remix, switch vibe, change the shape, edit the title, swap a shot, undo anything | **Works today**           |
+| Export an MP4 balanced for phones                                                | **Works today**           |
+| Use it as a Mac app, in a browser, or from the command line                      | **Works today**           |
+| Share one computer between up to 20 people on your network                       | **Works today**           |
+| Use your own music                                                               | Command line only for now |
+| Sort photos into scenes such as beaches, cafés and flights                       | Coming next               |
+| Copy the style of a reel you admire                                              | Planned                   |
+| Turn a screen recording into a product demo                                      | Planned                   |
+| Write a reel from a sentence                                                     | Planned                   |
 
-You need macOS 15+ on Apple Silicon, Node 22+, FFmpeg, and the Xcode Command Line Tools. Xcode itself isn't required.
+The [plan](docs/PLAN.md) has the full roadmap.
+
+## How to use it
+
+Everything is the same reel engine underneath, so pick whichever way suits you.
+
+**As a Mac app.** Open U-Cut from Applications.
+
+**In your browser, on any computer.** Run `ucut`. It opens at <http://localhost:4173>.
+
+**From the command line.**
+
+```bash
+ucut make ~/Pictures/Goa --vibe hype --title "Goa, day one" -o goa.mp4
+```
+
+Run `ucut make --help` for every option.
+
+**With Docker, on Linux or anywhere else.**
+
+```bash
+docker build -t u-cut https://github.com/mayank29deo/U-Cut.git
+docker run --rm -p 4173:4173 -v u-cut-data:/data u-cut
+```
+
+**With other people on your network.**
+
+```bash
+ucut serve --lan
+```
+
+This prints a private link to share. Everyone edits instantly on their own screen, and exports take turns fairly. [Here's how that works](docs/ARCHITECTURE.md).
+
+Stuck? [The install guide](docs/INSTALL.md) covers updating, uninstalling and common problems. `ucut doctor` checks your setup.
+
+## Good to know
+
+- **Your files stay with you.** Nothing is uploaded anywhere. A test blocks the network and makes a full reel to prove it.
+- **It's free.** There are no accounts and no per-render fees. Claude is optional, and the plugin for people who use Claude Code arrives in a later phase.
+- **It's fast on ordinary Macs.** On an 8 GB MacBook, a 27-second reel took 27 seconds to export.
+- **Reels are yours.** The bundled music and sample photos are CC0, so you can post your reels anywhere.
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[Your photos and clips] --> B[Read and store]
+    B --> C[Plan the cut on the beat]
+    C --> D[Compose]
+    D --> E[Live preview in your browser]
+    D --> F[Render every frame]
+    F --> G[Balance the sound]
+    G --> H[Your MP4]
+```
+
+The plan is a small JSON file. The same plan produces the preview and the final video, so what you see is what you export. Remixing is just making a new plan, which takes a few milliseconds in your browser.
+
+[The architecture guide](docs/ARCHITECTURE.md) explains the whole system. [The design guide](docs/DESIGN.md) explains how the interface is made.
+
+## Find your way around
+
+| Folder                                             | What's inside                                                             |
+| -------------------------------------------------- | ------------------------------------------------------------------------- |
+| [`apps/web`](apps/web)                             | The interface, built with React. The Mac app and browsers both show this. |
+| [`apps/mac`](apps/mac)                             | The native Mac app that hosts the interface.                              |
+| [`packages/engine`](packages/engine)               | The `ucut` command, the media pipeline and the server.                    |
+| [`packages/planner-rules`](packages/planner-rules) | Decides what goes where. Runs in the browser.                             |
+| [`packages/compose`](packages/compose)             | Turns a plan into the composition that gets previewed and rendered.       |
+| [`packages/schema`](packages/schema)               | The shape of every data file, for TypeScript and Swift.                   |
+| [`templates`](templates)                           | Styles of reel. [Adding one](templates/README.md) takes five minutes.     |
+| [`library`](library)                               | Music, fonts and sample photos, each with its licence.                    |
+| [`docs/decisions`](docs/decisions)                 | Why things are the way they are.                                          |
+
+## Build it yourself
 
 ```bash
 git clone https://github.com/mayank29deo/U-Cut.git
 cd U-Cut
 corepack enable
 pnpm install
-pnpm check
-```
-
-`pnpm check` runs lint, typecheck, tests and the licence scan.
-
-To build the command-line tool and try it:
-
-```bash
 pnpm build
-node packages/engine/dist/bin.js --version
+node packages/engine/dist/bin.js setup
+pnpm start
 ```
 
-To build and open the Mac app shell:
+| Command             | What it does                                             |
+| ------------------- | -------------------------------------------------------- |
+| `pnpm check`        | Lint, types, unit tests and the licence scan             |
+| `pnpm test:int`     | Real reels with real FFmpeg and Chrome                   |
+| `pnpm test:e2e`     | Clicks through the whole app in a real browser           |
+| `pnpm test:privacy` | Makes a reel with the network blocked                    |
+| `pnpm load-test`    | Simulates 20 people at once and reports what they'd feel |
 
-```bash
-scripts/bundle-app.sh
-open dist/U-Cut.app
-```
+## Contribute
 
-## Project guide
-
-| Read                               | For                             |
-| ---------------------------------- | ------------------------------- |
-| [docs/BRIEF.md](docs/BRIEF.md)     | The full product brief          |
-| [docs/PLAN.md](docs/PLAN.md)       | The build plan, phase by phase  |
-| [docs/decisions/](docs/decisions/) | Why things are the way they are |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute               |
+Better music is the easiest way to help: our starter tracks are synthesised to prove the pipeline. New templates are next. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licence
 
-Code is [Apache-2.0](LICENSE). Each bundled asset lists its own licence in `assets.json`.
+Code is [Apache-2.0](LICENSE). Each bundled asset lists its own licence in the `assets.json` beside it.

@@ -4,7 +4,11 @@ Thanks for helping. U-Cut is early, so read the [plan](docs/PLAN.md) first to se
 
 ## Set up
 
-Follow the steps in the [README](README.md#set-up-for-development). Run `pnpm check` before you open a pull request.
+Follow the steps in the [README](README.md#build-it-yourself). Then run the app with `pnpm start`. To work on the interface with live reload, run `pnpm start` in one terminal and `pnpm --filter @u-cut/web dev` in another.
+
+Before you open a pull request, run `pnpm check`. If you changed the engine, run `pnpm test:int` too. If you changed the interface, run `pnpm test:e2e ./shots` and look at the screenshots.
+
+New here? [How U-Cut works](docs/ARCHITECTURE.md) explains the system and [the design guide](docs/DESIGN.md) explains the interface.
 
 ## Sign your commits
 

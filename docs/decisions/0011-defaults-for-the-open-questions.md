@@ -14,7 +14,7 @@ Status: accepted until the owner says otherwise
 
 The brief's speed targets assume an M1 with 16 GB. The owner's Mac is an A18 Pro with 8 GB, which is closer to what many everyday users have. We report results on this Mac as well, and tune worker counts for 8 GB.
 
-Early numbers on this Mac, from synthetic media (real footage will be slower): an 8 s reel took 12 s at draft and 15 s at the `looks` quality level, which suggests about 1 minute for a 30 s reel.
+Measured with the finished engine on this Mac: a 26.7 s reel from photos exported in 26.6 s, and an 18.6 s reel from 4K HEVC clips in 41.7 s. Both beat the brief's target of 3 minutes for 30 s.
 
 ## Commit identity
 

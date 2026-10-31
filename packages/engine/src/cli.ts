@@ -81,8 +81,18 @@ const serveCommand = defineCommand({
     },
     open: { type: "boolean", default: true, description: "Open the browser" },
     json: { type: "boolean", default: false, description: "Print the address as JSON" },
+    "exit-with-parent": {
+      type: "boolean",
+      default: false,
+      description: "Stop when whatever started this closes its input",
+    },
   },
   async run({ args }) {
+    if (args["exit-with-parent"]) {
+      // A force-quit app can't tell us it's gone, but its end of this pipe always closes.
+      process.stdin.resume();
+      process.stdin.on("close", () => process.exit(0));
+    }
     const { url, lanUrl } = await serve({
       port: Number(args.port),
       lan: args.lan,

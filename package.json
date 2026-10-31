@@ -20,7 +20,8 @@
     "test:int": "vitest run --config vitest.int.config.ts",
     "load-test": "tsx --conditions=source scripts/load-test.ts",
     "start": "node --conditions=source --import tsx packages/engine/src/bin.ts",
-    "test:e2e": "tsx --conditions=source scripts/e2e.ts"
+    "test:e2e": "tsx --conditions=source scripts/e2e.ts",
+    "test:privacy": "scripts/privacy-test.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",

@@ -2,12 +2,14 @@
 # Installs U-Cut. Run it with:
 #   curl -fsSL https://raw.githubusercontent.com/mayank29deo/U-Cut/main/install.sh | bash
 #
-# Change where it goes with UCUT_DIR (the code) and UCUT_BIN (the `ucut` command).
+# Change where it goes with UCUT_DIR (the code), UCUT_BIN (the `ucut` command) and UCUT_APPS
+# (the Mac app).
 set -euo pipefail
 
 repo="${UCUT_REPO:-https://github.com/mayank29deo/U-Cut.git}"
 dir="${UCUT_DIR:-$HOME/.u-cut}"
 bin="${UCUT_BIN:-$HOME/.local/bin}"
+apps="${UCUT_APPS:-$HOME/Applications}"
 minimum_node=22
 
 say() { printf '\n\033[1m%s\033[0m\n' "$1"; }
@@ -72,10 +74,10 @@ chmod +x "$bin/ucut"
 if [ "$(uname)" = "Darwin" ] && have swift; then
   say "Building the Mac app"
   if scripts/bundle-app.sh >/dev/null 2>&1; then
-    mkdir -p "$HOME/Applications"
-    rm -rf "$HOME/Applications/U-Cut.app"
-    cp -R dist/U-Cut.app "$HOME/Applications/U-Cut.app"
-    echo "Added U-Cut to $HOME/Applications"
+    mkdir -p "$apps"
+    rm -rf "$apps/U-Cut.app"
+    cp -R dist/U-Cut.app "$apps/U-Cut.app"
+    echo "Added U-Cut to $apps"
   else
     echo "The Mac app didn't build. U-Cut still works in your browser."
   fi

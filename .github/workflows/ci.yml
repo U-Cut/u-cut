@@ -26,3 +26,50 @@ jobs:
       - name: Check DCO sign-offs
         if: github.event_name == 'pull_request'
         run: scripts/check-dco.sh "origin/${{ github.base_ref }}"
+
+  reels:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: brew install ffmpeg
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: node packages/engine/dist/bin.js setup
+      - name: Real reels, messy phone media, every template
+        run: pnpm test:int
+      - name: Make a reel with the network blocked
+        run: pnpm test:privacy
+      - name: Install Chrome for the browser test
+        run: |
+          installed="$(npx --yes @puppeteer/browsers install chrome@stable --path "$RUNNER_TEMP/chrome" | tail -1)"
+          echo "CHROME_PATH=${installed#* }" >> "$GITHUB_ENV"
+      - name: Click through the app in a real browser
+        run: pnpm test:e2e
+      - name: Five people at once
+        run: pnpm load-test --users 5 --seconds 3
+
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t u-cut .
+      - name: Make a reel inside the container
+        run: |
+          docker run --rm -v "$PWD/out:/out" u-cut \
+            node packages/engine/dist/bin.js make library/samples -o /out/reel.mp4 \
+            --duration 4 --quality draft
+          test -s out/reel.mp4
+      - name: Serve the interface from the container
+        run: |
+          docker run -d --name ucut -p 4173:4173 u-cut
+          for attempt in $(seq 1 30); do
+            curl -fsS http://localhost:4173/api/status && break
+            sleep 1
+          done
+          curl -fsS http://localhost:4173/ | grep -q '<div id="app">'

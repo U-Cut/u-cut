@@ -1,6 +1,6 @@
 # 0009. Licence exceptions
 
-Status: accepted, pending the owner's nod on the first item
+Status: accepted. The first item still needs the owner's nod.
 
 The brief says no non-permissive dependency without asking. Two come in transitively through tools the brief itself mandates.
 

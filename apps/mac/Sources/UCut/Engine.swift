@@ -11,8 +11,25 @@ final class Engine: ObservableObject {
 
     @Published private(set) var state: State = .starting
     private var process: Process?
+    /// Held open for the life of the app. If the app dies, the engine sees this close and stops.
+    private let lifeline = Pipe()
 
     func start() {
+        Task {
+            // U-Cut may already be running in the browser. Share it instead of starting another.
+            if let url = URL(string: "http://localhost:4173"),
+                let status = url.appending(path: "api/status") as URL?,
+                let (_, response) = try? await URLSession.shared.data(from: status),
+                (response as? HTTPURLResponse)?.statusCode == 200
+            {
+                state = .running(url)
+            } else {
+                launch()
+            }
+        }
+    }
+
+    private func launch() {
         guard let root = Self.engineRoot() else {
             state = .failed("U-Cut's engine isn't installed. Run the installer from the U-Cut README, then open this app again.")
             return
@@ -20,9 +37,13 @@ final class Engine: ObservableObject {
         let process = Process()
         let output = Pipe()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["node", "packages/engine/dist/bin.js", "serve", "--no-open", "--json", "--port", "4173"]
+        process.arguments = [
+            "node", "packages/engine/dist/bin.js", "serve", "--no-open", "--json", "--port", "4173",
+            "--exit-with-parent",
+        ]
         process.currentDirectoryURL = root
         process.standardOutput = output
+        process.standardInput = lifeline
         process.environment = Self.environment()
         output.fileHandleForReading.readabilityHandler = { [weak self] handle in
             guard let line = String(data: handle.availableData, encoding: .utf8),
