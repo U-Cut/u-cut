@@ -283,17 +283,20 @@ public struct EditPlan: Codable, Sendable, Equatable {
         public var src: String
         public var bpm: Double?
         public var start: Double
+        public var length: Double
 
-        public init(src: String, bpm: Double? = nil, start: Double) {
+        public init(src: String, bpm: Double? = nil, start: Double, length: Double) {
             self.src = src
             self.bpm = bpm
             self.start = start
+            self.length = length
         }
 
         private enum CodingKeys: String, CodingKey {
             case src
             case bpm
             case start
+            case length
         }
 
         public func encode(to encoder: any Encoder) throws {
@@ -301,6 +304,19 @@ public struct EditPlan: Codable, Sendable, Equatable {
             try container.encode(src, forKey: .src)
             try container.encode(bpm, forKey: .bpm)
             try container.encode(start, forKey: .start)
+            try container.encode(length, forKey: .length)
+        }
+    }
+
+    public struct Grade: Codable, Sendable, Equatable {
+        public var temp: Double
+        public var contrast: Double
+        public var sat: Double
+
+        public init(temp: Double, contrast: Double, sat: Double) {
+            self.temp = temp
+            self.contrast = contrast
+            self.sat = sat
         }
     }
 
@@ -448,13 +464,14 @@ public struct EditPlan: Codable, Sendable, Equatable {
     public var seed: Int
     public var duration: Double
     public var music: Music
+    public var grade: Grade
     public var voice: [Voice]?
     public var shots: [Shot]
     public var texts: [Text]
     public var transitions: [Transition]
     public var sfx: [Sfx]
 
-    public init(schemaVersion: Int, template: String, vibe: Vibe, aspect: Aspect, fps: Int, seed: Int, duration: Double, music: Music, voice: [Voice]? = nil, shots: [Shot], texts: [Text], transitions: [Transition], sfx: [Sfx]) {
+    public init(schemaVersion: Int, template: String, vibe: Vibe, aspect: Aspect, fps: Int, seed: Int, duration: Double, music: Music, grade: Grade, voice: [Voice]? = nil, shots: [Shot], texts: [Text], transitions: [Transition], sfx: [Sfx]) {
         self.schemaVersion = schemaVersion
         self.template = template
         self.vibe = vibe
@@ -463,6 +480,7 @@ public struct EditPlan: Codable, Sendable, Equatable {
         self.seed = seed
         self.duration = duration
         self.music = music
+        self.grade = grade
         self.voice = voice
         self.shots = shots
         self.texts = texts
