@@ -3,6 +3,7 @@ import type { Aspect, Vibe } from "@u-cut/schema";
 import { defineCommand, renderUsage, runCommand } from "citty";
 import { make } from "./make.ts";
 import type { Quality } from "./render.ts";
+import { serve } from "./server/serve.ts";
 
 const { version } = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -67,23 +68,53 @@ const makeCommand = defineCommand({
   },
 });
 
+const serveCommand = defineCommand({
+  meta: { name: "serve", description: "Open U-Cut in your browser." },
+  args: {
+    port: { type: "string", default: "4173", description: "Port to use" },
+    lan: {
+      type: "boolean",
+      default: false,
+      description: "Let other devices on your network use it",
+    },
+    open: { type: "boolean", default: true, description: "Open the browser" },
+    json: { type: "boolean", default: false, description: "Print the address as JSON" },
+  },
+  async run({ args }) {
+    const { url, lanUrl } = await serve({ port: Number(args.port), lan: args.lan });
+    if (args.json) {
+      console.log(JSON.stringify({ url, lanUrl }));
+    } else {
+      console.log(`U-Cut is running at ${url}`);
+      if (lanUrl) console.log(`Others on your network can use ${lanUrl}`);
+      console.log("Press Ctrl+C to stop.");
+    }
+    if (args.open) {
+      const { default: open } = await import("./open.ts");
+      await open(url);
+    }
+    await new Promise(() => {});
+  },
+});
+
 const main = defineCommand({
   meta: {
     name: "ucut",
     version,
     description: "Turn your photos, clips and recordings into finished reels on your own Mac.",
   },
-  subCommands: { make: makeCommand },
+  subCommands: { make: makeCommand, serve: serveCommand },
 });
 
-const commands = ["make"];
+const commands = ["make", "serve"];
 
 export async function run(argv: string[]): Promise<RunResult> {
   const [first] = argv;
   if (first === "--version" || first === "-v") {
     return { code: 0, stdout: `${version}\n`, stderr: "" };
   }
-  if (first === undefined || first === "--help" || first === "-h") {
+  if (first === undefined) return run(["serve"]);
+  if (first === "--help" || first === "-h") {
     return { code: 0, stdout: `${await renderUsage(main)}\n`, stderr: "" };
   }
   if (!commands.includes(first)) {

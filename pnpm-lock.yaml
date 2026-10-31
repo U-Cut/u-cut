@@ -172,6 +172,12 @@ importers:
       '@types/node':
         specifier: ^22
         version: 22.20.5
+      '@u-cut/planner-rules':
+        specifier: workspace:*
+        version: link:packages/planner-rules
+      '@u-cut/schema':
+        specifier: workspace:*
+        version: link:packages/schema
       tsx:
         specifier: 4.23.15
         version: 4.23.15

@@ -48,19 +48,13 @@ async function engineVersion(): Promise<string> {
 }
 
 /** The same plan at the same quality is the same file, so it's only ever rendered once. */
-export async function renderKey(
-  plan: EditPlan,
-  items: MediaItem[],
-  quality: Quality,
-): Promise<string> {
+export async function renderKey(plan: EditPlan, quality: Quality): Promise<string> {
   const template = findTemplate(plan.template);
   const hash = createHash("sha256");
   hash.update(await engineVersion());
   hash.update(template.css);
   hash.update(quality);
   hash.update(JSON.stringify(plan));
-  for (const id of new Set(plan.shots.map((shot) => shot.media))) hash.update(id);
-  void items;
   return hash.digest("hex").slice(0, 32);
 }
 
@@ -133,7 +127,7 @@ export async function renderPlan(
   options: RenderOptions,
 ): Promise<RenderResult> {
   const quality = options.quality ?? "looks";
-  const key = await renderKey(plan, items, quality);
+  const key = await renderKey(plan, quality);
   const finalPath = join(rendersDir(), `${key}.mp4`);
   const report = options.onProgress ?? (() => {});
   const already = await stat(finalPath).catch(() => undefined);
