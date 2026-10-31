@@ -91,7 +91,15 @@ async function main() {
       String(port),
       "--no-open",
     ],
-    { env: { ...process.env, UCUT_HOME: home }, stdio: "ignore" },
+    {
+      // CI machines have no GPU, so a full-quality export takes them over five minutes.
+      env: {
+        ...process.env,
+        UCUT_HOME: home,
+        ...(process.env.CI ? { UCUT_EXPORT_QUALITY: "draft" } : {}),
+      },
+      stdio: "ignore",
+    },
   );
   const browser = await puppeteer.launch({
     executablePath,

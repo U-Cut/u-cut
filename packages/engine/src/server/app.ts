@@ -457,9 +457,9 @@ export function createApp(options: ServerOptions) {
     const job = await ownedJob(c);
     if (!job) return notFound(c);
     const body = (await c.req.json().catch(() => ({}))) as { quality?: Quality; name?: string };
-    const quality = qualities.includes(body.quality as Quality)
-      ? (body.quality as Quality)
-      : "looks";
+    const quality = [body.quality, process.env.UCUT_EXPORT_QUALITY, "looks"].find((value) =>
+      qualities.includes(value as Quality),
+    ) as Quality;
     const plan = job.plan;
     if (!plan) return c.json({ error: "There's no reel to export yet." }, 409);
     if ((await freeDisk(homeDir())) < minimumFreeDisk) {
