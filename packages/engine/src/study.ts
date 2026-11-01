@@ -13,6 +13,8 @@ import { visionBinary } from "./vision.ts";
 const framesPerSecond = 2;
 const longestStudy = 90;
 const darkEnding = 22;
+/** The longest any one step may take, so a stuck tool can't freeze "Match a reel" for ever. */
+const stepLimitMs = 50_000;
 
 function json<T>(output: string): T {
   return JSON.parse(output.slice(output.indexOf("{"))) as T;
@@ -26,14 +28,15 @@ interface Look {
 }
 
 async function readCuts(path: string): Promise<number[]> {
-  const report = json<{ cuts?: { t: number }[] }>(await hf(["measure", "cuts", path, "--json"]));
+  const output = await hf(["measure", "cuts", path, "--json"], { timeoutMs: stepLimitMs });
+  const report = json<{ cuts?: { t: number }[] }>(output);
   return (report.cuts ?? []).map((cut) => cut.t);
 }
 
 async function readBeats(path: string): Promise<{ beats: number[]; bpm: number | null }> {
   try {
     const output = await hf(["audio", path, "--only", "beats,bpm", "--json"], {
-      timeoutMs: 120_000,
+      timeoutMs: stepLimitMs,
     });
     const [item] =
       json<{ items?: { beats?: { times?: number[] }; bpm?: { value?: number | null } }[] }>(output)
@@ -53,7 +56,7 @@ async function readLook(path: string, start = 0): Promise<Look> {
     "--json",
     ...(start > 0 ? ["--start", String(start)] : []),
   ];
-  return json<Look>(await hf(args));
+  return json<Look>(await hf(args, { timeoutMs: stepLimitMs }));
 }
 
 async function readText(path: string, duration: number): Promise<ReelMeasurements["text"]> {
@@ -76,7 +79,8 @@ async function readText(path: string, duration: number): Promise<ReelMeasurement
       join(folder, "%04d.jpg"),
     ]);
     const frames = (await readdir(folder)).sort().map((name) => join(folder, name));
-    const helper = spawn(binary, ["text"]);
+    // Its log output is ignored: an unread pipe fills up and blocks the helper for good.
+    const helper = spawn(binary, ["text"], { stdio: ["pipe", "pipe", "ignore"] });
     const found = new Map<string, ReelMeasurements["text"][number]["boxes"]>();
     const lines = createInterface({ input: helper.stdout });
     lines.on("line", (line) => {
@@ -87,7 +91,10 @@ async function readText(path: string, duration: number): Promise<ReelMeasurement
       found.set(result.path, result.boxes ?? []);
     });
     helper.stdin.end(`${frames.join("\n")}\n`);
+    // Words are a bonus: a reel can still be matched from its rhythm and colour without them.
+    const stuck = setTimeout(() => helper.kill("SIGKILL"), stepLimitMs);
     await new Promise((resolve) => helper.on("close", resolve));
+    clearTimeout(stuck);
     return frames.map((frame, index) => ({
       at: index / framesPerSecond,
       boxes: found.get(frame) ?? [],

@@ -1,8 +1,9 @@
-import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
+import { type ChildProcessByStdio, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { platform } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
+import type { Readable, Writable } from "node:stream";
 import { repoRoot } from "./paths.ts";
 
 export interface VisionResult {
@@ -36,7 +37,7 @@ export function visionBinary(): string | undefined {
  * It closes itself when idle, which gives its memory back.
  */
 export class Vision {
-  private child: ChildProcessWithoutNullStreams | undefined;
+  private child: ChildProcessByStdio<Writable, Readable, null> | undefined;
   private readonly waiting = new Map<string, (result: VisionResult) => void>();
   private idle: NodeJS.Timeout | undefined;
 
@@ -58,7 +59,8 @@ export class Vision {
 
   private helper() {
     if (this.child) return this.child;
-    const child = spawn(this.binary, ["analyze"]);
+    // Its log output is ignored: an unread pipe fills up and blocks the helper for good.
+    const child = spawn(this.binary, ["analyze"], { stdio: ["pipe", "pipe", "ignore"] });
     createInterface({ input: child.stdout }).on("line", (line) => {
       const result = JSON.parse(line) as VisionResult;
       this.waiting.get(result.path)?.(result);
