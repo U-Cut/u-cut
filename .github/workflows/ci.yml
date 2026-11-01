@@ -74,8 +74,11 @@ jobs:
           fi
           test -s out/reel.mp4
           docker run --rm -v "$PWD/out:/out" u-cut \
-            ffmpeg -hide_banner -nostats -i /out/reel.mp4 -af volumedetect,ebur128 -f null - 2>&1 |
-            grep -E 'mean_volume|max_volume|    I:' | while IFS= read -r line; do echo "::notice::$line"; done
+            ffmpeg -hide_banner -nostats -i /out/reel.mp4 -af ebur128 -f null - 2>&1 |
+            sed -n '/Summary:/,$p' | tee loudness.log
+          loudness="$(sed -n 's/ *I: *\(-[0-9.]*\) LUFS/\1/p' loudness.log)"
+          echo "::notice::A full reel on Linux measures $loudness LUFS"
+          awk -v value="$loudness" 'BEGIN { exit !(value > -15.5 && value < -12.5) }'
       - name: Serve the interface from the container
         run: |
           docker run -d --name ucut -p 4173:4173 u-cut
