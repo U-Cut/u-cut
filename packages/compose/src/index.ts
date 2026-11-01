@@ -9,6 +9,7 @@ export interface ComposeInput {
   assets: {
     media(item: MediaItem): string;
     music(src: string): string;
+    voice?(src: string): string;
   };
   /** The live preview plays the music itself, so it leaves the audio tags out. */
   omitAudio?: boolean;
@@ -134,12 +135,50 @@ function shotHtml(input: ComposeInput): string {
     .join("\n");
 }
 
+/** Words land one at a time, each given a share of the line that matches how long it is. */
+function kineticWords(text: EditPlan["texts"][number], index: number): string {
+  const words = text.text.split(/\s+/).filter(Boolean);
+  const spoken = (text.end - text.start) * 0.86;
+  const letters = words.reduce((sum, word) => sum + word.length + 1, 0);
+  let at = text.start;
+  return words
+    .map((word, place) => {
+      const start = round(at);
+      at += (spoken * (word.length + 1)) / letters;
+      return `<span id="t${index}w${place}" class="clip word" data-start="${start}" data-duration="${round(text.end - start)}" data-track-index="2">${escapeHtml(word)}</span>`;
+    })
+    .join(" ");
+}
+
 function textHtml(plan: EditPlan): string {
   return plan.texts
     .map((text, index) => {
       const timing = `data-start="${text.start}" data-duration="${round(text.end - text.start)}"`;
+      if (text.style === "kinetic") {
+        return `<div id="t${index}" class="clip text text-kinetic" ${timing} data-track-index="2"><p>${kineticWords(text, index)}</p></div>`;
+      }
       return `<div id="t${index}" class="clip text text-${text.style}" ${timing} data-track-index="2"><span>${escapeHtml(text.text)}</span></div>`;
     })
+    .join("\n");
+}
+
+function backdropHtml(plan: EditPlan): string {
+  return (plan.backdrops ?? [])
+    .map((backdrop, index) => {
+      const length = round(backdrop.end - backdrop.start);
+      return `<div id="b${index}" class="clip backdrop" data-start="${backdrop.start}" data-duration="${length}" data-track-index="1" style="--edge:${backdrop.edge};--glow:${backdrop.glow};animation-duration:${length}s"></div>`;
+    })
+    .join("\n");
+}
+
+function voiceHtml(input: ComposeInput): string {
+  const voiceUrl = input.assets.voice;
+  if (!voiceUrl) return "";
+  return (input.plan.voice ?? [])
+    .map(
+      (line, index) =>
+        `<audio id="voice${index}" src="${escapeHtml(voiceUrl(line.src))}" data-start="${line.at}" data-duration="${line.length}" data-media-start="0" data-volume="${line.vol}" data-timeline-role="voice" data-track-index="6"></audio>`,
+    )
     .join("\n");
 }
 
@@ -189,6 +228,10 @@ export function composeParts(input: ComposeInput): Composition {
     ".text{position:absolute;z-index:100;animation:ucut-text .42s cubic-bezier(.2,.8,.2,1) both}",
     "@keyframes ucut-text{from{opacity:0;transform:translateY(calc(26*var(--unit)))}to{opacity:1;transform:none}}",
     ".card{position:absolute;inset:0;z-index:150;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(36*var(--unit));padding:0 8%;text-align:center}",
+    ".backdrop{position:absolute;inset:-12%;background:radial-gradient(circle at 50% 42%,var(--glow) 0%,var(--edge) 68%);animation:ucut-drift linear both}",
+    "@keyframes ucut-drift{from{transform:scale(1)}to{transform:scale(1.14) rotate(3deg)}}",
+    ".word{display:inline-block;animation:ucut-word .24s cubic-bezier(.2,1.3,.4,1) both}",
+    "@keyframes ucut-word{from{opacity:0;transform:translateY(.32em) scale(.94)}to{opacity:1;transform:none}}",
     ".card span{animation:ucut-text .5s cubic-bezier(.2,.8,.2,1) both}",
     ".card img{max-width:44%;max-height:26%;object-fit:contain}",
     fade
@@ -203,11 +246,13 @@ export function composeParts(input: ComposeInput): Composition {
     .join("\n");
 
   const children = [
+    backdropHtml(plan),
     shotHtml(input),
     textHtml(plan),
     cardHtml(input),
     fadeHtml(plan),
     input.omitAudio ? "" : musicHtml(input),
+    input.omitAudio ? "" : voiceHtml(input),
   ]
     .filter(Boolean)
     .join("\n");

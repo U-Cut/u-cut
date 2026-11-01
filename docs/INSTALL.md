@@ -93,15 +93,16 @@ To delete your reels and media too, also remove `~/Movies/U-Cut`.
 
 Start with `ucut doctor`. It checks Node, FFmpeg, the rendering browser and disk space.
 
-| Problem                                     | Fix                                                                                              |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `Rendering browser: Not installed`          | Run `ucut setup`                                                                                 |
-| The app says captions need the speech model | Run `ucut setup --speech`, then add the recording again                                          |
-| The port is already in use                  | Another U-Cut may be open, so close it or use `ucut serve --port 8080`                           |
-| "This Mac is almost out of disk space"      | U-Cut needs at least 1.5 GB free. Clear space, or delete old reels from `~/Movies/U-Cut/renders` |
-| The Mac app says the engine isn't installed | Run the install command again                                                                    |
-| macOS says the app can't be opened          | Right-click it, then choose Open. U-Cut isn't notarized yet                                      |
-| A file was skipped                          | U-Cut lists why. Live Photo videos are skipped on purpose, so each moment appears once           |
-| Exports are slow                            | Close other apps. 4K video takes about twice the length of the reel on an 8 GB Mac               |
+| Problem                                     | Fix                                                                                                                                           |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Rendering browser: Not installed`          | Run `ucut setup`                                                                                                                              |
+| The app says captions need the speech model | Run `ucut setup --speech`, then add the recording again                                                                                       |
+| The app offers to add a voice               | Click Add a voice, or run `ucut setup --voice`. It needs [uv](https://docs.astral.sh/uv/) (`brew install uv`) and downloads about 500 MB once |
+| The port is already in use                  | Another U-Cut may be open, so close it or use `ucut serve --port 8080`                                                                        |
+| "This Mac is almost out of disk space"      | U-Cut needs at least 1.5 GB free. Clear space, or delete old reels from `~/Movies/U-Cut/renders`                                              |
+| The Mac app says the engine isn't installed | Run the install command again                                                                                                                 |
+| macOS says the app can't be opened          | Right-click it, then choose Open. U-Cut isn't notarized yet                                                                                   |
+| A file was skipped                          | U-Cut lists why. Live Photo videos are skipped on purpose, so each moment appears once                                                        |
+| Exports are slow                            | Close other apps. 4K video takes about twice the length of the reel on an 8 GB Mac                                                            |
 
 Still stuck? [Open an issue](https://github.com/mayank29deo/U-Cut/issues/new/choose) with the output of `ucut doctor`.

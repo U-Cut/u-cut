@@ -1,5 +1,5 @@
 import type { MediaItem } from "@u-cut/schema";
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import { type Catalog, thumbUrl } from "../api";
 import { planWith } from "../reel";
 import { Stage } from "./Stage";
@@ -13,6 +13,7 @@ interface Props {
   onSamples(): void;
   reading: boolean;
   onRecording(file: File): void;
+  onPrompt(prompt: string): void;
 }
 
 const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
@@ -26,9 +27,11 @@ export function Start({
   onSamples,
   reading,
   onRecording,
+  onPrompt,
 }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const recording = useRef<HTMLInputElement>(null);
+  const [prompt, setPrompt] = useState("");
   const busy = arriving > 0 || items.length > 0;
   const finished = items.filter((item) => ready.includes(item.id)).length;
   const total = items.length + arriving;
@@ -45,6 +48,7 @@ export function Start({
       excludedScenes: [],
       recipe: null,
       demo: null,
+      script: null,
     });
   }, [catalog]);
 
@@ -107,6 +111,35 @@ export function Start({
                 Try it with sample photos
               </button>
             </div>
+            <form
+              className="start-prompt"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (prompt.trim()) onPrompt(prompt.trim());
+              }}
+            >
+              <label>
+                <span className="start-prompt-label">Or just describe it</span>
+                <span className="start-prompt-row">
+                  <textarea
+                    rows={prompt.length > 48 ? 3 : 1}
+                    value={prompt}
+                    maxLength={4000}
+                    placeholder="A 20-second reel about my Goa trip, chill vibe"
+                    onChange={(event) => setPrompt(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        event.currentTarget.form?.requestSubmit();
+                      }
+                    }}
+                  />
+                  <button type="submit" className="button-solid" disabled={!prompt.trim()}>
+                    Write it
+                  </button>
+                </span>
+              </label>
+            </form>
             <button
               type="button"
               className="button-text start-recording"

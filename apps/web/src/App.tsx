@@ -94,6 +94,7 @@ export function App() {
           onSamples={() => void actions.addSamples()}
           reading={state.reading}
           onRecording={(file) => void actions.addRecording(file)}
+          onPrompt={(prompt) => void actions.writeReel(prompt)}
         />
       )}
       {dropping ? (

@@ -3,6 +3,7 @@ import type {
   Demo,
   EditPlan,
   MediaItem,
+  Script,
   StyleRecipe,
   TemplateManifest,
   Vibe,
@@ -24,6 +25,12 @@ export interface Catalog {
   scenes: { id: string; label: string; group: string; hiddenByDefault?: boolean }[];
   /** False without Apple's on-device helper, such as on Linux. */
   sorting: boolean;
+  voice: {
+    ready: boolean;
+    voices: { id: string; name: string }[];
+    defaultVoice: string;
+    size: string;
+  };
 }
 
 export interface Job {
@@ -34,6 +41,7 @@ export interface Job {
   excludedScenes: string[];
   recipe: StyleRecipe | null;
   demo: Demo | null;
+  script: Script | null;
 }
 
 export interface RenderEvent {
@@ -68,7 +76,14 @@ export interface RecordingEvent {
   demo?: Demo;
 }
 
-export type ServerEvent = RenderEvent | MediaEvent | RecordingEvent;
+export interface VoicingEvent {
+  type: "voicing";
+  job: string;
+  done: number;
+  total: number;
+}
+
+export type ServerEvent = RenderEvent | MediaEvent | RecordingEvent | VoicingEvent;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init).catch(() => {
@@ -104,6 +119,14 @@ export const api = {
       method: "PUT",
       body: file,
     }),
+  saveScript: (id: string, script: Script) =>
+    request(`/api/jobs/${id}/script`, { method: "PUT", ...json(script) }),
+  speak: (id: string, lines: { text: string; speed: number }[], voice: string) =>
+    request<{ lines: { src: string; length: number }[] }>(`/api/jobs/${id}/speak`, {
+      method: "POST",
+      ...json({ lines, voice }),
+    }),
+  installVoice: () => request("/api/voice/install", { method: "POST" }),
   saveDemo: (id: string, demo: Demo) =>
     request(`/api/jobs/${id}/demo`, { method: "PUT", ...json(demo) }),
   savePlan: (id: string, plan: EditPlan) =>

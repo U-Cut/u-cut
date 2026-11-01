@@ -93,6 +93,12 @@ The server listens to the recording with whisper.cpp and watches it with `hyperf
 
 Then the browser takes over. `findMoments` suggests one moment per sentence, or one per burst of screen change if nobody speaks. `planDemo` turns the moments you keep into a plan, so skipping a moment or changing the colour is instant. The composer shows the recording whole, holds each push-in while the action plays, and draws the cards. [ADR 0018](decisions/0018-demos-from-speech-and-screen-changes.md) has the reasoning.
 
+## How a sentence becomes a reel
+
+The browser does nearly all of this. `readPrompt` reads the sentence, `writeScript` writes the lines from fixed patterns, and `planScript` builds the reel, all before a server is involved. The reel appears straight away with estimated timing.
+
+Then each line goes to the server to be read aloud, one call at a time through a fair queue, and is cached by its words, voice and speed. As the real lengths come back, the plan is rebuilt around them. [ADR 0019](decisions/0019-written-reels-rules-first.md) has the reasoning.
+
 ## What happens when you export
 
 1. The browser saves the plan and calls `POST /api/jobs/:id/export`.

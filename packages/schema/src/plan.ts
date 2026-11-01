@@ -52,8 +52,19 @@ export const EditPlan = z
       volume: z.number().min(0).max(1).optional(),
     }),
     grade: z.strictObject({ temp: adjustment, contrast: adjustment, sat: adjustment }),
-    voice: z.array(Sound.extend({ text: z.string().min(1) })).optional(),
-    shots: z.array(Shot).min(1),
+    voice: z.array(Sound.extend({ text: z.string().min(1), length: positive })).optional(),
+    shots: z.array(Shot),
+    /** Moving colour behind the words, for a reel with no pictures. */
+    backdrops: z
+      .array(
+        z.strictObject({
+          start: seconds,
+          end: positive,
+          edge: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+          glow: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+        }),
+      )
+      .optional(),
     texts: z.array(Overlay),
     /** Title and end cards, for demos. */
     cards: z
@@ -79,6 +90,9 @@ export const EditPlan = z
     sfx: z.array(Sound),
   })
   .superRefine((plan, ctx) => {
+    if (plan.shots.length === 0 && !plan.backdrops?.length) {
+      ctx.addIssue({ code: "custom", path: ["shots"], message: "needs at least one shot." });
+    }
     plan.shots.forEach((shot, index) => {
       const path = ["shots", index];
       const previous = plan.shots[index - 1];

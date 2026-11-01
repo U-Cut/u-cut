@@ -11,6 +11,8 @@ import { hf } from "./hf.ts";
 import { findTemplate, fontsDir, loadFonts, musicDir } from "./library.ts";
 import { master, verifyOutput } from "./master.ts";
 import { rendersDir, repoRoot } from "./paths.ts";
+import { isHash, storedFolder } from "./store.ts";
+import { voiceFile } from "./voice.ts";
 
 export type Quality = "draft" | "looks" | "delivery";
 
@@ -91,6 +93,10 @@ export async function writeProject(plan: EditPlan, items: MediaItem[], projectDi
   for (const font of loadFonts()) {
     await link(join(fontsDir, font.file), join(assets, "fonts", font.file));
   }
+  for (const src of new Set((plan.voice ?? []).map((line) => line.src))) {
+    if (!isHash(src)) throw new Error("That reel's voice isn't one U-Cut made.");
+    await link(join(storedFolder(src), voiceFile), join(assets, `${src}.wav`));
+  }
 
   const fontCss = loadFonts()
     .map(
@@ -106,6 +112,7 @@ export async function writeProject(plan: EditPlan, items: MediaItem[], projectDi
     assets: {
       media: (item: MediaItem) => `assets/${names.get(item.id)}`,
       music: () => `assets/${musicName}`,
+      voice: (src: string) => `assets/${src}.wav`,
     },
   };
   await writeFile(join(projectDir, "index.html"), composeHtml(input));

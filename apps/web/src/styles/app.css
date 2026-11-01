@@ -1459,3 +1459,73 @@ kbd {
 .pick textarea:focus {
   border-color: var(--white);
 }
+
+/* Written reels */
+.start-prompt {
+  max-width: 480px;
+  margin-top: 28px;
+  font-size: 15px;
+}
+.start-prompt-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--ash);
+}
+.start-prompt-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 6px 6px 6px 16px;
+  border: 1px solid var(--smoke);
+  border-radius: 24px;
+  background: var(--haze);
+  transition: border-color 0.15s;
+}
+.start-prompt-row:focus-within {
+  border-color: var(--white);
+}
+.start-prompt textarea {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 0;
+  border: 0;
+  background: none;
+  resize: none;
+  outline: none;
+  font: 400 16px / 1.35 var(--sans);
+  color: var(--white);
+}
+.start-prompt textarea::placeholder {
+  color: rgba(255, 255, 255, 0.38);
+}
+.start-prompt .button-solid {
+  flex: none;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+.start-prompt .button-solid:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+.pick-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  border-style: dashed;
+  background: none;
+}
+.voice-offer p {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ash);
+}
+.voice-progress {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--ash);
+}

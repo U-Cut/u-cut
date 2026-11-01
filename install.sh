@@ -73,6 +73,8 @@ if [ -n "${UCUT_NO_SPEECH:-}" ]; then
 else
   # whisper-cpp and the 465 MB model give screen recordings their captions.
   have whisper-cli || { have brew && brew install whisper-cpp; } || true
+  # uv runs the voice for written reels, which downloads the first time someone asks for it.
+  have uv || { have brew && brew install uv; } || true
   node packages/engine/dist/bin.js setup --speech ||
     echo "The speech model didn't install. Demos still work, without captions."
 fi

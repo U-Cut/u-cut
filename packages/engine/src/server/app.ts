@@ -7,7 +7,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { decodePrint, duplicateOf, type Printed } from "@u-cut/classify";
-import { Demo, EditPlan, type MediaItem, type StyleRecipe, validate } from "@u-cut/schema";
+import { Demo, EditPlan, type MediaItem, Script, type StyleRecipe, validate } from "@u-cut/schema";
 import { type Context, Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { streamSSE } from "hono/streaming";
@@ -47,6 +47,16 @@ import { isHash, storedFolder, storeStream } from "../store.ts";
 import { type Study, studyReel } from "../study.ts";
 import { vision } from "../vision.ts";
 import {
+  defaultVoice,
+  installVoice,
+  type Spoken,
+  speak,
+  voiceFile,
+  voiceReady,
+  voiceSize,
+  voices,
+} from "../voice.ts";
+import {
   type Capacity,
   freeDisk,
   measureCapacity,
@@ -68,6 +78,8 @@ export interface Job {
   recipe: StyleRecipe | null;
   /** Set when this job is a screen recording rather than a pile of photos. */
   demo: Demo | null;
+  /** Set when this job was written from a sentence. */
+  script: Script | null;
 }
 
 interface RenderState {
@@ -116,6 +128,8 @@ export function createApp(options: ServerOptions) {
   const studying = new Scheduler<Study>({ slots: () => 1 });
   // Listening uses every core, so recordings take turns.
   const listening = new Scheduler<void>({ slots: () => 1 });
+  const speaking = new Scheduler<Spoken[]>({ slots: () => 1 });
+  let voiceInstall: Promise<void> | null = null;
   const webRoot = options.webRoot ?? join(repoRoot, "apps/web/dist");
   const maxUpload = options.maxUploadBytes ?? defaultMaxUpload;
   /** Seconds of work per second of finished reel, learned from real renders on this machine. */
@@ -176,6 +190,7 @@ export function createApp(options: ServerOptions) {
       excludedScenes: defaultExcludedScenes,
       recipe: null,
       demo: null,
+      script: null,
       ...(JSON.parse(text) as Partial<Job>),
     } as Job;
     jobs.set(id, job);
@@ -203,6 +218,7 @@ export function createApp(options: ServerOptions) {
       excludedScenes: job.excludedScenes,
       recipe: job.recipe,
       demo: job.demo,
+      script: job.script,
     };
   }
 
@@ -358,6 +374,7 @@ export function createApp(options: ServerOptions) {
       samples: samples.map(publicItem),
       scenes: [...loadScenes(), { id: "other", label: "Other", group: "other" }],
       sorting: Boolean(vision() && sceneModel()),
+      voice: { ready: voiceReady(), voices, defaultVoice, size: voiceSize },
     }),
   );
 
@@ -416,6 +433,7 @@ export function createApp(options: ServerOptions) {
       excludedScenes: defaultExcludedScenes,
       recipe: null,
       demo: null,
+      script: null,
     };
     jobs.set(job.id, job);
     await persist(job);
@@ -608,11 +626,80 @@ export function createApp(options: ServerOptions) {
     return c.json({ ok: true });
   });
 
+  app.put("/api/jobs/:id/script", async (c) => {
+    const job = await ownedJob(c);
+    if (!job) return notFound(c);
+    const result = validate(Script, await c.req.json(), "script");
+    if (!result.ok) return c.json({ error: result.errors.join(" ") }, 422);
+    job.script = result.value;
+    await persist(job);
+    return c.json({ ok: true });
+  });
+
+  // Each line is one job in the queue, so a long script can't hold up someone else's.
+  app.post("/api/jobs/:id/speak", async (c) => {
+    const job = await ownedJob(c);
+    if (!job) return notFound(c);
+    const { lines, voice } = (await c.req.json().catch(() => ({}))) as {
+      lines?: { text: string; speed: number }[];
+      voice?: string;
+    };
+    if (!voice || !voices.some((known) => known.id === voice) || !Array.isArray(lines)) {
+      return c.json({ error: "That isn't a voice U-Cut has." }, 422);
+    }
+    if (!voiceReady()) return c.json({ error: "The voice isn't installed yet." }, 409);
+    const spoken: Spoken[] = [];
+    try {
+      for (const [index, line] of lines.entries()) {
+        hub.publish(job.owner, {
+          type: "voicing",
+          job: job.id,
+          done: index,
+          total: lines.length,
+        });
+        const [result] = await speaking.submit({
+          id: `speak-${randomUUID()}`,
+          owner: job.owner,
+          run: async ({ signal }) => [await speak(line, voice, signal)],
+        });
+        if (result) spoken.push(result);
+      }
+    } catch (error) {
+      return c.json({ error: `The voice couldn't read that. ${(error as Error).message}` }, 500);
+    }
+    hub.publish(job.owner, {
+      type: "voicing",
+      job: job.id,
+      done: lines.length,
+      total: lines.length,
+    });
+    return c.json({ lines: spoken });
+  });
+
+  // Downloads about 500 MB, so it waits to be asked and only the person at this Mac can ask.
+  app.post("/api/voice/install", async (c) => {
+    if (!loopback(c.req.header("host") ?? "")) {
+      return c.json({ error: "Only the person running U-Cut can add the voice." }, 403);
+    }
+    voiceInstall ??= installVoice().finally(() => {
+      voiceInstall = null;
+    });
+    try {
+      await voiceInstall;
+      return c.json({ ok: true });
+    } catch (error) {
+      return c.json({ error: (error as Error).message }, 500);
+    }
+  });
+
   app.put("/api/jobs/:id/plan", async (c) => {
     const job = await ownedJob(c);
     if (!job) return notFound(c);
     const result = validate(EditPlan, await c.req.json(), "plan");
     if (!result.ok) return c.json({ error: result.errors.join(" ") }, 422);
+    if (!loadTracks().some((track) => track.file === result.value.music.src)) {
+      return c.json({ error: "That music isn't in U-Cut's library." }, 422);
+    }
     job.plan = result.value;
     await persist(job);
     return c.json({ ok: true });
@@ -727,6 +814,15 @@ export function createApp(options: ServerOptions) {
     if (!variant || !isHash(hash)) return notFound(c);
     return sendFile(c, join(storedFolder(hash), variant.file), {
       type: variant.type,
+      cacheForever: true,
+    });
+  });
+
+  app.get("/voice/:hash", async (c) => {
+    const hash = c.req.param("hash");
+    if (!isHash(hash)) return notFound(c);
+    return sendFile(c, join(storedFolder(hash), voiceFile), {
+      type: "audio/wav",
       cacheForever: true,
     });
   });

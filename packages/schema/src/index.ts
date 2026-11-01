@@ -4,5 +4,6 @@ export * from "./media.ts";
 export * from "./plan.ts";
 export * from "./planner.ts";
 export * from "./recipe.ts";
+export * from "./script.ts";
 export * from "./template.ts";
 export * from "./validate.ts";

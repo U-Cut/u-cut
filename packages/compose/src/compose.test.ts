@@ -226,3 +226,44 @@ describe("screen recordings", () => {
     expect(root).toContain('src="/l"');
   });
 });
+
+describe("written reels", () => {
+  const written: EditPlan = {
+    ...plan,
+    template: "explainer",
+    shots: [],
+    backdrops: [{ start: 0, end: 4, edge: "#0f3b4c", glow: "#3aa6a0" }],
+    texts: [{ text: "Slow days & Goa", start: 0.3, end: 3, style: "kinetic" }],
+    voice: [{ src: "abc", at: 0.3, vol: 1, text: "Slow days & Goa", length: 2.5 }],
+  };
+  const parts = (omitAudio = false) =>
+    composeParts({
+      plan: written,
+      items: {},
+      templateCss: "",
+      fontCss: "",
+      omitAudio,
+      assets: { media: () => "", music: (src) => src, voice: (src) => `/voice/${src}` },
+    });
+
+  it("lands words one at a time, keeping each until the line ends", () => {
+    const { root } = parts();
+    const starts = [...root.matchAll(/class="clip word" data-start="([\d.]+)"/g)].map(([, start]) =>
+      Number(start),
+    );
+    expect(starts).toHaveLength(4);
+    expect(starts[0]).toBe(0.3);
+    expect(starts[1]).toBeGreaterThan(starts[0] as number);
+    expect(starts[3]).toBeLessThan(3);
+    expect(root).toContain("&amp;");
+  });
+
+  it("plays the voice in the render, and leaves it to the player in the preview", () => {
+    expect(parts().root).toContain('id="voice0" src="/voice/abc" data-start="0.3"');
+    expect(parts(true).root).not.toContain("voice0");
+  });
+
+  it("draws moving colour behind the words", () => {
+    expect(parts().root).toContain("--glow:#3aa6a0");
+  });
+});

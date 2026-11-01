@@ -1,0 +1,38 @@
+.text-kinetic {
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8%;
+  text-align: center;
+  color: #fff;
+  font-size: calc(104 * var(--unit));
+  line-height: 1.1;
+  text-shadow: 0 calc(3 * var(--unit)) calc(28 * var(--unit)) rgba(0, 0, 0, 0.5);
+  animation: none;
+}
+.aspect-1x1 .text-kinetic,
+.aspect-16x9 .text-kinetic {
+  font-size: calc(96 * var(--unit));
+}
+.vibe-chill .text-kinetic {
+  font-family: "Inter", "Noto Sans Devanagari", sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.vibe-hype .text-kinetic {
+  font-family: "Archivo Black", "Noto Sans Devanagari", sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+.vibe-cinematic .text-kinetic {
+  font-family: "Playfair Display", "Noto Sans Devanagari", serif;
+  font-style: italic;
+  font-weight: 500;
+}
+.vibe-nostalgic .text-kinetic {
+  font-family: "Caveat", "Noto Sans Devanagari", cursive;
+  font-size: calc(128 * var(--unit));
+  font-weight: 700;
+}

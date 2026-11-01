@@ -5,6 +5,7 @@ import { hf } from "./hf.ts";
 import { homeDir } from "./paths.ts";
 import { speechReady } from "./recording.ts";
 import { freeDisk, minimumFreeDisk } from "./server/capacity.ts";
+import { voiceReady } from "./voice.ts";
 
 export interface Check {
   name: string;
@@ -62,6 +63,11 @@ export async function doctor(): Promise<Check[]> {
       detail: speechReady()
         ? "Ready"
         : "Optional, for captions on screen recordings. Run: ucut setup --speech",
+    },
+    {
+      name: "Voice",
+      ok: true,
+      detail: voiceReady() ? "Ready" : "Optional, for written reels. Run: ucut setup --voice",
     },
     { name: "Disk", ok: disk > minimumFreeDisk, detail: `${gigabytes(disk)} free in ${homeDir()}` },
     {

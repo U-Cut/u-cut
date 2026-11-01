@@ -374,12 +374,14 @@ public struct EditPlan: Codable, Sendable, Equatable {
         public var at: Double
         public var vol: Double
         public var text: String
+        public var length: Double
 
-        public init(src: String, at: Double, vol: Double, text: String) {
+        public init(src: String, at: Double, vol: Double, text: String, length: Double) {
             self.src = src
             self.at = at
             self.vol = vol
             self.text = text
+            self.length = length
         }
     }
 
@@ -478,6 +480,20 @@ public struct EditPlan: Codable, Sendable, Equatable {
             self.focus = focus
             self.fit = fit
             self.keepAudio = keepAudio
+        }
+    }
+
+    public struct Backdrop: Codable, Sendable, Equatable {
+        public var start: Double
+        public var end: Double
+        public var edge: String
+        public var glow: String
+
+        public init(start: Double, end: Double, edge: String, glow: String) {
+            self.start = start
+            self.end = end
+            self.edge = edge
+            self.glow = glow
         }
     }
 
@@ -580,13 +596,14 @@ public struct EditPlan: Codable, Sendable, Equatable {
     public var grade: Grade
     public var voice: [Voice]?
     public var shots: [Shot]
+    public var backdrops: [Backdrop]?
     public var texts: [Text]
     public var cards: [Card]?
     public var textStyle: TextStyle?
     public var transitions: [Transition]
     public var sfx: [Sfx]
 
-    public init(schemaVersion: Int, template: String, vibe: Vibe, aspect: Aspect, fps: Int, seed: Int, duration: Double, music: Music, grade: Grade, voice: [Voice]? = nil, shots: [Shot], texts: [Text], cards: [Card]? = nil, textStyle: TextStyle? = nil, transitions: [Transition], sfx: [Sfx]) {
+    public init(schemaVersion: Int, template: String, vibe: Vibe, aspect: Aspect, fps: Int, seed: Int, duration: Double, music: Music, grade: Grade, voice: [Voice]? = nil, shots: [Shot], backdrops: [Backdrop]? = nil, texts: [Text], cards: [Card]? = nil, textStyle: TextStyle? = nil, transitions: [Transition], sfx: [Sfx]) {
         self.schemaVersion = schemaVersion
         self.template = template
         self.vibe = vibe
@@ -598,6 +615,7 @@ public struct EditPlan: Codable, Sendable, Equatable {
         self.grade = grade
         self.voice = voice
         self.shots = shots
+        self.backdrops = backdrops
         self.texts = texts
         self.cards = cards
         self.textStyle = textStyle

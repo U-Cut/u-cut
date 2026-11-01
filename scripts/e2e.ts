@@ -412,6 +412,60 @@ async function main() {
       throw new Error(`The demo is ${demoVideo.width}x${demoVideo.height}.`);
     pass("the demo exports wide, like the recording");
 
+    await clickButton(page, "Back to editing");
+    await page.waitForSelector(".studio", { timeout: 15_000 });
+    page.once("dialog", (dialog) => void dialog.accept());
+    await clickButton(page, "New reel");
+    await page.waitForSelector(".start-prompt textarea");
+    await page.type(".start-prompt textarea", "a 12-second reel about my Goa trip, hype vibe");
+    await page.keyboard.press("Enter");
+    await page.waitForSelector(".moments .pick textarea", { timeout: 15_000 });
+    const lineCount = await page.$$eval(".pick textarea", (list) => list.length);
+    const kinetic = await page.$eval(
+      ".stage-host",
+      (host) => host.shadowRoot?.querySelectorAll(".text-kinetic .word").length ?? 0,
+    );
+    if (kinetic === 0) throw new Error("The script's words aren't on the reel.");
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await snap(page, "10-written");
+    pass("a sentence becomes a script and a reel", `${lineCount} lines`);
+
+    const firstLine = await page.$(".pick textarea");
+    await firstLine?.click({ count: 3 });
+    await page.keyboard.down("Meta");
+    await page.keyboard.press("a");
+    await page.keyboard.up("Meta");
+    await page.keyboard.type("Goa was worth it.");
+    await page.keyboard.press("Tab");
+    await page.waitForFunction(
+      () =>
+        [...(document.querySelector(".stage-host")?.shadowRoot?.querySelectorAll(".word") ?? [])]
+          .map((word) => word.textContent)
+          .join(" ")
+          .includes("Goa was worth it."),
+      { timeout: 10_000 },
+    );
+    pass("a line can be rewritten and the reel follows");
+
+    await page.click('[aria-label="Remove line 2"]');
+    await page.waitForFunction(
+      (before) => document.querySelectorAll(".pick textarea").length === before - 1,
+      { timeout: 5000 },
+      lineCount,
+    );
+    pass("a line can be removed");
+
+    await clickButton(page, "Export");
+    await page.waitForSelector(".final", { timeout: 300_000 });
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const writtenVideo = await page.$eval(".final", (element) => {
+      const final = element as HTMLVideoElement;
+      return { width: final.videoWidth, height: final.videoHeight };
+    });
+    if (writtenVideo.width !== 1080 || writtenVideo.height !== 1920)
+      throw new Error(`The written reel is ${writtenVideo.width}x${writtenVideo.height}.`);
+    pass("the written reel exports tall");
+
     console.log(results.join("\n"));
     if (problems.length) {
       console.log(`\nProblems seen in the browser:\n  ${[...new Set(problems)].join("\n  ")}`);

@@ -34,6 +34,7 @@ export class ReelPlayer {
   private lastFrame = 0;
   private frame = 0;
   private muted = false;
+  private readonly voices = new Map<string, HTMLAudioElement>();
 
   constructor(host: HTMLElement) {
     this.shadow = host.shadowRoot ?? host.attachShadow({ mode: "open" });
@@ -68,10 +69,28 @@ export class ReelPlayer {
       this.audio.src = musicUrl;
       this.audio.load();
     }
+    this.loadVoices(plan);
     if (!options.keepTime) this.time = 0;
     this.time = Math.min(this.time, Math.max(0, plan.duration - 0.01));
     this.syncAudio(true);
     this.render(true);
+  }
+
+  /** Keeps lines that haven't changed, so editing one doesn't reload the rest. */
+  private loadVoices(plan: EditPlan) {
+    const wanted = new Set((plan.voice ?? []).map((line) => line.src));
+    for (const [src, audio] of this.voices) {
+      if (wanted.has(src)) continue;
+      audio.pause();
+      this.voices.delete(src);
+    }
+    for (const src of wanted) {
+      if (this.voices.has(src)) continue;
+      const audio = new Audio(`/voice/${src}`);
+      audio.preload = "auto";
+      audio.muted = this.muted;
+      this.voices.set(src, audio);
+    }
   }
 
   /** Changes the words on screen without touching anything else. */
@@ -96,6 +115,7 @@ export class ReelPlayer {
     this.playing = false;
     cancelAnimationFrame(this.frame);
     this.audio.pause();
+    for (const voice of this.voices.values()) voice.pause();
     for (const video of this.videos) video.element.pause();
     this.onPlayingChange(false);
   }
@@ -114,6 +134,7 @@ export class ReelPlayer {
   setMuted(muted: boolean) {
     this.muted = muted;
     this.audio.muted = muted;
+    for (const voice of this.voices.values()) voice.muted = muted;
     for (const { element } of this.videos) {
       element.muted = muted || element.dataset.hasAudio !== "true";
     }
@@ -129,6 +150,8 @@ export class ReelPlayer {
 
   destroy() {
     this.pause();
+    for (const voice of this.voices.values()) voice.pause();
+    this.voices.clear();
     this.audio.removeAttribute("src");
     this.audio.load();
     this.shadow.innerHTML = "";
@@ -149,9 +172,24 @@ export class ReelPlayer {
     this.frame = requestAnimationFrame(this.step);
   };
 
+  private syncVoices(force: boolean) {
+    for (const line of this.plan?.voice ?? []) {
+      const audio = this.voices.get(line.src);
+      if (!audio) continue;
+      const target = this.time - line.at;
+      const speaking = target >= 0 && target < line.length;
+      if (speaking && (force || Math.abs(audio.currentTime - target) > driftLimit)) {
+        if (audio.readyState > 0) audio.currentTime = target;
+      }
+      if (speaking && this.playing && audio.paused) void audio.play().catch(() => {});
+      if ((!speaking || !this.playing) && !audio.paused) audio.pause();
+    }
+  }
+
   private syncAudio(force: boolean) {
     const plan = this.plan;
     if (!plan) return;
+    this.syncVoices(force);
     const segment = musicSegments(plan).find(
       (candidate) => this.time >= candidate.at && this.time < candidate.at + candidate.length,
     );
@@ -182,7 +220,9 @@ export class ReelPlayer {
     }
     for (const animation of this.animations) {
       const target = (animation.effect as KeyframeEffect | null)?.target as HTMLElement | null;
-      const start = Number(target?.dataset.start ?? 0);
+      // Something inside a timed element moves on that element's clock.
+      const clip = target?.closest<HTMLElement>("[data-start]");
+      const start = Number(clip?.dataset.start ?? 0);
       animation.currentTime = Math.max(0, time - start) * 1000;
     }
     for (const video of this.videos) {

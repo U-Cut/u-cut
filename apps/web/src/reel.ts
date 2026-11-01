@@ -1,14 +1,29 @@
 import { composeParts } from "@u-cut/compose";
 import {
+  defaultReelLength,
   matchTrack,
   matchVibe,
   planDemo,
   planRules,
+  planScript,
+  readPrompt,
   replaceShot,
   setTitle,
   swapShots,
+  usableItems,
+  writeScript,
 } from "@u-cut/planner-rules";
-import type { Aspect, Brand, Demo, EditPlan, MediaItem, StyleRecipe, Vibe } from "@u-cut/schema";
+import type {
+  Aspect,
+  Brand,
+  Demo,
+  EditPlan,
+  MediaItem,
+  Script,
+  ScriptLine,
+  StyleRecipe,
+  Vibe,
+} from "@u-cut/schema";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import {
   api,
@@ -34,6 +49,8 @@ export interface Settings {
   recipe: StyleRecipe | null;
   /** Set for a screen recording, which is cut from its moments instead of to the music. */
   demo: Demo | null;
+  /** Set for a written reel, which is timed by its words. */
+  script: Script | null;
 }
 
 interface Snapshot {
@@ -55,6 +72,11 @@ interface State {
   studying: boolean;
   /** A recording is on its way in, or being listened to. */
   reading: boolean;
+  /** How far through the script the voice is. */
+  voicing: { done: number; total: number } | null;
+  /** The voice has been asked for and is downloading. */
+  installingVoice: boolean;
+  voiceReady: boolean | null;
 }
 
 type Action =
@@ -72,6 +94,9 @@ type Action =
   | { type: "notice"; notice: string | null }
   | { type: "studying"; studying: boolean }
   | { type: "reading"; reading: boolean }
+  | { type: "voicing"; voicing: State["voicing"] }
+  | { type: "installingVoice"; installing: boolean }
+  | { type: "voiceReady" }
   | { type: "reset" };
 
 const historyLimit = 100;
@@ -87,6 +112,9 @@ const empty: State = {
   notice: null,
   studying: false,
   reading: false,
+  voicing: null,
+  installingVoice: false,
+  voiceReady: null,
 };
 
 function reducer(state: State, action: Action): State {
@@ -149,8 +177,14 @@ function reducer(state: State, action: Action): State {
       return { ...state, studying: action.studying };
     case "reading":
       return { ...state, reading: action.reading };
+    case "voicing":
+      return { ...state, voicing: action.voicing };
+    case "installingVoice":
+      return { ...state, installingVoice: action.installing };
+    case "voiceReady":
+      return { ...state, voiceReady: true };
     case "reset":
-      return empty;
+      return { ...empty, voiceReady: state.voiceReady };
   }
 }
 
@@ -164,6 +198,7 @@ const defaults: Settings = {
   excludedScenes: ["documents"],
   recipe: null,
   demo: null,
+  script: null,
 };
 
 function demoPlan(catalog: Catalog, items: MediaItem[], settings: Settings, demo: Demo): EditPlan {
@@ -181,8 +216,24 @@ function demoPlan(catalog: Catalog, items: MediaItem[], settings: Settings, demo
   });
 }
 
+function scriptPlan(catalog: Catalog, items: MediaItem[], settings: Settings, script: Script) {
+  const track = catalog.tracks.find((entry) => entry.vibe === settings.vibe);
+  if (!track) throw new Error("U-Cut's music didn't load. Reload the page.");
+  return planScript({
+    lines: script.lines,
+    items,
+    excludedScenes: settings.excludedScenes,
+    vibe: settings.vibe,
+    aspect: settings.aspect,
+    seed: settings.seed,
+    target: settings.duration,
+    music: { src: track.file, length: track.length, bpm: track.bpm },
+  });
+}
+
 export function planWith(catalog: Catalog, items: MediaItem[], settings: Settings): EditPlan {
   if (settings.demo) return demoPlan(catalog, items, settings, settings.demo);
+  if (settings.script) return scriptPlan(catalog, items, settings, settings.script);
   const { recipe } = settings;
   const templateId = recipe ? "recipe" : settings.template;
   const template = catalog.templates.find((entry) => entry.manifest.id === templateId);
@@ -221,6 +272,7 @@ const settingsFrom = (
   excludedScenes: string[],
   recipe: StyleRecipe | null,
   demo: Demo | null,
+  script: Script | null,
 ): Settings => ({
   vibe: plan.vibe,
   template: plan.template,
@@ -231,7 +283,14 @@ const settingsFrom = (
   excludedScenes,
   recipe,
   demo,
+  script,
 });
+
+/** The scenes in someone's photos, in the order the reel should reach them. */
+function scenesOf(items: MediaItem[]): string[] {
+  const shown = usableItems(items, defaults.excludedScenes);
+  return [...new Set(shown.flatMap((item) => item.labels.slice(0, 1).map((label) => label.id)))];
+}
 
 const jobKey = "ucut-job";
 const uploadsAtOnce = 3;
@@ -265,7 +324,11 @@ export function useReel(catalog: Catalog | null) {
   useEffect(
     () =>
       connectEvents((event: ServerEvent) => {
-        if (event.type === "recording") {
+        if (event.type === "voicing") {
+          if (event.job !== latest.current.job?.id) return;
+          const finished = event.done >= event.total;
+          dispatch({ type: "voicing", voicing: finished ? null : event });
+        } else if (event.type === "recording") {
           if (event.job === latest.current.job?.id) showDemo.current(event);
         } else if (event.type === "media") {
           if (event.job !== latest.current.job?.id) return;
@@ -298,7 +361,7 @@ export function useReel(catalog: Catalog | null) {
           type: "commit",
           snapshot: {
             plan: job.plan,
-            settings: settingsFrom(job.plan, job.excludedScenes, job.recipe, job.demo),
+            settings: settingsFrom(job.plan, job.excludedScenes, job.recipe, job.demo, job.script),
           },
         });
       },
@@ -329,15 +392,63 @@ export function useReel(catalog: Catalog | null) {
   // Saved quietly a moment after the last change.
   const plan = state.now?.plan;
   const demo = state.now?.settings.demo;
+  const script = state.now?.settings.script;
   const jobId = state.job?.id;
   useEffect(() => {
     if (!plan || !jobId) return;
     const timer = setTimeout(() => {
       void api.savePlan(jobId, plan).catch(() => {});
       if (demo) void api.saveDemo(jobId, demo).catch(() => {});
+      if (script) void api.saveScript(jobId, script).catch(() => {});
     }, 300);
     return () => clearTimeout(timer);
-  }, [plan, demo, jobId]);
+  }, [plan, demo, script, jobId]);
+
+  // Lines without a voice yet are read in the background, so editing never has to wait.
+  const speaking = useRef(false);
+  const voiceFailed = useRef(false);
+  const [readRound, readAgain] = useReducer((round: number) => round + 1, 0);
+  const voiceAvailable = state.voiceReady ?? catalog?.voice.ready ?? false;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: readRound runs this again after a read.
+  useEffect(() => {
+    const voice = script?.voice;
+    const unread = script?.lines.filter((line) => !line.voice) ?? [];
+    if (!voice || !voiceAvailable || unread.length === 0) return;
+    if (speaking.current || voiceFailed.current) return;
+    const job = latest.current.job;
+    if (!job) return;
+    speaking.current = true;
+    const lines = unread.map(({ text, speed }) => ({ text, speed }));
+    api
+      .speak(job.id, lines, voice)
+      .then((spoken) => {
+        const { now, items } = latest.current;
+        const current = now?.settings.script;
+        if (!catalog || !now || !current || current.voice !== voice) return;
+        const heard = new Map(
+          lines.map((line, index) => [`${line.text}|${line.speed}`, spoken.lines[index]]),
+        );
+        const updated = current.lines.map((line) => ({
+          ...line,
+          voice: line.voice ?? heard.get(`${line.text}|${line.speed}`) ?? null,
+        }));
+        const settings = { ...now.settings, script: { ...current, lines: updated } };
+        dispatch({
+          type: "replace",
+          snapshot: { settings, plan: planWith(catalog, items, settings) },
+        });
+      })
+      .catch((error: Error) => {
+        voiceFailed.current = true;
+        dispatch({ type: "notice", notice: error.message });
+      })
+      .finally(() => {
+        speaking.current = false;
+        dispatch({ type: "voicing", voicing: null });
+        // Anything changed while this was reading gets picked up by the next round.
+        readAgain();
+      });
+  }, [catalog, script, voiceAvailable, readRound]);
 
   const ensureJob = useCallback(async () => {
     if (latest.current.job) return latest.current.job;
@@ -388,6 +499,40 @@ export function useReel(catalog: Catalog | null) {
       }
     },
     [ensureJob],
+  );
+
+  /** Turns a sentence into a reel straight away. The voice follows as each line is read. */
+  const writeReel = useCallback(
+    async (prompt: string) => {
+      if (!catalog) return;
+      const { items } = latest.current;
+      await ensureJob();
+      const request = readPrompt(prompt);
+      const vibe = request.vibe ?? "chill";
+      const duration = request.duration ?? defaultReelLength;
+      const seed = 1;
+      const lines = writeScript({ request, scenes: scenesOf(items), vibe, duration, seed });
+      const settings: Settings = {
+        ...defaults,
+        template: "explainer",
+        vibe,
+        aspect: request.aspect ?? "9:16",
+        duration,
+        seed,
+        title: request.subject,
+        script: { prompt, lines, voice: catalog.voice.defaultVoice },
+      };
+      plannedCount.current = items.length;
+      try {
+        dispatch({
+          type: "commit",
+          snapshot: { settings, plan: planWith(catalog, items, settings) },
+        });
+      } catch (error) {
+        dispatch({ type: "notice", notice: (error as Error).message });
+      }
+    },
+    [catalog, ensureJob],
   );
 
   /** Re-cuts the reel. This runs here in the browser, so it's instant for everyone. */
@@ -460,6 +605,72 @@ export function useReel(catalog: Catalog | null) {
     },
     [changeDemo],
   );
+
+  const changeScript = useCallback(
+    (patch: Partial<Script>, settings: Partial<Settings> = {}) => {
+      const script = latest.current.now?.settings.script;
+      if (script) change({ ...settings, script: { ...script, ...patch } });
+    },
+    [change],
+  );
+
+  const setLine = useCallback(
+    (index: number, text: string) => {
+      const lines = latest.current.now?.settings.script?.lines ?? [];
+      changeScript({
+        lines: lines.map((line, place) =>
+          place === index ? { ...line, text, voice: null } : line,
+        ),
+      });
+    },
+    [changeScript],
+  );
+
+  const removeLine = useCallback(
+    (index: number) => {
+      const lines = latest.current.now?.settings.script?.lines ?? [];
+      if (lines.length > 1) changeScript({ lines: lines.filter((_, place) => place !== index) });
+    },
+    [changeScript],
+  );
+
+  const addLine = useCallback(() => {
+    const lines = latest.current.now?.settings.script?.lines ?? [];
+    const line: ScriptLine = { text: "Write this line.", scene: null, speed: 1, voice: null };
+    changeScript({ lines: [...lines, line] });
+  }, [changeScript]);
+
+  /** Writes a new script for the same idea, using whatever photos are here now. */
+  const rewrite = useCallback(() => {
+    const { now, items } = latest.current;
+    const script = now?.settings.script;
+    if (!now || !script) return;
+    const seed = now.settings.seed + 1;
+    const { vibe, duration } = now.settings;
+    const request = readPrompt(script.prompt);
+    const scenes = scenesOf(items);
+    changeScript({ lines: writeScript({ request, scenes, vibe, duration, seed }) }, { seed });
+  }, [changeScript]);
+
+  const setVoice = useCallback(
+    (voice: string | null) => {
+      voiceFailed.current = false;
+      const lines = latest.current.now?.settings.script?.lines ?? [];
+      changeScript({ voice, lines: lines.map((line) => ({ ...line, voice: null })) });
+    },
+    [changeScript],
+  );
+
+  const addVoice = useCallback(async () => {
+    dispatch({ type: "installingVoice", installing: true });
+    try {
+      await api.installVoice();
+      dispatch({ type: "voiceReady" });
+    } catch (error) {
+      dispatch({ type: "notice", notice: (error as Error).message });
+    }
+    dispatch({ type: "installingVoice", installing: false });
+  }, []);
 
   const remix = useCallback(() => {
     const seed = latest.current.now?.settings.seed ?? 1;
@@ -594,12 +805,19 @@ export function useReel(catalog: Catalog | null) {
       addFiles,
       addRecording,
       addSamples,
+      writeReel,
       change,
       changeDemo,
       toggleMoment,
       setCaption,
       setBrand,
       setLogo,
+      setLine,
+      removeLine,
+      addLine,
+      rewrite,
+      setVoice,
+      addVoice,
       remix,
       rename,
       replace,
@@ -619,12 +837,19 @@ export function useReel(catalog: Catalog | null) {
       addFiles,
       addRecording,
       addSamples,
+      writeReel,
       change,
       changeDemo,
       toggleMoment,
       setCaption,
       setBrand,
       setLogo,
+      setLine,
+      removeLine,
+      addLine,
+      rewrite,
+      setVoice,
+      addVoice,
       remix,
       rename,
       replace,

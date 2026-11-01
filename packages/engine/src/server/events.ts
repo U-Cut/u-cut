@@ -1,4 +1,5 @@
 export type ServerEvent =
+  | { type: "voicing"; job: string; done: number; total: number }
   | {
       type: "recording";
       job: string;

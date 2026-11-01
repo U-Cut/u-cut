@@ -30,4 +30,11 @@ sandbox-exec -f "$work/no-network.sb" \
   demo "$work/recording.mp4" -o "$work/demo.mp4" --name Acme --quality draft
 
 test -s "$work/demo.mp4"
-echo "Privacy test passed: a reel and a demo were made with the network blocked."
+
+# Read aloud where the voice is installed. Without it, this is a reel of words.
+sandbox-exec -f "$work/no-network.sb" \
+  node --conditions=source --import tsx "$root/packages/engine/src/bin.ts" \
+  write "an 8-second reel about my Goa trip" -o "$work/written.mp4" --quality draft
+
+test -s "$work/written.mp4"
+echo "Privacy test passed: a reel, a demo and a written reel were made with the network blocked."

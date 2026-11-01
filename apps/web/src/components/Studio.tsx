@@ -8,8 +8,10 @@ import { ExportSheet } from "./ExportSheet";
 import { Filmstrip } from "./Filmstrip";
 import { MuteIcon, PauseIcon, PlayIcon, PlusIcon, RedoIcon, SoundIcon, UndoIcon } from "./icons";
 import { Moments } from "./Moments";
+import { ScriptLines } from "./ScriptLines";
 import { Sort } from "./Sort";
 import { Stage, type StageHandle } from "./Stage";
+import { VoiceChoice } from "./VoiceChoice";
 
 type Reel = ReturnType<typeof useReel>;
 
@@ -25,6 +27,8 @@ const vibeLabels: Record<Vibe, string> = {
   cinematic: "Cinematic",
   nostalgic: "Nostalgic",
 };
+/** These are used by a matched reel, a demo and a written reel, not picked from the list. */
+const builtForOneJob = ["recipe", "demo", "explainer"];
 const lengths = [10, 20, 30, 45];
 const shapes: { value: Aspect; label: string }[] = [
   { value: "9:16", label: "Tall" },
@@ -77,6 +81,7 @@ export function Studio({ catalog, reel }: Props) {
 
   const plan = now?.plan;
   const demo = now?.settings.demo ?? null;
+  const script = now?.settings.script ?? null;
   const momentStarts = useMemo(() => {
     const starts = new Map<number, number>();
     const kept = (demo?.moments ?? []).flatMap((_, index) =>
@@ -136,7 +141,7 @@ export function Studio({ catalog, reel }: Props) {
   if (!now || !plan) return null;
   const { settings } = now;
   const templates = catalog.templates
-    .filter((template) => template.manifest.id !== "recipe")
+    .filter((template) => !builtForOneJob.includes(template.manifest.id))
     .map((template) => ({ value: template.manifest.id, label: template.manifest.name }));
 
   return (
@@ -205,14 +210,16 @@ export function Studio({ catalog, reel }: Props) {
               Your reel
             </button>
           ) : null}
-          <button
-            type="button"
-            className="button-text match-reel"
-            disabled={state.studying}
-            onClick={() => reelPicker.current?.click()}
-          >
-            {state.studying ? "Studying your reel" : "Match a reel you love"}
-          </button>
+          {script ? null : (
+            <button
+              type="button"
+              className="button-text match-reel"
+              disabled={state.studying}
+              onClick={() => reelPicker.current?.click()}
+            >
+              {state.studying ? "Studying your reel" : "Match a reel you love"}
+            </button>
+          )}
           <input
             ref={reelPicker}
             type="file"
@@ -299,6 +306,42 @@ export function Studio({ catalog, reel }: Props) {
               onChange={(aspect) => actions.change({ aspect })}
             />
           </>
+        ) : script ? (
+          <>
+            <VoiceChoice
+              catalog={catalog}
+              voice={script.voice}
+              ready={state.voiceReady ?? catalog.voice.ready}
+              installing={state.installingVoice}
+              voicing={state.voicing}
+              onVoice={actions.setVoice}
+              onInstall={() => void actions.addVoice()}
+            />
+            <Choice
+              label="Shape"
+              options={shapes}
+              value={settings.aspect}
+              onChange={(aspect) => actions.change({ aspect })}
+            />
+            <div className="media-note">
+              <p>{Math.round(plan.duration)} seconds</p>
+              <button type="button" className="button-text" onClick={() => picker.current?.click()}>
+                Add photos or clips
+              </button>
+              <input
+                ref={picker}
+                type="file"
+                accept="image/*,video/*,.heic,.heif,.mov"
+                multiple
+                hidden
+                aria-label="Add photos or clips"
+                onChange={(event) => {
+                  void actions.addFiles([...(event.target.files ?? [])]);
+                  event.target.value = "";
+                }}
+              />
+            </div>
+          </>
         ) : (
           <>
             {settings.recipe ? (
@@ -370,7 +413,18 @@ export function Studio({ catalog, reel }: Props) {
         )}
       </aside>
 
-      {demo ? (
+      {script ? (
+        <ScriptLines
+          script={script}
+          playhead={playhead}
+          starts={plan.texts.map((text) => text.start)}
+          onSeek={(time) => stage.current?.seek(time)}
+          onChange={actions.setLine}
+          onRemove={actions.removeLine}
+          onAdd={actions.addLine}
+          onRewrite={actions.rewrite}
+        />
+      ) : demo ? (
         <Moments
           demo={demo}
           playhead={playhead}

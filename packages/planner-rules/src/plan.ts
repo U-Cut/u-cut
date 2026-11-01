@@ -15,7 +15,7 @@ type Shot = EditPlan["shots"][number];
 type Part = "hook" | "body" | "close";
 
 /** Something a shot can be cut from: a photo, or a stretch of a video. */
-interface Source {
+export interface Source {
   item: MediaItem;
   from: number;
   to: number;
@@ -90,7 +90,7 @@ function openOnBest(sources: Source[]): Source[] {
 }
 
 /** Leaves out hidden scenes, and keeps only the best of a run of near-identical photos. */
-function usableItems(items: MediaItem[], excluded: string[]): MediaItem[] {
+export function usableItems(items: MediaItem[], excluded: string[]): MediaItem[] {
   const shown = items.filter((item) => !excluded.includes(item.labels[0]?.id ?? ""));
   const best = new Map<string, MediaItem>();
   for (const item of shown) {
@@ -170,7 +170,7 @@ function framing(rng: () => number, scale: number, focus: MediaItem["focus"]) {
   return { x: towards(focus?.x), y: towards(focus?.y), scale: round(scale) };
 }
 
-function motionFor(source: Source, profile: VibeProfile, rng: () => number): Shot["motion"] {
+export function motionFor(source: Source, profile: VibeProfile, rng: () => number): Shot["motion"] {
   const still = { x: 0.5, y: 0.5, scale: 1 };
   if (source.item.kind === "video") {
     const scale = 1 + profile.motion / 3;
