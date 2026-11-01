@@ -283,10 +283,16 @@ async function main() {
     const shotsBefore = await page.$$eval(".shot-tile", (tiles) => tiles.length);
     const reelInput = await page.$('input[aria-label="Choose a reel to match"]');
     await reelInput?.uploadFile(reel);
-    await page.waitForSelector(".recipe-card", { timeout: 120_000 }).catch(async (error: Error) => {
-      const notice = await page.$eval(".notice", (element) => element.textContent).catch(() => "");
-      throw new Error(`${error.message}. The app says: ${notice}`);
-    });
+    // Notices fade after seven seconds, so this watches for one instead of reading it at the end.
+    const studied = await page.waitForFunction(
+      () =>
+        document.querySelector(".recipe-card")
+          ? "ok"
+          : document.querySelector(".notice button")?.textContent,
+      { timeout: 120_000 },
+    );
+    const outcome = await studied.jsonValue();
+    if (outcome !== "ok") throw new Error(`Matching a reel failed. The app says: ${outcome}`);
     await new Promise((resolve) => setTimeout(resolve, 700));
     await snap(page, "5d-matched-reel");
     const card = await page.$eval(".recipe-card p", (paragraph) => paragraph.textContent ?? "");
