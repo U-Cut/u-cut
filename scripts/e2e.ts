@@ -367,6 +367,8 @@ async function main() {
     pass("works at phone width");
 
     await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+    // Leaving phone mode reloads the page.
+    await page.waitForSelector(".studio", { timeout: 30_000 });
     page.once("dialog", (dialog) => void dialog.accept());
     await clickButton(page, "New reel");
     await page.waitForSelector(".headline");
