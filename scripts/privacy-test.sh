@@ -31,10 +31,17 @@ sandbox-exec -f "$work/no-network.sb" \
 
 test -s "$work/demo.mp4"
 
+# Matching a reel studies it with the same tools, so it has to pass the same way.
+sandbox-exec -f "$work/no-network.sb" \
+  node --conditions=source --import tsx "$root/packages/engine/src/bin.ts" \
+  make "$root/library/samples" --like "$work/recording.mp4" -o "$work/matched.mp4" --quality draft
+
+test -s "$work/matched.mp4"
+
 # Read aloud where the voice is installed. Without it, this is a reel of words.
 sandbox-exec -f "$work/no-network.sb" \
   node --conditions=source --import tsx "$root/packages/engine/src/bin.ts" \
   write "an 8-second reel about my Goa trip" -o "$work/written.mp4" --quality draft
 
 test -s "$work/written.mp4"
-echo "Privacy test passed: a reel, a demo and a written reel were made with the network blocked."
+echo "Privacy test passed: every kind of reel was made with the network blocked."
