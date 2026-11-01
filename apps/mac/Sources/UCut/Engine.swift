@@ -13,8 +13,12 @@ final class Engine: ObservableObject {
     private var process: Process?
     /// Held open for the life of the app. If the app dies, the engine sees this close and stops.
     private let lifeline = Pipe()
+    private var started = false
 
+    /// Safe to call more than once: macOS can restore several windows, and each one asks.
     func start() {
+        guard !started else { return }
+        started = true
         Task {
             // U-Cut may already be running in the browser. Share it instead of starting another.
             if let url = URL(string: "http://localhost:4173"),
@@ -45,6 +49,7 @@ final class Engine: ObservableObject {
         process.standardOutput = output
         process.standardInput = lifeline
         process.environment = Self.environment()
+        if let log = Self.openLog() { process.standardError = log }
         output.fileHandleForReading.readabilityHandler = { [weak self] handle in
             guard let line = String(data: handle.availableData, encoding: .utf8),
                 let data = line.data(using: .utf8),
@@ -55,9 +60,9 @@ final class Engine: ObservableObject {
             Task { @MainActor in self?.state = .running(url) }
         }
         process.terminationHandler = { [weak self] finished in
+            let code = finished.terminationStatus
             Task { @MainActor in
-                if case .running = self?.state { return }
-                self?.state = .failed("The engine stopped with code \(finished.terminationStatus). Is U-Cut already open?")
+                self?.state = .failed("U-Cut's engine stopped (code \(code)). Open the app again. If it keeps happening, the reason is in ~/Library/Logs/U-Cut/engine.log.")
             }
         }
         do {
@@ -70,6 +75,16 @@ final class Engine: ObservableObject {
 
     func stop() {
         process?.terminate()
+    }
+
+    /// Starts a fresh log each launch, so a failure can be diagnosed.
+    private static func openLog() -> FileHandle? {
+        let manager = FileManager.default
+        let folder = manager.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/U-Cut")
+        let file = folder.appendingPathComponent("engine.log")
+        try? manager.createDirectory(at: folder, withIntermediateDirectories: true)
+        guard manager.createFile(atPath: file.path, contents: nil) else { return nil }
+        return try? FileHandle(forWritingTo: file)
     }
 
     private struct Reply: Decodable {

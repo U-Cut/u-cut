@@ -1,3 +1,4 @@
+import { open } from "node:fs/promises";
 import type { MediaItem } from "@u-cut/schema";
 import exifr from "exifr";
 import { run } from "./exec.ts";
@@ -16,6 +17,7 @@ interface FfprobeOutput {
   format?: { duration?: string; tags?: Record<string, string> };
 }
 
+const metadataBytes = 2 * 1024 * 1024;
 const photoExtensions = new Set([".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp"]);
 const videoExtensions = new Set([".mov", ".mp4", ".m4v", ".webm", ".mkv"]);
 
@@ -44,9 +46,24 @@ async function ffprobe(path: string): Promise<FfprobeOutput> {
   return JSON.parse(output) as FfprobeOutput;
 }
 
+/** EXIF sits at the start of a file. It's read here because exifr leaves its own file handles
+ * open, and Node 26 treats that as a fatal error. */
+async function firstBytes(path: string): Promise<Buffer> {
+  const file = await open(path);
+  try {
+    const { buffer, bytesRead } = await file.read({
+      buffer: Buffer.alloc(metadataBytes),
+      position: 0,
+    });
+    return buffer.subarray(0, bytesRead);
+  } finally {
+    await file.close();
+  }
+}
+
 async function photoMetadata(path: string) {
   const data = (await exifr
-    .parse(path, { gps: true, tiff: true, exif: true, translateValues: false })
+    .parse(await firstBytes(path), { gps: true, tiff: true, exif: true, translateValues: false })
     .catch(() => undefined)) as
     | {
         DateTimeOriginal?: Date;
