@@ -22,6 +22,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Lint, typecheck, unit tests, schema and Swift round-trip tests, licence scan.
       - run: pnpm check
+      - run: pnpm --filter @u-cut/site build
       - run: swift build --package-path apps/mac
       - name: Check DCO sign-offs
         if: github.event_name == 'pull_request'

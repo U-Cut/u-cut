@@ -13,3 +13,6 @@ coverage/
 *.m4v
 *.webm
 *.mkv
+
+# Copied from library/ when the website is built.
+apps/site/public/media/

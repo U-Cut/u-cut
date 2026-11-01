@@ -25,7 +25,7 @@ Updated 2026-11-01.
 | 6. Planner lanes                       | Not started                                                                                                                                                                                                                                                                                                                |
 | 7. Ship                                | Partly done: three of eight templates, and an install script. No `.dmg` yet                                                                                                                                                                                                                                                |
 
-**Added since the brief:** `ucut serve` with a fair export queue, `--lan` sharing, Docker, and a 20-person load test ([ADR 0013](decisions/0013-browser-plans-server-exports.md)).
+**Added since the brief:** `ucut serve` with a fair export queue, `--lan` sharing, Docker, a 20-person load test ([ADR 0013](decisions/0013-browser-plans-server-exports.md)), and a website with a live reel ([ADR 0020](decisions/0020-the-website-is-static.md)).
 
 ## Global Constraints
 

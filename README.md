@@ -100,6 +100,7 @@ The plan is a small JSON file. The same plan produces the preview and the final 
 | Folder                                             | What's inside                                                             |
 | -------------------------------------------------- | ------------------------------------------------------------------------- |
 | [`apps/web`](apps/web)                             | The interface, built with React. The Mac app and browsers both show this. |
+| [`apps/site`](apps/site)                           | The website. It plays a real reel in the page, with no server.            |
 | [`apps/mac`](apps/mac)                             | The native Mac app that hosts the interface.                              |
 | [`packages/engine`](packages/engine)               | The `ucut` command, the media pipeline and the server.                    |
 | [`packages/planner-rules`](packages/planner-rules) | Decides what goes where. Runs in the browser.                             |

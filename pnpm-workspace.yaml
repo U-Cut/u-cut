@@ -1,6 +1,7 @@
 packages:
   - "packages/*"
   - "apps/web"
+  - "apps/site"
 allowBuilds:
   esbuild: true
 minimumReleaseAgeExclude:

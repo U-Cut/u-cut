@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#000000" />
+    <title>U-Cut, the free reel maker that runs on your Mac</title>
+    <meta
+      name="description"
+      content="Turn photos, a reel you love, a screen recording or one sentence into a finished video on your own Mac. Free, open source, and nothing is uploaded."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="U-Cut, the free reel maker that runs on your Mac" />
+    <meta
+      property="og:description"
+      content="Photos, a reel you love, a screen recording or one sentence, turned into a finished video on your own Mac."
+    />
+    <meta property="og:image" content="%SITE%/media/preview.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <header class="top">
+      <a class="wordmark" href="/" aria-label="U-Cut home">U-Cut</a>
+      <nav aria-label="Main">
+        <a href="#install">Install</a>
+        <a class="top-github" href="https://github.com/mayank29deo/U-Cut">GitHub</a>
+      </nav>
+    </header>
+
+    <main>
+      <div class="opening">
+        <section class="hero">
+          <h1>Make reels on your own Mac.</h1>
+          <p class="lede">
+            Give U-Cut your photos, a reel you love, a screen recording or one sentence. It plays
+            you a finished video in seconds. Free, open source, and nothing leaves your computer.
+          </p>
+          <div class="actions">
+            <a class="button-solid" href="#install">Install U-Cut</a>
+            <a class="button-outline" href="https://github.com/mayank29deo/U-Cut">See the code</a>
+          </div>
+
+          <form class="try">
+            <label>
+              <span class="try-label">Try it now. Describe a reel and watch it cut.</span>
+              <span class="try-row">
+                <textarea rows="1" maxlength="600" aria-label="Describe a reel">A 20-second reel about my Goa trip, chill vibe</textarea>
+                <button type="submit" class="button-solid">Cut it</button>
+              </span>
+            </label>
+          </form>
+          <fieldset class="vibes">
+            <legend class="hidden-label">Vibe</legend>
+            <button type="button" class="vibe" data-vibe="chill">Chill</button>
+            <button type="button" class="vibe" data-vibe="hype">Hype</button>
+            <button type="button" class="vibe" data-vibe="cinematic">Cinematic</button>
+            <button type="button" class="vibe" data-vibe="nostalgic">Nostalgic</button>
+          </fieldset>
+        </section>
+
+        <aside class="stage" aria-label="A reel being cut live in this page">
+          <div class="stage-glow"></div>
+          <div class="stage-frame" data-shape="9:16">
+            <div class="stage-host"></div>
+          </div>
+          <div class="stage-controls">
+            <button type="button" class="stage-play" aria-label="Pause" data-playing="true"></button>
+            <button type="button" class="stage-remix" aria-keyshortcuts="R">Remix <kbd>R</kbd></button>
+            <button type="button" class="stage-sound" aria-pressed="false">Sound off</button>
+          </div>
+          <p class="stage-note" aria-live="polite">This is U-Cut, running in this page.</p>
+        </aside>
+
+        <section class="ways" aria-labelledby="ways-title">
+          <h2 id="ways-title">Start from whatever you have.</h2>
+          <button type="button" class="way" data-way="photos">
+            <strong>Your photos and clips</strong>
+            <span>It sorts them into scenes, drops the near-copies and cuts the best shots to music.</span>
+          </button>
+          <button type="button" class="way" data-way="reference">
+            <strong>A reel you love</strong>
+            <span>It learns the rhythm, text style and colour, then rebuilds that with your own media. Nothing from that reel is used.</span>
+          </button>
+          <button type="button" class="way" data-way="recording">
+            <strong>A screen recording</strong>
+            <span>It finds the moments worth keeping, pushes in on the action, and adds captions and title cards.</span>
+          </button>
+          <button type="button" class="way is-on" data-way="sentence">
+            <strong>One sentence</strong>
+            <span>It writes a short script, reads it in a local voice and builds the reel around the words. The voice runs in the app.</span>
+          </button>
+        </section>
+      </div>
+
+      <section class="yours" aria-labelledby="yours-title">
+        <h2 id="yours-title">Yours, start to finish.</h2>
+        <dl>
+          <div>
+            <dt>Free</dt>
+            <dd>No account, no credits and no watermark. It's open source under Apache-2.0.</dd>
+          </div>
+          <div>
+            <dt>Private</dt>
+            <dd>Your media stays on your computer. Every kind of reel is tested with the network blocked.</dd>
+          </div>
+          <div>
+            <dt>Quick</dt>
+            <dd>On an 8 GB Mac, 28 photos became a playing reel in 2.8 seconds, and a remix took under 30 milliseconds.</dd>
+          </div>
+          <div>
+            <dt>Editable</dt>
+            <dd>Every export comes with a project folder you can open and change.</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="install" id="install" aria-labelledby="install-title">
+        <h2 id="install-title">Install it with one line.</h2>
+        <p>Paste this into Terminal on a Mac with Apple Silicon. It takes a few minutes and about 2 GB.</p>
+        <div class="command">
+          <code>curl -fsSL https://raw.githubusercontent.com/mayank29deo/U-Cut/main/install.sh | bash</code>
+          <button type="button" class="copy">Copy</button>
+        </div>
+        <p>
+          Then open U-Cut from your Applications folder, or type <code>ucut</code> to use it in your
+          browser. On Linux or Windows, it runs in Docker, without sorting by scene.
+        </p>
+        <div class="actions">
+          <a class="button-solid" href="https://github.com/mayank29deo/U-Cut/blob/main/docs/INSTALL.md">Read the install guide</a>
+          <a class="button-outline" href="https://github.com/mayank29deo/U-Cut">Open the repo on GitHub</a>
+        </div>
+
+        <h3>Or use the command line</h3>
+        <pre><code>ucut make ~/Pictures/Goa --vibe hype -o goa.mp4
+ucut make ~/Pictures/Goa --like a-reel-i-love.mp4 -o goa.mp4
+ucut demo recording.mov --name "Acme" -o demo.mp4
+ucut write "a 20-second reel about my Goa trip, chill vibe" -o goa.mp4</code></pre>
+      </section>
+
+      <section class="status" aria-labelledby="status-title">
+        <h2 id="status-title">Where it stands.</h2>
+        <div class="status-lists">
+          <div>
+            <h3>Works today</h3>
+            <ul>
+              <li>Reels cut to music, with remix, undo and a shot swap</li>
+              <li>Sorting into scenes, on a Mac</li>
+              <li>Matching the style of a reel you love</li>
+              <li>Demos from screen recordings</li>
+              <li>Reels from a sentence, with a local voice</li>
+              <li>Up to 20 people sharing one computer</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Still rough</h3>
+            <ul>
+              <li>Sorting is right about two times in three on new places</li>
+              <li>Scripts come from fixed patterns until the Claude lanes arrive</li>
+              <li>Captions and scripts are in English</li>
+              <li>The app isn't notarized, so right-click it and choose Open</li>
+              <li>Three reel styles so far, with more to come</li>
+            </ul>
+          </div>
+        </div>
+        <p>
+          The <a href="https://github.com/mayank29deo/U-Cut/blob/main/docs/PLAN.md">plan</a> is
+          public, and templates, sound and code are all open to
+          <a href="https://github.com/mayank29deo/U-Cut/blob/main/CONTRIBUTING.md">contributions</a>.
+        </p>
+      </section>
+    </main>
+
+    <footer class="bottom">
+      <span>U-Cut is free software under Apache-2.0.</span>
+      <nav aria-label="More">
+        <a href="https://github.com/mayank29deo/U-Cut">GitHub</a>
+        <a href="https://github.com/mayank29deo/U-Cut/issues">Report a problem</a>
+      </nav>
+    </footer>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
