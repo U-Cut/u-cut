@@ -38,8 +38,13 @@ describe("studying a reel", () => {
     expect(recipe.bpm).toBeCloseTo(128, -1);
     expect(recipe.cutRhythm.median).toBeCloseTo(0.94, 1);
     expect(recipe.cutRhythm.onBeat).toBe(true);
-    expect(recipe.text).toMatchObject({ case: "upper", position: "lower" });
     expect(description).toContain("cutting on the beat");
+  });
+
+  // Apple's text recognition doesn't finish on GitHub's GPU-less virtual Macs.
+  it.skipIf(process.env.CI)("reads how the reel's words are set", async () => {
+    const { recipe } = await studyReel(reel);
+    expect(recipe.text).toMatchObject({ case: "upper", position: "lower" });
   });
 
   it("never records what the reel's words say", async () => {

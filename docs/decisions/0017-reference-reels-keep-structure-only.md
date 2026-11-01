@@ -21,4 +21,6 @@ The brief says a reference reel is used for structure only: its footage, audio a
 
 Measured on a reel U-Cut made itself, where the true values are known: 128 BPM found as 128, 0.94 s shots found as 0.93 s, and capitals set low were read correctly.
 
+Every step has a time limit, and text is optional. Text recognition doesn't finish on GitHub's GPU-less virtual Macs, so a reel there is matched from rhythm and colour alone, and the test for reading text runs only on real Macs.
+
 It hasn't yet been tested on real reels from Instagram or similar, which may use dissolves and busier text. Transition types beyond a hard cut and an end fade aren't detected yet, and fonts aren't identified.
