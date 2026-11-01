@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type Catalog } from "./api";
+import { Splash } from "./components/Splash";
 import { Start } from "./components/Start";
 import { Studio } from "./components/Studio";
 import { useReel } from "./reel";
@@ -98,6 +99,7 @@ export function App() {
           <p>Let go to add them</p>
         </div>
       ) : null}
+      <Splash />
       <div className="notice" role="status" aria-live="polite">
         {state.notice ? (
           <button type="button" onClick={actions.dismiss}>

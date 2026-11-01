@@ -34,13 +34,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 struct ContentView: View {
     @ObservedObject var engine: Engine
+    @State private var splashTimeUp = false
+
+    private var isStarting: Bool {
+        if case .starting = engine.state { return true }
+        return false
+    }
 
     var body: some View {
+        ZStack {
+            content
+            if isStarting || !splashTimeUp {
+                SplashView().transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.4), value: isStarting || !splashTimeUp)
+        .task {
+            try? await Task.sleep(for: .seconds(1.9))
+            splashTimeUp = true
+        }
+    }
+
+    @ViewBuilder private var content: some View {
         switch engine.state {
         case .starting:
             Color.black
         case .running(let url):
-            WebView(url: url).ignoresSafeArea()
+            // The page skips its own splash, since this app has just shown one.
+            WebView(url: url.appending(queryItems: [URLQueryItem(name: "shell", value: "1")]))
+                .ignoresSafeArea()
         case .failed(let reason):
             VStack(spacing: 10) {
                 Text("U-Cut can't start.")

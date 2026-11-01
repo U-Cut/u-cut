@@ -13,7 +13,15 @@ Everything follows from that:
 - **Black and white do the work.** Black is `#000`, not a tinted grey. Text is pure white or a lower-contrast grey.
 - **Purple is atmosphere only.** It appears as a light leak, film grain and the glow behind the reel. No button, label or control is ever purple. The one exception is the focus ring, which needs to stand out.
 - **Words are the controls.** Vibes are a stack of large words. The chosen one lights up. There are no cards or boxes, because a darkroom doesn't have a dashboard.
-- **One white button.** Export is the only solid white control while editing, so you always know how to finish.
+- **One white button.** Export is the only solid white control while editing, so you always know how to finish. New reel sits beside it as an outlined pill: starting and finishing live in the same place.
+
+## The splash
+
+The app opens on the logo: **U ✂ Cut** in bold white on purplish black, with the scissors standing in for the hyphen. The scissors snip twice as "Cut" is cut open beside them, then the screen fades into the app.
+
+It lasts under two seconds, and any click or key skips it. It plays once a session, and the Mac app draws the same mark natively, so nothing sits on an empty window while the engine starts.
+
+The scissors are drawn by hand in two halves that pivot, in [`icons.tsx`](../apps/web/src/components/icons.tsx) and [`Splash.swift`](../apps/mac/Sources/UCut/Splash.swift). Keep the two in step.
 
 ## The product rule: the reel comes first
 
@@ -61,7 +69,7 @@ These live at the top of [`app.css`](../apps/web/src/styles/app.css).
 
 ```
 ┌───────────────────────────────────────────────────────┐
-│ U-Cut  New reel                    Undo Redo  Export  │
+│ U-Cut              Undo Redo  + New reel  Export      │
 │                                                       │
 │                     ┌─────────┐                       │
 │ Chill               │         │          Title        │
@@ -74,7 +82,7 @@ These live at the top of [`app.css`](../apps/web/src/styles/app.css).
 └───────────────────────────────────────────────────────┘
 ```
 
-Left is how it feels. Right is how it's built. The bottom is what's in it. On a phone these stack: reel, vibes, shots, settings.
+Left is how it feels. Right is how it's built. The bottom is what's in it. The top right is how you start and finish. On a phone these stack: reel, vibes, shots, settings.
 
 The strip along the bottom shows each shot at its real length, so the rhythm of the cut is visible at a glance.
 

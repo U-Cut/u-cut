@@ -77,6 +77,125 @@ button {
   opacity: 0.2;
 }
 
+/* The splash: the scissors snip, and the name is cut open. */
+.splash {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  cursor: default;
+  background: radial-gradient(
+    58vmax 42vmax at 50% 50%,
+    #26116a 0%,
+    #150a3c 34%,
+    #07030f 66%,
+    #000 100%
+  );
+}
+
+.splash::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--grain);
+  opacity: 0.28;
+  pointer-events: none;
+}
+
+.splash.is-leaving {
+  animation: splash-leave 0.42s var(--ease) forwards;
+}
+
+@keyframes splash-leave {
+  to {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+.splash-mark {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.13em;
+  font: 800 clamp(84px, 17vw, 250px) / 1 var(--display);
+  letter-spacing: -0.025em;
+  color: var(--white);
+  animation: splash-arrive 0.5s var(--spring) both;
+}
+
+@keyframes splash-arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+}
+
+.splash-cut {
+  clip-path: inset(-10% 100% -10% 0);
+  animation: splash-cut 0.62s cubic-bezier(0.7, 0, 0.2, 1) 0.42s forwards;
+}
+
+@keyframes splash-cut {
+  to {
+    clip-path: inset(-10% -5% -10% 0);
+  }
+}
+
+.scissors {
+  width: 0.96em;
+  height: 0.9em;
+  flex: none;
+  overflow: visible;
+  --pin: #150a3c;
+}
+
+.scissors-pin {
+  fill: var(--pin);
+}
+
+.scissors-half {
+  transform-box: view-box;
+  transform-origin: 60px 60px;
+}
+
+.scissors-up {
+  animation: snip-up 0.86s ease-in-out 0.34s both;
+}
+
+.scissors-down {
+  animation: snip-down 0.86s ease-in-out 0.34s both;
+}
+
+@keyframes snip-up {
+  30%,
+  78% {
+    transform: rotate(11deg);
+  }
+  54% {
+    transform: rotate(1deg);
+  }
+  100% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes snip-down {
+  30%,
+  78% {
+    transform: rotate(-11deg);
+  }
+  54% {
+    transform: rotate(-1deg);
+  }
+  100% {
+    transform: rotate(-5deg);
+  }
+}
+
 /* Buttons */
 .button-solid {
   display: inline-flex;
@@ -333,8 +452,43 @@ button {
   gap: 6px;
 }
 
-.topbar-actions .button-solid {
+.topbar-actions .button-outline {
   margin-left: 10px;
+}
+
+.topbar-actions .button-solid {
+  margin-left: 2px;
+}
+
+.button-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 18px 0 13px;
+  border-radius: 999px;
+  color: var(--white);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.72);
+  transition:
+    background 0.15s,
+    color 0.15s,
+    transform 0.18s var(--spring);
+}
+
+.button-outline:hover {
+  background: var(--white);
+  color: var(--black);
+  transform: scale(1.03);
+}
+
+.button-outline:active {
+  transform: scale(0.97);
+}
+
+.button-outline svg {
+  width: 17px;
+  height: 17px;
 }
 
 /* Vibes are the interface's loudest words. */
@@ -1101,6 +1255,16 @@ kbd {
   }
   .strip {
     height: 52px;
+  }
+  .button-outline {
+    padding: 0 11px;
+  }
+  .button-outline span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
   }
   .sort-body {
     grid-template-columns: 1fr;

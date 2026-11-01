@@ -146,6 +146,11 @@ async function main() {
 
     const loadStart = performance.now();
     await page.goto(base);
+    await page.waitForSelector(".splash");
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    await snap(page, "0-splash");
+    await page.waitForSelector(".splash", { hidden: true, timeout: 5000 });
+    pass("the splash plays, then gets out of the way");
     await page.waitForSelector(".headline");
     pass("first screen appears", `${(performance.now() - loadStart).toFixed(0)} ms`);
 

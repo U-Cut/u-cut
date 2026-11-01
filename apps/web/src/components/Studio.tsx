@@ -5,7 +5,7 @@ import type { Catalog } from "../api";
 import type { useReel } from "../reel";
 import { ExportSheet } from "./ExportSheet";
 import { Filmstrip } from "./Filmstrip";
-import { MuteIcon, PauseIcon, PlayIcon, RedoIcon, SoundIcon, UndoIcon } from "./icons";
+import { MuteIcon, PauseIcon, PlayIcon, PlusIcon, RedoIcon, SoundIcon, UndoIcon } from "./icons";
 import { Sort } from "./Sort";
 import { Stage, type StageHandle } from "./Stage";
 
@@ -129,18 +129,7 @@ export function Studio({ catalog, reel }: Props) {
     <div className="studio" ref={room}>
       <div className="stage-glow is-breathing" />
       <header className="topbar">
-        <div className="topbar-start">
-          <span className="wordmark">U-Cut</span>
-          <button
-            type="button"
-            className="button-text"
-            onClick={() => {
-              if (window.confirm("Start a new reel? This one will close.")) actions.startOver();
-            }}
-          >
-            New reel
-          </button>
-        </div>
+        <span className="wordmark">U-Cut</span>
         <div className="topbar-actions">
           <button
             type="button"
@@ -161,6 +150,16 @@ export function Studio({ catalog, reel }: Props) {
             title="Redo (⇧⌘Z)"
           >
             <RedoIcon />
+          </button>
+          <button
+            type="button"
+            className="button-outline"
+            onClick={() => {
+              if (window.confirm("Start a new reel? This one will close.")) actions.startOver();
+            }}
+          >
+            <PlusIcon />
+            <span>New reel</span>
           </button>
           <button type="button" className="button-solid" onClick={() => void actions.exportReel()}>
             Export

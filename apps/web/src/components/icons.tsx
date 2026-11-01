@@ -49,3 +49,38 @@ export const MuteIcon = () => (
     <path d="m13.5 8 4 4m0-4-4 4" />
   </svg>
 );
+
+export const PlusIcon = () => (
+  <svg {...stroke} strokeWidth={2}>
+    <path d="M10 4v12M4 10h12" />
+  </svg>
+);
+
+/** U-Cut's mark. Two halves that pivot, so the blades can snip. */
+export const Scissors = () => (
+  <svg className="scissors" viewBox="0 0 128 120" aria-hidden="true">
+    <g className="scissors-half scissors-up">
+      <circle cx="21" cy="87" r="14" fill="none" stroke="currentColor" strokeWidth="13" />
+      <path
+        d="M34 77 60 60"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="13"
+        strokeLinecap="round"
+      />
+      <path d="M44 72 126 32 70 46Z" fill="currentColor" />
+    </g>
+    <g className="scissors-half scissors-down">
+      <circle cx="21" cy="33" r="14" fill="none" stroke="currentColor" strokeWidth="13" />
+      <path
+        d="M34 43 60 60"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="13"
+        strokeLinecap="round"
+      />
+      <path d="M44 48 126 88 70 74Z" fill="currentColor" />
+    </g>
+    <circle className="scissors-pin" cx="60" cy="60" r="5" />
+  </svg>
+);
