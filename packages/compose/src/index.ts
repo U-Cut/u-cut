@@ -52,6 +52,12 @@ export function gradeFilter(grade: EditPlan["grade"]): string {
   return parts.length > 0 ? parts.join(" ") : "none";
 }
 
+/** Black or white, whichever reads better on a brand colour. */
+function inkOn(colour: string): string {
+  const channel = (start: number) => Number.parseInt(colour.slice(start, start + 2), 16);
+  return channel(1) * 0.299 + channel(3) * 0.587 + channel(5) * 0.114 > 150 ? "#000" : "#fff";
+}
+
 function transformFor(framing: EditPlan["shots"][number]["motion"]["from"]): string {
   const x = round((0.5 - framing.x) * framing.scale * 100);
   const y = round((0.5 - framing.y) * framing.scale * 100);
@@ -72,15 +78,25 @@ export function musicSegments(plan: EditPlan): MusicSegment[] {
   return segments;
 }
 
+/** A screen recording pushes in quickly, holds while the action plays, then pulls back. */
+function cameraKeyframes(shot: EditPlan["shots"][number], length: number): string {
+  const from = transformFor(shot.motion.from);
+  const to = transformFor(shot.motion.to);
+  if (shot.fit !== "contain") return `from{transform:${from}}to{transform:${to}}`;
+  const arrive = round(Math.min(0.35, 0.6 / length) * 100);
+  const leave = round(100 - Math.min(0.25, 0.5 / length) * 100);
+  const ease = "animation-timing-function:cubic-bezier(.3,0,.1,1)";
+  return `0%{transform:${from};${ease}}${arrive}%{transform:${to}}${leave}%{transform:${to};${ease}}100%{transform:${from}}`;
+}
+
 function shotCss(plan: EditPlan): string {
   return plan.shots
     .map((shot, index) => {
       const id = `s${index}`;
       const length = round(shot.end - shot.start);
       return [
-        `#${id}{animation:${id} ${length}s linear both;z-index:${index + 1};object-position:${round(shot.focus.x * 100)}% ${round(shot.focus.y * 100)}%}`,
-        `@keyframes ${id}{from{transform:${transformFor(shot.motion.from)}}`,
-        `to{transform:${transformFor(shot.motion.to)}}}`,
+        `#${id}{animation:${id} ${length}s linear both;z-index:${index + 1};object-position:${round(shot.focus.x * 100)}% ${round(shot.focus.y * 100)}%${shot.fit === "contain" ? ";object-fit:contain" : ""}}`,
+        `@keyframes ${id}{${cameraKeyframes(shot, length)}}`,
       ].join("");
     })
     .join("\n");
@@ -112,7 +128,8 @@ function shotHtml(input: ComposeInput): string {
       if (item.kind === "photo") {
         return `<img id="s${index}" class="clip shot" src="${src}" ${timing} data-track-index="1" alt=""/>`;
       }
-      return `<video id="s${index}" class="clip shot" src="${src}" ${timing} data-media-start="${shot.in}" data-track-index="1" muted playsinline></video>`;
+      const sound = shot.keepAudio ? 'data-has-audio="true" data-volume="1"' : "muted";
+      return `<video id="s${index}" class="clip shot" src="${src}" ${timing} data-media-start="${shot.in}" data-track-index="1" ${sound} playsinline></video>`;
     })
     .join("\n");
 }
@@ -122,6 +139,17 @@ function textHtml(plan: EditPlan): string {
     .map((text, index) => {
       const timing = `data-start="${text.start}" data-duration="${round(text.end - text.start)}"`;
       return `<div id="t${index}" class="clip text text-${text.style}" ${timing} data-track-index="2"><span>${escapeHtml(text.text)}</span></div>`;
+    })
+    .join("\n");
+}
+
+function cardHtml(input: ComposeInput): string {
+  return (input.plan.cards ?? [])
+    .map((card, index) => {
+      const timing = `data-start="${card.start}" data-duration="${round(card.end - card.start)}"`;
+      const item = card.logo ? input.items[card.logo] : undefined;
+      const logo = item ? `<img src="${escapeHtml(input.assets.media(item))}" alt=""/>` : "";
+      return `<div id="c${index}" class="clip card" ${timing} data-track-index="5" style="background:${card.colour};color:${inkOn(card.colour)}">${logo}<span>${escapeHtml(card.title)}</span></div>`;
     })
     .join("\n");
 }
@@ -144,7 +172,7 @@ function musicHtml(input: ComposeInput): string {
     .map((segment, index) => {
       const fade =
         index === segments.length - 1 && fadeOut > 0 ? ` data-fade-out="${fadeOut}"` : "";
-      return `<audio id="music${index}" src="${escapeHtml(input.assets.music(plan.music.src))}" data-start="${segment.at}" data-duration="${segment.length}" data-media-start="${segment.from}" data-volume="1"${fade} data-timeline-role="music" data-track-index="4"></audio>`;
+      return `<audio id="music${index}" src="${escapeHtml(input.assets.music(plan.music.src))}" data-start="${segment.at}" data-duration="${segment.length}" data-media-start="${segment.from}" data-volume="${plan.music.volume ?? 1}"${fade} data-timeline-role="music" data-track-index="4"></audio>`;
     })
     .join("\n");
 }
@@ -160,6 +188,9 @@ export function composeParts(input: ComposeInput): Composition {
     `.shot{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;filter:${gradeFilter(plan.grade)}}`,
     ".text{position:absolute;z-index:100;animation:ucut-text .42s cubic-bezier(.2,.8,.2,1) both}",
     "@keyframes ucut-text{from{opacity:0;transform:translateY(calc(26*var(--unit)))}to{opacity:1;transform:none}}",
+    ".card{position:absolute;inset:0;z-index:150;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(36*var(--unit));padding:0 8%;text-align:center}",
+    ".card span{animation:ucut-text .5s cubic-bezier(.2,.8,.2,1) both}",
+    ".card img{max-width:44%;max-height:26%;object-fit:contain}",
     fade
       ? `#fade{position:absolute;inset:0;background:#000;z-index:200;animation:ucut-fade ${fade.duration}s linear both}`
       : "",
@@ -174,12 +205,13 @@ export function composeParts(input: ComposeInput): Composition {
   const children = [
     shotHtml(input),
     textHtml(plan),
+    cardHtml(input),
     fadeHtml(plan),
     input.omitAudio ? "" : musicHtml(input),
   ]
     .filter(Boolean)
     .join("\n");
-  const root = `<div id="root" class="vibe-${plan.vibe}" data-composition-id="main" data-start="0" data-duration="${plan.duration}" data-fps="${plan.fps}" data-width="${width}" data-height="${height}" data-no-timeline>\n${children}\n</div>`;
+  const root = `<div id="root" class="vibe-${plan.vibe} aspect-${plan.aspect.replace(":", "x")}" data-composition-id="main" data-start="0" data-duration="${plan.duration}" data-fps="${plan.fps}" data-width="${width}" data-height="${height}" data-no-timeline>\n${children}\n</div>`;
   return { width, height, css, root };
 }
 

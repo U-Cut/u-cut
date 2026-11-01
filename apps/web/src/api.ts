@@ -1,5 +1,6 @@
 import type {
   BeatGrid,
+  Demo,
   EditPlan,
   MediaItem,
   StyleRecipe,
@@ -32,6 +33,7 @@ export interface Job {
   plan: EditPlan | null;
   excludedScenes: string[];
   recipe: StyleRecipe | null;
+  demo: Demo | null;
 }
 
 export interface RenderEvent {
@@ -57,7 +59,16 @@ export interface MediaEvent {
   item?: MediaItem;
 }
 
-export type ServerEvent = RenderEvent | MediaEvent;
+export interface RecordingEvent {
+  type: "recording";
+  job: string;
+  id: string;
+  state: "ready" | "failed";
+  reason?: string;
+  demo?: Demo;
+}
+
+export type ServerEvent = RenderEvent | MediaEvent | RecordingEvent;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init).catch(() => {
@@ -83,6 +94,18 @@ export const api = {
       method: "PUT",
       body: file,
     }),
+  uploadRecording: (id: string, file: File) =>
+    request<MediaItem>(`/api/jobs/${id}/recording/${encodeURIComponent(file.name)}`, {
+      method: "PUT",
+      body: file,
+    }),
+  uploadLogo: (id: string, file: File) =>
+    request<MediaItem>(`/api/jobs/${id}/logo/${encodeURIComponent(file.name)}`, {
+      method: "PUT",
+      body: file,
+    }),
+  saveDemo: (id: string, demo: Demo) =>
+    request(`/api/jobs/${id}/demo`, { method: "PUT", ...json(demo) }),
   savePlan: (id: string, plan: EditPlan) =>
     request(`/api/jobs/${id}/plan`, { method: "PUT", ...json(plan) }),
   setScene: (id: string, media: string, scene: string) =>
@@ -111,4 +134,6 @@ export function connectEvents(onEvent: (event: ServerEvent) => void): () => void
 
 export const mediaUrl = (item: MediaItem) =>
   `/media/${item.id}/${item.kind === "photo" ? "display" : "preview"}`;
+export const screenUrl = (item: MediaItem) =>
+  item.kind === "photo" ? mediaUrl(item) : `/media/${item.id}/screen`;
 export const thumbUrl = (id: string) => `/media/${id}/thumb`;

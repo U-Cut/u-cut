@@ -1,6 +1,15 @@
 import type { Planner, PlannerInput } from "@u-cut/schema";
 import { planRules } from "./plan.ts";
 
+export {
+  captionLines,
+  type DemoInput,
+  type DemoPlanInput,
+  findMoments,
+  planDemo,
+  type ScreenWindow,
+  spreadWords,
+} from "./demo.ts";
 export { replaceShot, setTitle, swapShots } from "./edit.ts";
 export { PlanError, planRules } from "./plan.ts";
 export {

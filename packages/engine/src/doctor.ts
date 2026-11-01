@@ -3,6 +3,7 @@ import { cpus, platform, totalmem } from "node:os";
 import { run } from "./exec.ts";
 import { hf } from "./hf.ts";
 import { homeDir } from "./paths.ts";
+import { speechReady } from "./recording.ts";
 import { freeDisk, minimumFreeDisk } from "./server/capacity.ts";
 
 export interface Check {
@@ -54,6 +55,13 @@ export async function doctor(): Promise<Check[]> {
       name: "Rendering browser",
       ok: hasChrome,
       detail: hasChrome ? "Ready" : "Not installed. Run: ucut setup",
+    },
+    {
+      name: "Speech",
+      ok: true,
+      detail: speechReady()
+        ? "Ready"
+        : "Optional, for captions on screen recordings. Run: ucut setup --speech",
     },
     { name: "Disk", ok: disk > minimumFreeDisk, detail: `${gigabytes(disk)} free in ${homeDir()}` },
     {

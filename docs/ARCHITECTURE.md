@@ -87,6 +87,12 @@ A correction made in the sort view is saved on your computer, so nearly identica
 
 The recipe then drives the same planner as everything else, in the browser: shot lengths per section become whole beats of a licensed track chosen by tempo. [ADR 0017](decisions/0017-reference-reels-keep-structure-only.md) explains the rules and how they're tested.
 
+## How a screen recording becomes a demo
+
+The server listens to the recording with whisper.cpp and watches it with `hyperframes measure events`, one recording at a time because listening uses every core. It stores the timed words and screen changes with the file, along with a 1600-pixel copy that has sound.
+
+Then the browser takes over. `findMoments` suggests one moment per sentence, or one per burst of screen change if nobody speaks. `planDemo` turns the moments you keep into a plan, so skipping a moment or changing the colour is instant. The composer shows the recording whole, holds each push-in while the action plays, and draws the cards. [ADR 0018](decisions/0018-demos-from-speech-and-screen-changes.md) has the reasoning.
+
 ## What happens when you export
 
 1. The browser saves the plan and calls `POST /api/jobs/:id/export`.

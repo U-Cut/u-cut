@@ -68,7 +68,14 @@ if [ "$(uname)" = "Darwin" ] && have swift; then
 fi
 
 say "Getting the rendering browser"
-node packages/engine/dist/bin.js setup
+if [ -n "${UCUT_NO_SPEECH:-}" ]; then
+  node packages/engine/dist/bin.js setup
+else
+  # whisper-cpp and the 465 MB model give screen recordings their captions.
+  have whisper-cli || { have brew && brew install whisper-cpp; } || true
+  node packages/engine/dist/bin.js setup --speech ||
+    echo "The speech model didn't install. Demos still work, without captions."
+fi
 
 mkdir -p "$bin"
 cat > "$bin/ucut" <<WRAPPER

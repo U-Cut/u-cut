@@ -9,6 +9,7 @@ import { derived } from "./store.ts";
 export const thumbName = "thumb.jpg";
 export const displayName = "display.jpg";
 export const previewName = "preview.mp4";
+export const screenName = "screen.mp4";
 
 const quiet = ["-hide_banner", "-loglevel", "error", "-y"];
 const heic = (path: string) => /\.hei[cf]$/i.test(extname(path));
@@ -66,11 +67,24 @@ export async function grabFrame(source: string, at: number, target: string, size
   ]);
 }
 
-function encoderArguments(): string[] {
+function encoderArguments(bitrate: string, crf: string): string[] {
   if (platform() === "darwin")
-    return ["-c:v", "h264_videotoolbox", "-b:v", "1600k", "-allow_sw", "1"];
-  return ["-c:v", "libx264", "-preset", "veryfast", "-crf", "27"];
+    return ["-c:v", "h264_videotoolbox", "-b:v", bitrate, "-allow_sw", "1"];
+  return ["-c:v", "libx264", "-preset", "veryfast", "-crf", crf];
 }
+
+const webColour = [
+  "-g",
+  "15",
+  "-color_primaries",
+  "bt709",
+  "-color_trc",
+  "bt709",
+  "-colorspace",
+  "bt709",
+  "-movflags",
+  "+faststart",
+];
 
 /** A small H.264 copy every browser can play, with frequent keyframes for quick seeking. */
 async function makePreview(source: string, target: string, signal?: AbortSignal) {
@@ -83,17 +97,34 @@ async function makePreview(source: string, target: string, signal?: AbortSignal)
       "-an",
       "-vf",
       "scale=540:540:force_original_aspect_ratio=decrease:force_divisible_by=2,fps=30,format=yuv420p",
-      ...encoderArguments(),
-      "-g",
-      "15",
-      "-color_primaries",
-      "bt709",
-      "-color_trc",
-      "bt709",
-      "-colorspace",
-      "bt709",
-      "-movflags",
-      "+faststart",
+      ...encoderArguments("1600k", "27"),
+      ...webColour,
+      target,
+    ],
+    { nice: 5, ...(signal ? { signal } : {}) },
+  );
+}
+
+/** Small words have to stay readable when the camera pushes in, and the voice has to play. */
+async function makeScreenCopy(source: string, target: string, signal?: AbortSignal) {
+  await run(
+    "ffmpeg",
+    [
+      ...quiet,
+      "-i",
+      source,
+      "-map",
+      "0:v:0",
+      "-map",
+      "0:a:0?",
+      "-vf",
+      "scale=1600:1600:force_original_aspect_ratio=decrease:force_divisible_by=2,fps=30,format=yuv420p",
+      ...encoderArguments("5000k", "23"),
+      "-c:a",
+      "aac",
+      "-b:a",
+      "128k",
+      ...webColour,
       target,
     ],
     { nice: 5, ...(signal ? { signal } : {}) },
@@ -114,6 +145,12 @@ export async function deriveMedia(item: MediaItem, signal?: AbortSignal): Promis
   const middle = (item.duration ?? 0) / 2;
   await derived(item.id, thumbName, (partial) => grabFrame(item.path, middle, partial, 360));
   await derived(item.id, previewName, (partial) => makePreview(item.path, partial, signal));
+}
+
+export async function deriveRecording(item: MediaItem, signal?: AbortSignal): Promise<void> {
+  const middle = (item.duration ?? 0) / 2;
+  await derived(item.id, thumbName, (partial) => grabFrame(item.path, middle, partial, 360));
+  await derived(item.id, screenName, (partial) => makeScreenCopy(item.path, partial, signal));
 }
 
 /** The sorter only needs a photo's display copy. Clips sample their own frames. */

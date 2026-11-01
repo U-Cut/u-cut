@@ -30,7 +30,7 @@ jobs:
   # Runs on the newest Node, which is what Homebrew gives people. `checks` covers the oldest.
   reels:
     runs-on: macos-15
-    timeout-minutes: 25
+    timeout-minutes: 32
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -47,7 +47,7 @@ jobs:
       - name: Make a reel with the network blocked
         run: pnpm test:privacy
       - name: Click through the app in a real browser
-        timeout-minutes: 10
+        timeout-minutes: 14
         env:
           CHROME_PATH: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
         run: pnpm test:e2e 2>&1 | tee e2e.log; status=${PIPESTATUS[0]}; [ "$status" -eq 0 ] || { tail -6 e2e.log | while IFS= read -r line; do echo "::error::$line"; done; exit "$status"; }

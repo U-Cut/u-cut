@@ -7,7 +7,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { decodePrint, duplicateOf, type Printed } from "@u-cut/classify";
-import { EditPlan, type MediaItem, type StyleRecipe, validate } from "@u-cut/schema";
+import { Demo, EditPlan, type MediaItem, type StyleRecipe, validate } from "@u-cut/schema";
 import { type Context, Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { streamSSE } from "hono/streaming";
@@ -19,7 +19,14 @@ import {
   readSignals,
   sceneModel,
 } from "../analyse.ts";
-import { deriveMedia, displayName, previewName, thumbName } from "../derive.ts";
+import {
+  deriveMedia,
+  deriveRecording,
+  displayName,
+  previewName,
+  screenName,
+  thumbName,
+} from "../derive.ts";
 import { ingest } from "../ingest.ts";
 import {
   fontCss,
@@ -34,6 +41,7 @@ import {
 import { defaultExcludedScenes } from "../make.ts";
 import { homeDir, jobsDir, repoRoot } from "../paths.ts";
 import { mediaKind, probe } from "../probe.ts";
+import { readRecording } from "../recording.ts";
 import { type Quality, renderKey, renderPlan } from "../render.ts";
 import { isHash, storedFolder, storeStream } from "../store.ts";
 import { type Study, studyReel } from "../study.ts";
@@ -58,6 +66,8 @@ export interface Job {
   excludedScenes: string[];
   /** The style studied from a reel. The reel itself is deleted straight after. */
   recipe: StyleRecipe | null;
+  /** Set when this job is a screen recording rather than a pile of photos. */
+  demo: Demo | null;
 }
 
 interface RenderState {
@@ -104,6 +114,8 @@ export function createApp(options: ServerOptions) {
   const analysis = new Scheduler<void>({ slots: () => capacity.analysisSlots });
   const rendering = new Scheduler<void>({ slots: () => capacity.renderSlots });
   const studying = new Scheduler<Study>({ slots: () => 1 });
+  // Listening uses every core, so recordings take turns.
+  const listening = new Scheduler<void>({ slots: () => 1 });
   const webRoot = options.webRoot ?? join(repoRoot, "apps/web/dist");
   const maxUpload = options.maxUploadBytes ?? defaultMaxUpload;
   /** Seconds of work per second of finished reel, learned from real renders on this machine. */
@@ -163,6 +175,7 @@ export function createApp(options: ServerOptions) {
     const job = {
       excludedScenes: defaultExcludedScenes,
       recipe: null,
+      demo: null,
       ...(JSON.parse(text) as Partial<Job>),
     } as Job;
     jobs.set(id, job);
@@ -189,6 +202,7 @@ export function createApp(options: ServerOptions) {
       plan: job.plan,
       excludedScenes: job.excludedScenes,
       recipe: job.recipe,
+      demo: job.demo,
     };
   }
 
@@ -260,6 +274,47 @@ export function createApp(options: ServerOptions) {
           reason: error.message,
         });
       });
+  }
+
+  /** Listens to and watches a recording, then tells the browser what it found. */
+  function readDemo(job: Job, item: MediaItem) {
+    listening
+      .submit({
+        id: `recording-${item.id}`,
+        owner: job.owner,
+        run: async ({ signal }) => {
+          await deriveRecording(item, signal);
+          const reading = await readRecording(item);
+          job.demo = {
+            media: item.id,
+            ...reading,
+            skipped: [],
+            captions: true,
+            brand: { name: "", colour: "#7b5cff" },
+          };
+          await persist(job);
+        },
+      })
+      .then(
+        () => {
+          hub.publish(job.owner, {
+            type: "recording",
+            job: job.id,
+            id: item.id,
+            state: "ready",
+            demo: job.demo,
+          });
+        },
+        (error: Error) => {
+          hub.publish(job.owner, {
+            type: "recording",
+            job: job.id,
+            id: item.id,
+            state: "failed",
+            reason: `U-Cut couldn't read that recording. ${error.message}`,
+          });
+        },
+      );
   }
 
   function addItem(job: Job, item: MediaItem) {
@@ -360,6 +415,7 @@ export function createApp(options: ServerOptions) {
       plan: null,
       excludedScenes: defaultExcludedScenes,
       recipe: null,
+      demo: null,
     };
     jobs.set(job.id, job);
     await persist(job);
@@ -398,6 +454,68 @@ export function createApp(options: ServerOptions) {
     } catch (error) {
       return c.json({ error: `${name}: ${(error as Error).message}` }, 422);
     }
+  });
+
+  app.put("/api/jobs/:id/recording/:name", async (c) => {
+    const job = await ownedJob(c);
+    if (!job) return notFound(c);
+    const name = safeName(c.req.param("name"));
+    if (mediaKind(extname(name)) !== "video") {
+      return c.json({ error: `${name} isn't a video. Choose a screen recording.` }, 415);
+    }
+    if (Number(c.req.header("content-length") ?? 0) > maxUpload) {
+      return c.json({ error: `${name} is too large.` }, 413);
+    }
+    if ((await freeDisk(homeDir())) < minimumFreeDisk) {
+      return c.json(
+        { error: "This Mac is almost out of disk space. Free some up and try again." },
+        507,
+      );
+    }
+    const body = c.req.raw.body;
+    if (!body) return c.json({ error: "Nothing was uploaded." }, 400);
+    const stored = await storeStream(Readable.fromWeb(body as NodeReadableStream), name);
+    try {
+      const item = await probe(stored.hash, stored.path, "video");
+      addItem(job, item);
+      await persist(job);
+      readDemo(job, item);
+      return c.json(publicItem(item), 201);
+    } catch (error) {
+      return c.json({ error: `${name}: ${(error as Error).message}` }, 422);
+    }
+  });
+
+  // Returns once the small copy exists, so the logo appears as soon as the card uses it.
+  app.put("/api/jobs/:id/logo/:name", async (c) => {
+    const job = await ownedJob(c);
+    if (!job) return notFound(c);
+    const name = safeName(c.req.param("name"));
+    if (mediaKind(extname(name)) !== "photo") {
+      return c.json({ error: `${name} isn't a picture. Choose a PNG or JPEG logo.` }, 415);
+    }
+    const body = c.req.raw.body;
+    if (!body) return c.json({ error: "Nothing was uploaded." }, 400);
+    const stored = await storeStream(Readable.fromWeb(body as NodeReadableStream), name);
+    try {
+      const item = await probe(stored.hash, stored.path, "photo");
+      await deriveMedia(item);
+      addItem(job, item);
+      await persist(job);
+      return c.json(publicItem(item), 201);
+    } catch (error) {
+      return c.json({ error: `${name}: ${(error as Error).message}` }, 422);
+    }
+  });
+
+  app.put("/api/jobs/:id/demo", async (c) => {
+    const job = await ownedJob(c);
+    if (!job) return notFound(c);
+    const result = validate(Demo, await c.req.json(), "demo");
+    if (!result.ok) return c.json({ error: result.errors.join(" ") }, 422);
+    job.demo = result.value;
+    await persist(job);
+    return c.json({ ok: true });
   });
 
   app.post("/api/jobs/:id/samples", async (c) => {
@@ -599,6 +717,7 @@ export function createApp(options: ServerOptions) {
     thumb: { file: thumbName, type: "image/jpeg" },
     display: { file: displayName, type: "image/jpeg" },
     preview: { file: previewName, type: "video/mp4" },
+    screen: { file: screenName, type: "video/mp4" },
   };
 
   // A hash is 128 random-looking bits, so holding one is what grants access to the file.

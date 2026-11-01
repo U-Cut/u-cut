@@ -58,7 +58,7 @@ export class ReelPlayer {
     this.clips = [...this.shadow.querySelectorAll<HTMLElement>(".clip")].map(timing);
     this.videos = [...this.shadow.querySelectorAll<HTMLVideoElement>("video")].map((element) => {
       element.preload = "auto";
-      element.muted = true;
+      element.muted = this.muted || element.dataset.hasAudio !== "true";
       return { ...timing(element), element, mediaStart: Number(element.dataset.mediaStart ?? 0) };
     });
     this.animations = this.shadow.getAnimations();
@@ -114,6 +114,9 @@ export class ReelPlayer {
   setMuted(muted: boolean) {
     this.muted = muted;
     this.audio.muted = muted;
+    for (const { element } of this.videos) {
+      element.muted = muted || element.dataset.hasAudio !== "true";
+    }
   }
 
   isMuted() {
@@ -167,7 +170,7 @@ export class ReelPlayer {
     }
     const fade = plan.transitions.find((transition) => transition.type === "fade");
     const fading = fade ? Math.max(0, (this.time - fade.at) / fade.duration) : 0;
-    this.audio.volume = Math.max(0, 1 - fading);
+    this.audio.volume = Math.max(0, 1 - fading) * (plan.music.volume ?? 1);
     if (this.playing && this.audio.paused) void this.audio.play().catch(() => {});
     if (!this.playing && !this.audio.paused) this.audio.pause();
   }

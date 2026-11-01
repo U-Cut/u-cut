@@ -92,6 +92,8 @@ export function App() {
           arriving={state.arriving}
           onFiles={(files) => void actions.addFiles(files)}
           onSamples={() => void actions.addSamples()}
+          reading={state.reading}
+          onRecording={(file) => void actions.addRecording(file)}
         />
       )}
       {dropping ? (

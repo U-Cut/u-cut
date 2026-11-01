@@ -329,12 +329,14 @@ public struct EditPlan: Codable, Sendable, Equatable {
         public var bpm: Double?
         public var start: Double
         public var length: Double
+        public var volume: Double?
 
-        public init(src: String, bpm: Double? = nil, start: Double, length: Double) {
+        public init(src: String, bpm: Double? = nil, start: Double, length: Double, volume: Double? = nil) {
             self.src = src
             self.bpm = bpm
             self.start = start
             self.length = length
+            self.volume = volume
         }
 
         private enum CodingKeys: String, CodingKey {
@@ -342,6 +344,7 @@ public struct EditPlan: Codable, Sendable, Equatable {
             case bpm
             case start
             case length
+            case volume
         }
 
         public func encode(to encoder: any Encoder) throws {
@@ -350,6 +353,7 @@ public struct EditPlan: Codable, Sendable, Equatable {
             try container.encode(bpm, forKey: .bpm)
             try container.encode(start, forKey: .start)
             try container.encode(length, forKey: .length)
+            try container.encodeIfPresent(volume, forKey: .volume)
         }
     }
 
@@ -447,6 +451,11 @@ public struct EditPlan: Codable, Sendable, Equatable {
             }
         }
 
+        public enum Fit: String, Codable, Sendable, Equatable {
+            case cover = "cover"
+            case contain = "contain"
+        }
+
         public var media: String
         public var `in`: Double
         public var out: Double
@@ -455,8 +464,10 @@ public struct EditPlan: Codable, Sendable, Equatable {
         public var motion: Motion
         public var crop: Crop
         public var focus: Focu
+        public var fit: Fit?
+        public var keepAudio: Bool?
 
-        public init(media: String, `in`: Double, out: Double, start: Double, end: Double, motion: Motion, crop: Crop, focus: Focu) {
+        public init(media: String, `in`: Double, out: Double, start: Double, end: Double, motion: Motion, crop: Crop, focus: Focu, fit: Fit? = nil, keepAudio: Bool? = nil) {
             self.media = media
             self.in = `in`
             self.out = out
@@ -465,6 +476,8 @@ public struct EditPlan: Codable, Sendable, Equatable {
             self.motion = motion
             self.crop = crop
             self.focus = focus
+            self.fit = fit
+            self.keepAudio = keepAudio
         }
     }
 
@@ -479,6 +492,22 @@ public struct EditPlan: Codable, Sendable, Equatable {
             self.start = start
             self.end = end
             self.style = style
+        }
+    }
+
+    public struct Card: Codable, Sendable, Equatable {
+        public var title: String
+        public var start: Double
+        public var end: Double
+        public var colour: String
+        public var logo: String?
+
+        public init(title: String, start: Double, end: Double, colour: String, logo: String? = nil) {
+            self.title = title
+            self.start = start
+            self.end = end
+            self.colour = colour
+            self.logo = logo
         }
     }
 
@@ -552,11 +581,12 @@ public struct EditPlan: Codable, Sendable, Equatable {
     public var voice: [Voice]?
     public var shots: [Shot]
     public var texts: [Text]
+    public var cards: [Card]?
     public var textStyle: TextStyle?
     public var transitions: [Transition]
     public var sfx: [Sfx]
 
-    public init(schemaVersion: Int, template: String, vibe: Vibe, aspect: Aspect, fps: Int, seed: Int, duration: Double, music: Music, grade: Grade, voice: [Voice]? = nil, shots: [Shot], texts: [Text], textStyle: TextStyle? = nil, transitions: [Transition], sfx: [Sfx]) {
+    public init(schemaVersion: Int, template: String, vibe: Vibe, aspect: Aspect, fps: Int, seed: Int, duration: Double, music: Music, grade: Grade, voice: [Voice]? = nil, shots: [Shot], texts: [Text], cards: [Card]? = nil, textStyle: TextStyle? = nil, transitions: [Transition], sfx: [Sfx]) {
         self.schemaVersion = schemaVersion
         self.template = template
         self.vibe = vibe
@@ -569,6 +599,7 @@ public struct EditPlan: Codable, Sendable, Equatable {
         self.voice = voice
         self.shots = shots
         self.texts = texts
+        self.cards = cards
         self.textStyle = textStyle
         self.transitions = transitions
         self.sfx = sfx

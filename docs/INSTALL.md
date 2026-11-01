@@ -8,12 +8,12 @@ On a Mac with Apple Silicon, paste this into Terminal:
 curl -fsSL https://raw.githubusercontent.com/mayank29deo/U-Cut/main/install.sh | bash
 ```
 
-It takes a few minutes the first time and uses about 1.5 GB of disk. It does the following:
+It takes a few minutes the first time and uses about 2 GB of disk. To skip the 465 MB speech model, which only captions need, put `UCUT_NO_SPEECH=1` before `bash`. It does the following:
 
 1. Installs Node and FFmpeg with Homebrew, if they're missing. If you don't have Homebrew, it stops and tells you where to get it.
 2. Downloads U-Cut into `~/.u-cut`.
 3. Installs its dependencies and builds it.
-4. Downloads the browser U-Cut renders with.
+4. Downloads the browser U-Cut renders with, and the speech model for captions.
 5. Adds the `ucut` command to `~/.local/bin`.
 6. Builds the Mac app into `~/Applications`, if you have the Xcode Command Line Tools. Without them, U-Cut still works in your browser.
 7. Runs `ucut doctor` to check everything.
@@ -96,6 +96,7 @@ Start with `ucut doctor`. It checks Node, FFmpeg, the rendering browser and disk
 | Problem                                     | Fix                                                                                              |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | `Rendering browser: Not installed`          | Run `ucut setup`                                                                                 |
+| The app says captions need the speech model | Run `ucut setup --speech`, then add the recording again                                          |
 | The port is already in use                  | Another U-Cut may be open, so close it or use `ucut serve --port 8080`                           |
 | "This Mac is almost out of disk space"      | U-Cut needs at least 1.5 GB free. Clear space, or delete old reels from `~/Movies/U-Cut/renders` |
 | The Mac app says the engine isn't installed | Run the install command again                                                                    |

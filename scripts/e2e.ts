@@ -57,6 +57,19 @@ function makeTestReel(path: string) {
   ]); // biome-ignore format: flags read better in pairs
 }
 
+/** A dark screen where one panel opens, then another. It has no sound, like many recordings. */
+function makeTestRecording(path: string) {
+  const panels = [
+    "drawbox=x=800:y=100:w=300:h=200:color=white:t=fill:enable='between(t,3,5)'",
+    "drawbox=x=100:y=480:w=300:h=180:color=white:t=fill:enable='between(t,8,10)'",
+  ].join(",");
+  execFileSync("ffmpeg", [
+    "-hide_banner", "-loglevel", "error", "-y",
+    "-f", "lavfi", "-i", `color=c=0x101018:s=1280x720:r=30:d=12,${panels}`,
+    "-c:v", "libx264", "-pix_fmt", "yuv420p", path,
+  ]); // biome-ignore format: flags read better in pairs
+}
+
 const results: string[] = [];
 function pass(name: string, detail = "") {
   results.push(`  ok   ${name}${detail ? `  (${detail})` : ""}`);
@@ -84,12 +97,14 @@ async function clickButton(page: Page, name: string) {
 }
 
 async function main() {
+  let stopServer = () => {};
   // A stuck browser must fail the run, not hang it.
   setTimeout(() => {
     console.log(results.join("\n"));
-    console.error("\nFAILED: the browser test took longer than 8 minutes.");
+    console.error("\nFAILED: the browser test took longer than 12 minutes.");
+    stopServer();
     process.exit(1);
-  }, 480_000).unref();
+  }, 720_000).unref();
   if (shots) mkdirSync(shots, { recursive: true });
   // Chrome draws no frames on a sleeping display, which looks exactly like a frozen page.
   const awake =
@@ -119,10 +134,12 @@ async function main() {
       stdio: "ignore",
     },
   );
+  stopServer = () => server.kill("SIGTERM");
   const browser = await puppeteer.launch({
     executablePath,
     headless: true,
-    protocolTimeout: 40_000,
+    // Every wait is one call to the browser, so this has to outlast the longest wait below.
+    protocolTimeout: 330_000,
     args: ["--autoplay-policy=no-user-gesture-required", "--no-sandbox"],
   });
 
@@ -349,6 +366,50 @@ async function main() {
     if (overflow) throw new Error("The page scrolls sideways at phone width.");
     pass("works at phone width");
 
+    await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 1 });
+    page.once("dialog", (dialog) => void dialog.accept());
+    await clickButton(page, "New reel");
+    await page.waitForSelector(".headline");
+    const recording = join(home, "recording.mp4");
+    makeTestRecording(recording);
+    const recordingInput = await page.$('input[aria-label="Choose a screen recording"]');
+    await recordingInput?.uploadFile(recording);
+    await page.waitForSelector(".moments .pick", { timeout: 180_000 });
+    const picks = await page.$$eval(".pick", (list) => list.length);
+    if (picks < 2) throw new Error(`Only ${picks} moment was found in the recording.`);
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await snap(page, "9-demo");
+    pass("a screen recording becomes moments to keep or skip", `${picks} moments`);
+
+    await page.type(".title-field input", "Acme");
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".stage-host")?.shadowRoot?.querySelector(".card span")
+          ?.textContent === "Acme",
+      { timeout: 10_000 },
+    );
+    pass("the brand name appears on the card");
+
+    const noteBefore = await page.$eval(".demo-note", (note) => note.textContent);
+    await page.click(".pick-toggle");
+    await page.waitForFunction(
+      (before) => document.querySelector(".demo-note")?.textContent !== before,
+      { timeout: 5000 },
+      noteBefore,
+    );
+    pass("a moment can be skipped");
+
+    await clickButton(page, "Export");
+    await page.waitForSelector(".final", { timeout: 300_000 });
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const demoVideo = await page.$eval(".final", (element) => {
+      const final = element as HTMLVideoElement;
+      return { width: final.videoWidth, height: final.videoHeight };
+    });
+    if (demoVideo.width !== 1920 || demoVideo.height !== 1080)
+      throw new Error(`The demo is ${demoVideo.width}x${demoVideo.height}.`);
+    pass("the demo exports wide, like the recording");
+
     console.log(results.join("\n"));
     if (problems.length) {
       console.log(`\nProblems seen in the browser:\n  ${[...new Set(problems)].join("\n  ")}`);
@@ -366,5 +427,6 @@ async function main() {
 await main().catch((error: Error) => {
   console.log(results.join("\n"));
   console.error(`\nFAILED: ${error.message}`);
+  if (error.cause) console.error(`Because: ${String(error.cause)}`);
   process.exitCode = 1;
 });

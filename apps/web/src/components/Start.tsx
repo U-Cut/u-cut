@@ -11,12 +11,24 @@ interface Props {
   arriving: number;
   onFiles(files: File[]): void;
   onSamples(): void;
+  reading: boolean;
+  onRecording(file: File): void;
 }
 
 const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 
-export function Start({ catalog, items, ready, arriving, onFiles, onSamples }: Props) {
+export function Start({
+  catalog,
+  items,
+  ready,
+  arriving,
+  onFiles,
+  onSamples,
+  reading,
+  onRecording,
+}: Props) {
   const input = useRef<HTMLInputElement>(null);
+  const recording = useRef<HTMLInputElement>(null);
   const busy = arriving > 0 || items.length > 0;
   const finished = items.filter((item) => ready.includes(item.id)).length;
   const total = items.length + arriving;
@@ -32,13 +44,31 @@ export function Start({ catalog, items, ready, arriving, onFiles, onSamples }: P
       title: "Your reel",
       excludedScenes: [],
       recipe: null,
+      demo: null,
     });
   }, [catalog]);
 
   return (
     <main className="start">
       <section className="start-copy">
-        {busy ? (
+        {reading ? (
+          <>
+            <h1 className="headline" aria-live="polite">
+              Finding the best moments.
+            </h1>
+            <p className="lede">
+              U-Cut is listening to your recording and watching the screen. A minute of recording
+              takes about 20 seconds.
+            </p>
+            <div
+              className="meter is-working"
+              role="progressbar"
+              aria-label="Reading your recording"
+            >
+              <span />
+            </div>
+          </>
+        ) : busy ? (
           <>
             <h1 className="headline" aria-live="polite">
               {finished} of {total}
@@ -77,6 +107,25 @@ export function Start({ catalog, items, ready, arriving, onFiles, onSamples }: P
                 Try it with sample photos
               </button>
             </div>
+            <button
+              type="button"
+              className="button-text start-recording"
+              onClick={() => recording.current?.click()}
+            >
+              Turn a screen recording into a demo
+            </button>
+            <input
+              ref={recording}
+              type="file"
+              accept="video/*,.mov"
+              hidden
+              aria-label="Choose a screen recording"
+              onChange={(event) => {
+                const [file] = event.target.files ?? [];
+                if (file) onRecording(file);
+                event.target.value = "";
+              }}
+            />
             <input
               ref={input}
               type="file"

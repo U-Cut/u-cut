@@ -183,3 +183,46 @@ describe("gradeFilter", () => {
     expect(gradeFilter({ temp: 0, contrast: 0, sat: 0 })).toBe("none");
   });
 });
+
+describe("screen recordings", () => {
+  const recording = { ...item("r", "video"), w: 1920, h: 1080 };
+  const shot = plan.shots[0] as EditPlan["shots"][number];
+  const demo: EditPlan = {
+    ...plan,
+    template: "demo",
+    music: { ...plan.music, volume: 0.12 },
+    shots: [{ ...shot, media: "r", fit: "contain", keepAudio: true }],
+    cards: [{ title: "Acme & co", start: 0, end: 1.6, colour: "#7b5cff", logo: "l" }],
+  };
+  const parts = () =>
+    composeParts({
+      plan: demo,
+      items: { r: recording, l: item("l", "photo") },
+      templateCss: "",
+      fontCss: "",
+      assets: { media: (media) => `/${media.id}`, music: (src) => src },
+    });
+
+  it("keeps the recording's sound and shows the whole screen", () => {
+    const { root, css } = parts();
+    expect(root).toContain('data-has-audio="true"');
+    expect(root).not.toContain(" muted");
+    expect(css).toContain("object-fit:contain");
+  });
+
+  it("holds the push-in before pulling back", () => {
+    const { css } = parts();
+    expect(css).toMatch(/@keyframes s0\{0%\{.*\}\d+(\.\d+)?%\{.*\}\d+(\.\d+)?%\{.*\}100%\{/);
+  });
+
+  it("keeps music under the voice", () => {
+    expect(parts().root).toContain('data-volume="0.12"');
+  });
+
+  it("draws cards in the brand's colour, with readable ink", () => {
+    const { root } = parts();
+    expect(root).toContain("background:#7b5cff;color:#fff");
+    expect(root).toContain("Acme &amp; co");
+    expect(root).toContain('src="/l"');
+  });
+});

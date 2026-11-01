@@ -1,11 +1,13 @@
 import { vibes } from "@u-cut/planner-rules";
 import type { Aspect, MediaItem, Vibe } from "@u-cut/schema";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Catalog } from "../api";
 import type { useReel } from "../reel";
+import { BrandForm } from "./BrandForm";
 import { ExportSheet } from "./ExportSheet";
 import { Filmstrip } from "./Filmstrip";
 import { MuteIcon, PauseIcon, PlayIcon, PlusIcon, RedoIcon, SoundIcon, UndoIcon } from "./icons";
+import { Moments } from "./Moments";
 import { Sort } from "./Sort";
 import { Stage, type StageHandle } from "./Stage";
 
@@ -74,6 +76,18 @@ export function Studio({ catalog, reel }: Props) {
   const [sorting, setSorting] = useState(false);
 
   const plan = now?.plan;
+  const demo = now?.settings.demo ?? null;
+  const momentStarts = useMemo(() => {
+    const starts = new Map<number, number>();
+    const kept = (demo?.moments ?? []).flatMap((_, index) =>
+      demo?.skipped.includes(index) ? [] : [index],
+    );
+    for (const [place, index] of kept.entries()) {
+      const shot = plan?.shots[place];
+      if (shot) starts.set(index, shot.start);
+    }
+    return starts;
+  }, [demo, plan]);
   const onTime = useCallback(
     (time: number) => {
       if (!plan) return;
@@ -99,7 +113,7 @@ export function Studio({ catalog, reel }: Props) {
       if (event.code === "Space" && target.tagName !== "BUTTON") {
         event.preventDefault();
         stage.current?.toggle();
-      } else if (event.key.toLowerCase() === "r" && !command) {
+      } else if (event.key.toLowerCase() === "r" && !command && !demo) {
         remix();
       } else if (event.key.toLowerCase() === "z" && command) {
         event.preventDefault();
@@ -117,7 +131,7 @@ export function Studio({ catalog, reel }: Props) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [actions, plan, remix, sorting, state.render]);
+  }, [actions, demo, plan, remix, sorting, state.render]);
 
   if (!now || !plan) return null;
   const { settings } = now;
@@ -167,45 +181,52 @@ export function Studio({ catalog, reel }: Props) {
         </div>
       </header>
 
-      <nav className="vibes" aria-label="Vibe">
-        {vibeNames.map((vibe) => (
+      {demo ? (
+        <p className="demo-note">
+          {demo.moments.length - demo.skipped.length} of {demo.moments.length} moments,{" "}
+          {Math.round(plan.duration)} seconds
+        </p>
+      ) : (
+        <nav className="vibes" aria-label="Vibe">
+          {vibeNames.map((vibe) => (
+            <button
+              type="button"
+              key={vibe}
+              aria-pressed={settings.vibe === vibe && !settings.recipe}
+              onClick={() =>
+                settings.recipe ? actions.forgetReel({ vibe }) : actions.change({ vibe })
+              }
+            >
+              {vibeLabels[vibe]}
+            </button>
+          ))}
+          {settings.recipe ? (
+            <button type="button" aria-pressed={true} disabled>
+              Your reel
+            </button>
+          ) : null}
           <button
             type="button"
-            key={vibe}
-            aria-pressed={settings.vibe === vibe && !settings.recipe}
-            onClick={() =>
-              settings.recipe ? actions.forgetReel({ vibe }) : actions.change({ vibe })
-            }
+            className="button-text match-reel"
+            disabled={state.studying}
+            onClick={() => reelPicker.current?.click()}
           >
-            {vibeLabels[vibe]}
+            {state.studying ? "Studying your reel" : "Match a reel you love"}
           </button>
-        ))}
-        {settings.recipe ? (
-          <button type="button" aria-pressed={true} disabled>
-            Your reel
-          </button>
-        ) : null}
-        <button
-          type="button"
-          className="button-text match-reel"
-          disabled={state.studying}
-          onClick={() => reelPicker.current?.click()}
-        >
-          {state.studying ? "Studying your reel" : "Match a reel you love"}
-        </button>
-        <input
-          ref={reelPicker}
-          type="file"
-          accept="video/*,.mov"
-          hidden
-          aria-label="Choose a reel to match"
-          onChange={(event) => {
-            const [file] = event.target.files ?? [];
-            if (file) void actions.matchReel(file);
-            event.target.value = "";
-          }}
-        />
-      </nav>
+          <input
+            ref={reelPicker}
+            type="file"
+            accept="video/*,.mov"
+            hidden
+            aria-label="Choose a reel to match"
+            onChange={(event) => {
+              const [file] = event.target.files ?? [];
+              if (file) void actions.matchReel(file);
+              event.target.value = "";
+            }}
+          />
+        </nav>
+      )}
 
       <section className="center" aria-label="Your reel">
         <div className={`stage-wrap shape-${settings.aspect.replace(":", "x")}`}>
@@ -242,9 +263,11 @@ export function Studio({ catalog, reel }: Props) {
           >
             {playing ? <PauseIcon /> : <PlayIcon />}
           </button>
-          <button type="button" className="remix" onClick={remix} aria-keyshortcuts="R">
-            Remix <kbd>R</kbd>
-          </button>
+          {demo ? null : (
+            <button type="button" className="remix" onClick={remix} aria-keyshortcuts="R">
+              Remix <kbd>R</kbd>
+            </button>
+          )}
           <button
             type="button"
             className="icon-button"
@@ -260,79 +283,112 @@ export function Studio({ catalog, reel }: Props) {
       </section>
 
       <aside className="controls" aria-label="Reel settings">
-        {settings.recipe ? (
-          <div className="recipe-card">
-            <p>{settings.recipe.notes}</p>
-            <p className="recipe-promise">
-              Your reel uses this style. Nothing from that reel appears in it.
-            </p>
-          </div>
-        ) : null}
-        <label className="title-field">
-          <span>Title</span>
-          <input
-            type="text"
-            value={settings.title}
-            placeholder="Add a title"
-            maxLength={60}
-            onChange={(event) => actions.rename(event.target.value)}
-          />
-        </label>
-        <Choice
-          label="Style"
-          options={templates}
-          value={settings.recipe ? "" : settings.template}
-          onChange={(template) =>
-            settings.recipe ? actions.forgetReel({ template }) : actions.change({ template })
-          }
-        />
-        <Choice
-          label="Length"
-          options={lengths.map((value) => ({ value, label: `${value} s` }))}
-          value={lengths.reduce((best, value) =>
-            Math.abs(value - settings.duration) < Math.abs(best - settings.duration) ? value : best,
-          )}
-          onChange={(duration) => actions.change({ duration })}
-        />
-        <Choice
-          label="Shape"
-          options={shapes}
-          value={settings.aspect}
-          onChange={(aspect) => actions.change({ aspect })}
-        />
-        <div className="media-note">
-          <p>
-            {Math.round(plan.duration)} seconds, {plan.shots.length} shots
-          </p>
-          <button type="button" className="button-text" onClick={() => setSorting(true)}>
-            Sort your photos
-          </button>
-          <button type="button" className="button-text" onClick={() => picker.current?.click()}>
-            Add photos or clips
-          </button>
-          <input
-            ref={picker}
-            type="file"
-            accept="image/*,video/*,.heic,.heif,.mov"
-            multiple
-            hidden
-            aria-label="Add photos or clips"
-            onChange={(event) => {
-              void actions.addFiles([...(event.target.files ?? [])]);
-              event.target.value = "";
-            }}
-          />
-        </div>
+        {demo ? (
+          <>
+            <BrandForm
+              key={demo.media}
+              demo={demo}
+              onBrand={actions.setBrand}
+              onCaptions={(captions) => actions.changeDemo({ captions })}
+              onLogo={(file) => void actions.setLogo(file)}
+            />
+            <Choice
+              label="Shape"
+              options={shapes}
+              value={settings.aspect}
+              onChange={(aspect) => actions.change({ aspect })}
+            />
+          </>
+        ) : (
+          <>
+            {settings.recipe ? (
+              <div className="recipe-card">
+                <p>{settings.recipe.notes}</p>
+                <p className="recipe-promise">
+                  Your reel uses this style. Nothing from that reel appears in it.
+                </p>
+              </div>
+            ) : null}
+            <label className="title-field">
+              <span>Title</span>
+              <input
+                type="text"
+                value={settings.title}
+                placeholder="Add a title"
+                maxLength={60}
+                onChange={(event) => actions.rename(event.target.value)}
+              />
+            </label>
+            <Choice
+              label="Style"
+              options={templates}
+              value={settings.recipe ? "" : settings.template}
+              onChange={(template) =>
+                settings.recipe ? actions.forgetReel({ template }) : actions.change({ template })
+              }
+            />
+            <Choice
+              label="Length"
+              options={lengths.map((value) => ({ value, label: `${value} s` }))}
+              value={lengths.reduce((best, value) =>
+                Math.abs(value - settings.duration) < Math.abs(best - settings.duration)
+                  ? value
+                  : best,
+              )}
+              onChange={(duration) => actions.change({ duration })}
+            />
+            <Choice
+              label="Shape"
+              options={shapes}
+              value={settings.aspect}
+              onChange={(aspect) => actions.change({ aspect })}
+            />
+            <div className="media-note">
+              <p>
+                {Math.round(plan.duration)} seconds, {plan.shots.length} shots
+              </p>
+              <button type="button" className="button-text" onClick={() => setSorting(true)}>
+                Sort your photos
+              </button>
+              <button type="button" className="button-text" onClick={() => picker.current?.click()}>
+                Add photos or clips
+              </button>
+              <input
+                ref={picker}
+                type="file"
+                accept="image/*,video/*,.heic,.heif,.mov"
+                multiple
+                hidden
+                aria-label="Add photos or clips"
+                onChange={(event) => {
+                  void actions.addFiles([...(event.target.files ?? [])]);
+                  event.target.value = "";
+                }}
+              />
+            </div>
+          </>
+        )}
       </aside>
 
-      <Filmstrip
-        plan={plan}
-        items={state.items as MediaItem[]}
-        playhead={playhead}
-        onSeek={(time) => stage.current?.seek(time)}
-        onSwap={actions.swap}
-        onReplace={actions.replace}
-      />
+      {demo ? (
+        <Moments
+          demo={demo}
+          playhead={playhead}
+          starts={momentStarts}
+          onSeek={(time) => stage.current?.seek(time)}
+          onToggle={actions.toggleMoment}
+          onCaption={actions.setCaption}
+        />
+      ) : (
+        <Filmstrip
+          plan={plan}
+          items={state.items as MediaItem[]}
+          playhead={playhead}
+          onSeek={(time) => stage.current?.seek(time)}
+          onSwap={actions.swap}
+          onReplace={actions.replace}
+        />
+      )}
 
       {state.render ? <ExportSheet render={state.render} onClose={actions.cancelExport} /> : null}
       {sorting ? (

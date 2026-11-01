@@ -1,0 +1,19 @@
+{
+  "id": "demo",
+  "name": "Product demo",
+  "version": "1.0.0",
+  "author": "U-Cut contributors",
+  "licence": "Apache-2.0",
+  "aspects": ["16:9", "9:16", "1:1"],
+  "durationRange": { "min": 3, "max": 600 },
+  "sections": [
+    {
+      "name": "moments",
+      "slots": [{ "accepts": ["any"], "count": 40, "minDur": 0.5, "maxDur": 60 }]
+    }
+  ],
+  "variables": [{ "id": "name", "type": "string", "label": "Name", "default": "" }],
+  "vibes": ["chill"],
+  "preview": "preview.gif",
+  "requires": []
+}

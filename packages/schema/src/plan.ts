@@ -19,6 +19,10 @@ const Shot = z.strictObject({
   crop: z.strictObject({ x: unit, y: unit, w: unit, h: unit }),
   /** The point of the frame to keep in view when a photo is cropped to fit. */
   focus: z.strictObject({ x: unit, y: unit }),
+  /** A screen recording is shown whole. Photos and clips fill the frame. */
+  fit: z.enum(["cover", "contain"]).optional(),
+  /** Keeps the clip's own sound, such as the voice in a recording. */
+  keepAudio: z.boolean().optional(),
 });
 
 const Overlay = z.strictObject({
@@ -44,11 +48,25 @@ export const EditPlan = z
       bpm: positive.nullable(),
       start: seconds,
       length: positive,
+      /** 1 is full volume. Music sits well under speech. */
+      volume: z.number().min(0).max(1).optional(),
     }),
     grade: z.strictObject({ temp: adjustment, contrast: adjustment, sat: adjustment }),
     voice: z.array(Sound.extend({ text: z.string().min(1) })).optional(),
     shots: z.array(Shot).min(1),
     texts: z.array(Overlay),
+    /** Title and end cards, for demos. */
+    cards: z
+      .array(
+        z.strictObject({
+          title: z.string().min(1),
+          start: seconds,
+          end: positive,
+          colour: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+          logo: z.string().min(1).optional(),
+        }),
+      )
+      .optional(),
     /** How a matched reel's words looked. Without it, the template decides. */
     textStyle: z
       .strictObject({

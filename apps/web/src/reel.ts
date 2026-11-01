@@ -2,12 +2,13 @@ import { composeParts } from "@u-cut/compose";
 import {
   matchTrack,
   matchVibe,
+  planDemo,
   planRules,
   replaceShot,
   setTitle,
   swapShots,
 } from "@u-cut/planner-rules";
-import type { Aspect, EditPlan, MediaItem, StyleRecipe, Vibe } from "@u-cut/schema";
+import type { Aspect, Brand, Demo, EditPlan, MediaItem, StyleRecipe, Vibe } from "@u-cut/schema";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import {
   api,
@@ -15,8 +16,10 @@ import {
   connectEvents,
   type Job,
   mediaUrl,
+  type RecordingEvent,
   type RenderEvent,
   type ServerEvent,
+  screenUrl,
 } from "./api";
 
 export interface Settings {
@@ -29,6 +32,8 @@ export interface Settings {
   excludedScenes: string[];
   /** The style of a reel you matched. It takes over from the vibe and template while it's on. */
   recipe: StyleRecipe | null;
+  /** Set for a screen recording, which is cut from its moments instead of to the music. */
+  demo: Demo | null;
 }
 
 interface Snapshot {
@@ -48,6 +53,8 @@ interface State {
   render: RenderEvent | null;
   notice: string | null;
   studying: boolean;
+  /** A recording is on its way in, or being listened to. */
+  reading: boolean;
 }
 
 type Action =
@@ -64,6 +71,7 @@ type Action =
   | { type: "render"; render: RenderEvent | null }
   | { type: "notice"; notice: string | null }
   | { type: "studying"; studying: boolean }
+  | { type: "reading"; reading: boolean }
   | { type: "reset" };
 
 const historyLimit = 100;
@@ -78,6 +86,7 @@ const empty: State = {
   render: null,
   notice: null,
   studying: false,
+  reading: false,
 };
 
 function reducer(state: State, action: Action): State {
@@ -138,6 +147,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, notice: action.notice };
     case "studying":
       return { ...state, studying: action.studying };
+    case "reading":
+      return { ...state, reading: action.reading };
     case "reset":
       return empty;
   }
@@ -152,9 +163,26 @@ const defaults: Settings = {
   title: "",
   excludedScenes: ["documents"],
   recipe: null,
+  demo: null,
 };
 
+function demoPlan(catalog: Catalog, items: MediaItem[], settings: Settings, demo: Demo): EditPlan {
+  const source = items.find((item) => item.id === demo.media);
+  const track = catalog.tracks.find((entry) => entry.vibe === "chill");
+  if (!source || !track) throw new Error("U-Cut lost track of that recording. Add it again.");
+  return planDemo({
+    source: { id: source.id, w: source.w, h: source.h, sound: demo.sound },
+    words: demo.words,
+    moments: demo.moments.filter((_, index) => !demo.skipped.includes(index)),
+    captions: demo.captions,
+    brand: demo.brand,
+    aspect: settings.aspect,
+    music: { src: track.file, length: track.length, bpm: track.bpm },
+  });
+}
+
 export function planWith(catalog: Catalog, items: MediaItem[], settings: Settings): EditPlan {
+  if (settings.demo) return demoPlan(catalog, items, settings, settings.demo);
   const { recipe } = settings;
   const templateId = recipe ? "recipe" : settings.template;
   const template = catalog.templates.find((entry) => entry.manifest.id === templateId);
@@ -184,7 +212,7 @@ export function compositionFor(catalog: Catalog, items: MediaItem[], plan: EditP
     templateCss: template?.css ?? "",
     fontCss: "",
     omitAudio: true,
-    assets: { media: mediaUrl, music: () => "" },
+    assets: { media: plan.template === "demo" ? screenUrl : mediaUrl, music: () => "" },
   });
 }
 
@@ -192,6 +220,7 @@ const settingsFrom = (
   plan: EditPlan,
   excludedScenes: string[],
   recipe: StyleRecipe | null,
+  demo: Demo | null,
 ): Settings => ({
   vibe: plan.vibe,
   template: plan.template,
@@ -201,6 +230,7 @@ const settingsFrom = (
   title: plan.texts.find((text) => text.style === "title")?.text ?? "",
   excludedScenes,
   recipe,
+  demo,
 });
 
 const jobKey = "ucut-job";
@@ -212,10 +242,32 @@ export function useReel(catalog: Catalog | null) {
   latest.current = state;
   const plannedCount = useRef(0);
 
+  // Lives in a ref because the event stream is opened once, before the catalog has loaded.
+  const showDemo = useRef<(event: RecordingEvent) => void>(() => {});
+  showDemo.current = (event) => {
+    dispatch({ type: "reading", reading: false });
+    const { demo } = event;
+    const source = latest.current.items.find((item) => item.id === event.id);
+    if (event.state === "failed" || !demo || !source || !catalog) {
+      dispatch({ type: "failed", id: event.id, reason: event.reason ?? "That didn't work." });
+      return;
+    }
+    const aspect: Aspect = source.w === source.h ? "1:1" : source.w > source.h ? "16:9" : "9:16";
+    const settings = { ...defaults, aspect, template: "demo", demo };
+    plannedCount.current = latest.current.items.length;
+    dispatch({ type: "ready", id: event.id });
+    dispatch({
+      type: "commit",
+      snapshot: { settings, plan: planWith(catalog, latest.current.items, settings) },
+    });
+  };
+
   useEffect(
     () =>
       connectEvents((event: ServerEvent) => {
-        if (event.type === "media") {
+        if (event.type === "recording") {
+          if (event.job === latest.current.job?.id) showDemo.current(event);
+        } else if (event.type === "media") {
           if (event.job !== latest.current.job?.id) return;
           if (event.state === "ready") dispatch({ type: "ready", id: event.id, item: event.item });
           else
@@ -246,7 +298,7 @@ export function useReel(catalog: Catalog | null) {
           type: "commit",
           snapshot: {
             plan: job.plan,
-            settings: settingsFrom(job.plan, job.excludedScenes, job.recipe),
+            settings: settingsFrom(job.plan, job.excludedScenes, job.recipe, job.demo),
           },
         });
       },
@@ -276,12 +328,16 @@ export function useReel(catalog: Catalog | null) {
 
   // Saved quietly a moment after the last change.
   const plan = state.now?.plan;
+  const demo = state.now?.settings.demo;
   const jobId = state.job?.id;
   useEffect(() => {
     if (!plan || !jobId) return;
-    const timer = setTimeout(() => void api.savePlan(jobId, plan).catch(() => {}), 300);
+    const timer = setTimeout(() => {
+      void api.savePlan(jobId, plan).catch(() => {});
+      if (demo) void api.saveDemo(jobId, demo).catch(() => {});
+    }, 300);
     return () => clearTimeout(timer);
-  }, [plan, jobId]);
+  }, [plan, demo, jobId]);
 
   const ensureJob = useCallback(async () => {
     if (latest.current.job) return latest.current.job;
@@ -318,6 +374,22 @@ export function useReel(catalog: Catalog | null) {
     dispatch({ type: "items", items: updated.items });
   }, [ensureJob]);
 
+  const addRecording = useCallback(
+    async (file: File) => {
+      dispatch({ type: "reading", reading: true });
+      try {
+        const job = await ensureJob();
+        const item = await api.uploadRecording(job.id, file);
+        latest.current = { ...latest.current, items: [item] };
+        dispatch({ type: "items", items: [item] });
+      } catch (error) {
+        dispatch({ type: "reading", reading: false });
+        dispatch({ type: "notice", notice: (error as Error).message });
+      }
+    },
+    [ensureJob],
+  );
+
   /** Re-cuts the reel. This runs here in the browser, so it's instant for everyone. */
   const change = useCallback(
     (patch: Partial<Settings>) => {
@@ -334,6 +406,59 @@ export function useReel(catalog: Catalog | null) {
       }
     },
     [catalog],
+  );
+
+  const changeDemo = useCallback(
+    (patch: Partial<Demo>) => {
+      const demo = latest.current.now?.settings.demo;
+      if (demo) change({ demo: { ...demo, ...patch } });
+    },
+    [change],
+  );
+
+  const toggleMoment = useCallback(
+    (index: number) => {
+      const skipped = latest.current.now?.settings.demo?.skipped ?? [];
+      changeDemo({
+        skipped: skipped.includes(index)
+          ? skipped.filter((other) => other !== index)
+          : [...skipped, index],
+      });
+    },
+    [changeDemo],
+  );
+
+  const setCaption = useCallback(
+    (index: number, caption: string) => {
+      const moments = latest.current.now?.settings.demo?.moments ?? [];
+      changeDemo({
+        moments: moments.map((moment, place) =>
+          place === index ? { ...moment, caption } : moment,
+        ),
+      });
+    },
+    [changeDemo],
+  );
+
+  const setBrand = useCallback((brand: Brand) => changeDemo({ brand }), [changeDemo]);
+
+  const setLogo = useCallback(
+    async (file: File) => {
+      const { job, now } = latest.current;
+      if (!job || !now?.settings.demo) return;
+      try {
+        const item = await api.uploadLogo(job.id, file);
+        plannedCount.current += 1;
+        const items = [...latest.current.items, item];
+        latest.current = { ...latest.current, items };
+        dispatch({ type: "items", items });
+        dispatch({ type: "ready", id: item.id });
+        changeDemo({ brand: { ...now.settings.demo.brand, logo: item.id } });
+      } catch (error) {
+        dispatch({ type: "notice", notice: (error as Error).message });
+      }
+    },
+    [changeDemo],
   );
 
   const remix = useCallback(() => {
@@ -444,7 +569,8 @@ export function useReel(catalog: Catalog | null) {
     if (!job || !now) return;
     try {
       await api.savePlan(job.id, now.plan);
-      const name = now.settings.title.trim() || "U-Cut reel";
+      const named = now.settings.demo?.brand.name ?? now.settings.title;
+      const name = named.trim() || (now.settings.demo ? "U-Cut demo" : "U-Cut reel");
       dispatch({ type: "render", render: await api.exportReel(job.id, name) });
     } catch (error) {
       dispatch({ type: "notice", notice: (error as Error).message });
@@ -466,8 +592,14 @@ export function useReel(catalog: Catalog | null) {
   const actions = useMemo(
     () => ({
       addFiles,
+      addRecording,
       addSamples,
       change,
+      changeDemo,
+      toggleMoment,
+      setCaption,
+      setBrand,
+      setLogo,
       remix,
       rename,
       replace,
@@ -485,8 +617,14 @@ export function useReel(catalog: Catalog | null) {
     }),
     [
       addFiles,
+      addRecording,
       addSamples,
       change,
+      changeDemo,
+      toggleMoment,
+      setCaption,
+      setBrand,
+      setLogo,
       remix,
       rename,
       replace,

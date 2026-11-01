@@ -1,0 +1,34 @@
+#root {
+  background: #0b0a10;
+}
+.text-caption {
+  left: 7%;
+  right: 7%;
+  bottom: calc(64 * var(--unit));
+  text-align: center;
+  font-family: "Inter", "Noto Sans Devanagari", sans-serif;
+  font-size: calc(46 * var(--unit));
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: #fff;
+  animation-duration: 0.18s;
+}
+.text-caption span {
+  padding: calc(10 * var(--unit)) calc(22 * var(--unit));
+  border-radius: calc(14 * var(--unit));
+  background: rgba(0, 0, 0, 0.72);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.aspect-9x16 .text-caption {
+  bottom: 18%;
+  font-size: calc(58 * var(--unit));
+}
+.card span {
+  font-family: "Inter", "Noto Sans Devanagari", sans-serif;
+  font-size: calc(120 * var(--unit));
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}

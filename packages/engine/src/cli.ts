@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
 import type { Aspect, Vibe } from "@u-cut/schema";
 import { defineCommand, renderUsage, runCommand } from "citty";
+import { makeDemo } from "./demo.ts";
 import { doctor } from "./doctor.ts";
 import { hf } from "./hf.ts";
 import { ingest } from "./ingest.ts";
 import { make } from "./make.ts";
+import { installSpeech, speechReady } from "./recording.ts";
 import type { Quality } from "./render.ts";
 import { serve } from "./server/serve.ts";
 import { sortMedia } from "./sort.ts";
@@ -70,6 +72,55 @@ const makeCommand = defineCommand({
         } else if (event.type === "done") {
           console.log(
             `Saved ${event.output} (${event.duration.toFixed(1)} s, ${event.shots} shots). Project: ${event.job}`,
+          );
+        }
+      },
+    );
+  },
+});
+
+const demoCommand = defineCommand({
+  meta: { name: "demo", description: "Turn a screen recording into a product demo." },
+  args: {
+    recording: { type: "positional", description: "A screen recording", required: true },
+    output: {
+      type: "string",
+      alias: "o",
+      default: "demo.mp4",
+      description: "Where to save the MP4",
+    },
+    name: { type: "string", default: "", description: "Shown on the title and end cards" },
+    colour: { type: "string", default: "#7b5cff", description: "Colour of the cards" },
+    logo: { type: "string", description: "A picture for the cards" },
+    aspect: { type: "string", description: "9:16, 1:1 or 16:9. The recording's shape if left out" },
+    captions: { type: "boolean", default: true, description: "Show what's said as captions" },
+    quality: { type: "string", default: "looks", description: "draft, looks or delivery" },
+    json: { type: "boolean", default: false, description: "Print progress as JSON lines" },
+  },
+  async run({ args }) {
+    let lastStage = "";
+    await makeDemo(
+      {
+        recording: args.recording,
+        output: args.output,
+        name: args.name,
+        colour: args.colour,
+        captions: args.captions,
+        quality: args.quality as Quality,
+        ...(args.logo ? { logo: args.logo } : {}),
+        ...(args.aspect ? { aspect: args.aspect as Aspect } : {}),
+      },
+      (event) => {
+        if (args.json) {
+          console.log(JSON.stringify(event));
+        } else if (event.type === "stage" && event.stage !== lastStage) {
+          lastStage = event.stage;
+          console.log(`${event.stage}…`);
+        } else if (event.type === "skipped") {
+          console.log(`${event.name} ${event.reason}.`);
+        } else if (event.type === "done") {
+          console.log(
+            `Saved ${event.output} (${event.duration.toFixed(1)} s, ${event.shots} ${event.shots === 1 ? "moment" : "moments"}). Project: ${event.job}`,
           );
         }
       },
@@ -160,10 +211,21 @@ const studyCommand = defineCommand({
 });
 
 const setupCommand = defineCommand({
-  meta: { name: "setup", description: "Download the browser U-Cut renders with." },
-  async run() {
+  meta: { name: "setup", description: "Download what U-Cut needs to render and listen." },
+  args: {
+    speech: {
+      type: "boolean",
+      default: false,
+      description: "Also get the speech model for captions (465 MB)",
+    },
+  },
+  async run({ args }) {
     console.log("Getting the rendering browser ready. This only happens once.");
     await hf(["browser", "ensure"], { timeoutMs: 600_000 });
+    if (args.speech && !speechReady()) {
+      console.log("Getting the speech model. It's 465 MB, and stays on this computer.");
+      await installSpeech();
+    }
     console.log("Done.");
   },
 });
@@ -187,6 +249,7 @@ const main = defineCommand({
   },
   subCommands: {
     make: makeCommand,
+    demo: demoCommand,
     sort: sortCommand,
     study: studyCommand,
     serve: serveCommand,
@@ -195,7 +258,7 @@ const main = defineCommand({
   },
 });
 
-const commands = ["make", "sort", "study", "serve", "setup", "doctor"];
+const commands = ["make", "demo", "sort", "study", "serve", "setup", "doctor"];
 
 export async function run(argv: string[]): Promise<RunResult> {
   const [first] = argv;

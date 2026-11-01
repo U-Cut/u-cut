@@ -28,7 +28,7 @@ No files to hand? Press **Try it with sample photos**.
 | Use your own music                                                                 | Command line only for now                                                                                                                          |
 | Sort photos into scenes, skip screenshots and near-copies, and pick the best shots | **Works today** on a Mac. It's right about two times in three on photos from new places, and a wrong one takes a click to fix                      |
 | Copy the style of a reel you admire                                                | **Works today.** It learns the rhythm, text style and colour, and never uses that reel's footage, sound or words. Tested on generated reels so far |
-| Turn a screen recording into a product demo                                        | Planned                                                                                                                                            |
+| Turn a screen recording into a product demo                                        | **Works today.** It finds the moments, pushes in on the action, and adds captions and title cards. Captions are in English for now                 |
 | Write a reel from a sentence                                                       | Planned                                                                                                                                            |
 
 The [plan](docs/PLAN.md) has the full roadmap.
@@ -48,6 +48,7 @@ ucut make ~/Pictures/Goa --vibe hype --title "Goa, day one" -o goa.mp4
 ucut sort ~/Pictures/Goa
 ucut study a-reel-i-love.mp4
 ucut make ~/Pictures/Goa --like a-reel-i-love.mp4 -o goa.mp4
+ucut demo recording.mov --name "Acme" --colour "#7b5cff" -o demo.mp4
 ```
 
 Run `ucut make --help` for every option.

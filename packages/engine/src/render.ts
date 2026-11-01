@@ -76,7 +76,8 @@ export async function writeProject(plan: EditPlan, items: MediaItem[], projectDi
 
   const byId = Object.fromEntries(items.map((item) => [item.id, item]));
   const names = new Map<string, string>();
-  for (const id of new Set(plan.shots.map((shot) => shot.media))) {
+  const logos = (plan.cards ?? []).flatMap((card) => (card.logo ? [card.logo] : []));
+  for (const id of new Set([...plan.shots.map((shot) => shot.media), ...logos])) {
     const item = byId[id];
     if (!item) throw new Error(`The plan uses media "${id}", which isn't in this project.`);
     const source = item.kind === "photo" ? await renderPhoto(item) : item.path;
@@ -161,6 +162,8 @@ export async function renderPlan(
         "--workers",
         String(workers),
         ...(platform() === "darwin" ? ["--gpu"] : []),
+        // Lossless frames, because JPEG smears the small text on a screen.
+        ...(plan.template === "demo" ? ["--video-frame-format", "png"] : []),
       ],
       {
         nice: 10,
