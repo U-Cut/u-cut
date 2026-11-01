@@ -84,10 +84,12 @@ function cameraKeyframes(shot: EditPlan["shots"][number], length: number): strin
   const from = transformFor(shot.motion.from);
   const to = transformFor(shot.motion.to);
   if (shot.fit !== "contain") return `from{transform:${from}}to{transform:${to}}`;
-  const arrive = round(Math.min(0.35, 0.6 / length) * 100);
-  const leave = round(100 - Math.min(0.25, 0.5 / length) * 100);
   const ease = "animation-timing-function:cubic-bezier(.3,0,.1,1)";
-  return `0%{transform:${from};${ease}}${arrive}%{transform:${to}}${leave}%{transform:${to};${ease}}100%{transform:${from}}`;
+  const begin = (shot.motion.at ?? 0) / length;
+  const arrive = round((begin + Math.min(0.35, 0.6 / length)) * 100);
+  const leave = round(100 - Math.min(0.25, 0.5 / length) * 100);
+  const hold = begin > 0 ? `${round(begin * 100)}%{transform:${from};${ease}}` : "";
+  return `0%{transform:${from};${ease}}${hold}${arrive}%{transform:${to}}${leave}%{transform:${to};${ease}}100%{transform:${from}}`;
 }
 
 function shotCss(plan: EditPlan): string {

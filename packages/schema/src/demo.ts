@@ -18,6 +18,8 @@ export const Moment = z.strictObject({
   /** Where to push in to, from 0 to 1 across and down the screen. */
   focus: z.strictObject({ x: unit, y: unit }).nullable(),
   zoom: z.number().min(1).max(4),
+  /** When the action happens in the recording, so the camera can arrive with it. */
+  at: seconds.optional(),
   /** The words to show instead of what was heard, when someone corrects them. */
   caption: z.string().optional(),
 });

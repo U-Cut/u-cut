@@ -82,8 +82,7 @@ All run on the owner's Mac (A18 Pro, 8 GB, macOS 26.5) with throwaway projects.
 
 Nothing blocks Phase 2.
 
-1. Is the libvips LGPL exception fine ([0009](decisions/0009-licence-exceptions.md))?
-2. By Phase 7: will there be a paid Apple Developer account for signed releases?
+1. By Phase 7: will there be a paid Apple Developer account for signed releases?
 
 ---
 

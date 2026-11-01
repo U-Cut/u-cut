@@ -1,6 +1,6 @@
 # 0009. Licence exceptions
 
-Status: accepted. The first item still needs the owner's nod.
+Status: accepted. The owner approved the libvips exception on 2026-11-01.
 
 The brief says no non-permissive dependency without asking. Two come in transitively through tools the brief itself mandates.
 

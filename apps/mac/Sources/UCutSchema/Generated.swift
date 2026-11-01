@@ -421,11 +421,13 @@ public struct EditPlan: Codable, Sendable, Equatable {
             public var type: Kind
             public var from: From
             public var to: To
+            public var at: Double?
 
-            public init(type: Kind, from: From, to: To) {
+            public init(type: Kind, from: From, to: To, at: Double? = nil) {
                 self.type = type
                 self.from = from
                 self.to = to
+                self.at = at
             }
         }
 

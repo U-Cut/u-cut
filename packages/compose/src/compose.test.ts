@@ -215,6 +215,19 @@ describe("screen recordings", () => {
     expect(css).toMatch(/@keyframes s0\{0%\{.*\}\d+(\.\d+)?%\{.*\}\d+(\.\d+)?%\{.*\}100%\{/);
   });
 
+  it("stays wide until the action", () => {
+    const [first] = demo.shots as [EditPlan["shots"][number]];
+    const later = { ...demo, shots: [{ ...first, motion: { ...first.motion, at: 1 } }] };
+    const { css } = composeParts({
+      plan: later,
+      items: { r: recording, l: item("l", "photo") },
+      templateCss: "",
+      fontCss: "",
+      assets: { media: (media) => `/${media.id}`, music: (src) => src },
+    });
+    expect(css).toMatch(/@keyframes s0\{0%\{.*\}50%\{.*\}80%\{/);
+  });
+
   it("keeps music under the voice", () => {
     expect(parts().root).toContain('data-volume="0.12"');
   });

@@ -15,6 +15,8 @@ const Shot = z.strictObject({
     type: z.enum(["none", "push-in", "pull-out", "pan"]),
     from: Framing,
     to: Framing,
+    /** Seconds into the shot to hold before moving. */
+    at: seconds.optional(),
   }),
   crop: z.strictObject({ x: unit, y: unit, w: unit, h: unit }),
   /** The point of the frame to keep in view when a photo is cropped to fit. */

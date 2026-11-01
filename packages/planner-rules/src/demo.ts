@@ -24,6 +24,8 @@ const cardLength = 1.6;
 const fps = 30;
 const wordsPerLine = 5;
 const fadeOut = 0.4;
+const pushLead = 0.4;
+const shortestPush = 1.4;
 const smallestZoom = 1.6;
 const largestZoom = 2;
 
@@ -52,17 +54,21 @@ function cellsIn(what: string): [number, number][] {
   return [...what.matchAll(/r(\d+)c(\d+)/g)].map((match) => [Number(match[1]), Number(match[2])]);
 }
 
-/** Where a change happened and how much of the screen it took up. */
+/** Picks the clearest change in a stretch of the recording, and where and when it happened. */
 function aimAt(windows: ScreenWindow[], grid: DemoInput["grid"]) {
-  const seen = new Map<string, [number, number]>();
   const wholeScreen = grid.cols * grid.rows;
-  for (const window of windows) {
-    for (const line of window.what) {
-      for (const cell of cellsIn(line)) seen.set(cell.join(), cell);
-    }
-  }
-  const cells = [...seen.values()];
-  if (cells.length === 0 || cells.length > wholeScreen / 2) return { focus: null, zoom: 1 };
+  const changes = windows.flatMap((window) => {
+    // A cut replaces everything, so it can't say where to look.
+    if (window.what.some((line) => line.startsWith("cut"))) return [];
+    const seen = new Map(window.what.flatMap(cellsIn).map((cell) => [cell.join(), cell]));
+    const cells = [...seen.values()];
+    return cells.length > 0 && cells.length <= wholeScreen / 2 ? [{ window, cells }] : [];
+  });
+  const [best] = changes.sort(
+    (a, b) => b.cells.length - a.cells.length || a.window.start - b.window.start,
+  );
+  if (!best) return { focus: null, zoom: 1 };
+  const { cells, window } = best;
   const middle = (values: number[], size: number) =>
     round((values.reduce((sum, value) => sum + value, 0) / values.length + 0.5) / size);
   const share = cells.length / wholeScreen;
@@ -78,6 +84,7 @@ function aimAt(windows: ScreenWindow[], grid: DemoInput["grid"]) {
       ),
     },
     zoom: round(largestZoom - (largestZoom - smallestZoom) * Math.min(1, share * 2)),
+    at: round(window.start),
   };
 }
 
@@ -92,10 +99,9 @@ function spokenMoments(input: DemoInput): Moment[] {
     const end = sentence.at(-1)?.end ?? start;
     const previousEnd = sentences[index - 1]?.at(-1)?.end;
     const nextStart = sentences[index + 1]?.[0]?.start;
-    const near = overlapping(input.windows, start, end);
-    const aim = aimAt(near, input.grid);
+    const aim = aimAt(overlapping(input.windows, start, end), input.grid);
     const why =
-      near.length > 0
+      aim.focus !== null
         ? "Something happens on screen as you explain it"
         : index === 0
           ? "You introduce it"
@@ -217,7 +223,12 @@ export function planDemo(input: DemoPlanInput): EditPlan {
     const start = round(at);
     const end = round(at + length);
     const still = { x: 0.5, y: 0.5, scale: 1 };
-    const zooms = index > 0 && moment.focus !== null && moment.zoom > 1;
+    // The camera stays wide until just before the action, so the screen is seen first.
+    const wait =
+      moment.at === undefined
+        ? 0
+        : round(Math.max(0, Math.min(moment.at - moment.in - pushLead, length - shortestPush)));
+    const zooms = moment.focus !== null && moment.zoom > 1 && (index > 0 || wait > 0);
     const margin = (moment.zoom - 1) / (2 * moment.zoom);
     const to =
       zooms && moment.focus
@@ -234,7 +245,12 @@ export function planDemo(input: DemoPlanInput): EditPlan {
       out: moment.out,
       start,
       end,
-      motion: { type: zooms ? "push-in" : "none", from: still, to },
+      motion: {
+        type: zooms ? "push-in" : "none",
+        from: still,
+        to,
+        ...(zooms && wait > 0 ? { at: wait } : {}),
+      },
       crop: { x: 0, y: 0, w: 1, h: 1 },
       focus: { x: 0.5, y: 0.5 },
       fit: "contain",

@@ -55,6 +55,32 @@ describe("findMoments", () => {
     expect(moment.zoom).toBeGreaterThan(1.5);
   });
 
+  it("finds the clear change in a busy stretch, ignoring cuts", () => {
+    // Measured from a real recording: cuts and big changes around one panel opening.
+    const busy = {
+      ...input,
+      windows: [
+        {
+          start: 4.1,
+          end: 4.3,
+          what: ["change r0c0,r0c1,r0c2,r1c0,r1c1,r1c2,r2c0,r2c1,r2c2", "cut"],
+        },
+        { start: 5, end: 5.3, what: ["appear r1c2,r1c3,r2c2"] },
+        { start: 5.5, end: 5.6, what: ["change r3c0"] },
+        { start: 6, end: 6.5, what: ["change r0c0,r0c1,r0c2,r0c3,r1c0,r1c1,r1c2,r1c3,r2c0"] },
+      ],
+    };
+    const moment = findMoments(busy)[1] as Moment;
+    expect(moment.at).toBe(5);
+    expect(moment.focus?.x).toBeGreaterThan(0.5);
+    expect(moment.zoom).toBeGreaterThan(1.5);
+  });
+
+  it("doesn't claim action when the only change is a cut", () => {
+    const cutOnly = { ...input, windows: [{ start: 5, end: 5.1, what: ["cut"] }] };
+    expect(findMoments(cutOnly)[1]?.why).toBe("You talk through this");
+  });
+
   it("doesn't zoom when the whole screen changes", () => {
     const whole = {
       ...input,
@@ -217,6 +243,21 @@ describe("planDemo", () => {
   it("is byte-identical for the same input", () => {
     const again = planDemo({ ...options, aspect: "16:9", music });
     expect(JSON.stringify(again)).toBe(JSON.stringify(plan));
+  });
+
+  it("holds wide until just before the action", () => {
+    const [, action] = plan.shots;
+    const [, moment] = options.moments as [Moment, Moment];
+    const leadIn = (moment.at ?? 0) - moment.in - 0.4;
+    // A short moment moves sooner, so the push-in still has time to land.
+    expect(action?.motion.at).toBeCloseTo(Math.min(leadIn, moment.out - moment.in - 1.4));
+    expect(action?.motion.at).toBeGreaterThan(0);
+  });
+
+  it("can push in on the first moment, once the screen has been seen", () => {
+    const first = { in: 0, out: 6, quote: "", why: "x", focus: { x: 0.8, y: 0.2 }, zoom: 2, at: 3 };
+    const opening = planDemo({ ...options, moments: [first], aspect: "16:9", music });
+    expect(opening.shots[0]?.motion).toMatchObject({ type: "push-in", at: 2.6 });
   });
 
   it("keeps the camera on the screen when the action is in a corner", () => {

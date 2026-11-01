@@ -79,7 +79,14 @@ async function watch(path: string, duration: number): Promise<ScreenActivity> {
 
 export type Reading = Pick<Demo, "sound" | "words" | "moments" | "speech">;
 
-async function read(item: MediaItem): Promise<Reading> {
+/** What was heard and seen. Moments are worked out from this, so better planning needs no re-read. */
+interface Signals extends ScreenActivity {
+  sound: boolean;
+  words: DemoWord[];
+  speech: Demo["speech"];
+}
+
+async function read(item: MediaItem): Promise<Signals> {
   const duration = item.duration ?? 0;
   const screen = await watch(item.path, duration).catch(
     (): ScreenActivity => ({ windows: [], grid: { cols: 4, rows: 4 } }),
@@ -87,22 +94,22 @@ async function read(item: MediaItem): Promise<Reading> {
   const sound = await hasSound(item.path);
   // A recording U-Cut can't hear is still a recording it can watch.
   const words = sound && speechReady() ? await listen(item.path, duration).catch(() => []) : [];
-  return {
-    sound,
-    words,
-    moments: findMoments({ duration, words, ...screen }),
-    speech: words.length > 0 ? "heard" : sound && !speechReady() ? "no-model" : "none",
-  };
+  const speech = words.length > 0 ? "heard" : sound && !speechReady() ? "no-model" : "none";
+  return { ...screen, sound, words, speech };
 }
 
-/** Works out the moments in a recording once per file, however many demos it's used in. */
+/** Works out the moments in a recording, listening to and watching each file only once. */
 export async function readRecording(item: MediaItem): Promise<Reading> {
   // Installing the model later has to give the next try a fresh listen.
-  const name = speechReady() ? "recording.json" : "recording-silent.json";
+  const name = speechReady() ? "recording-signals.json" : "recording-signals-silent.json";
   const path = await derived(item.id, name, async (partial) => {
     await writeFile(partial, JSON.stringify(await read(item)));
   });
-  return JSON.parse(await readFile(path, "utf8")) as Reading;
+  const { sound, words, speech, windows, grid } = JSON.parse(
+    await readFile(path, "utf8"),
+  ) as Signals;
+  const moments = findMoments({ duration: item.duration ?? 0, words, windows, grid });
+  return { sound, words, moments, speech };
 }
 
 /** Fetches the speech model by asking for it on a moment of silence. */
