@@ -28,13 +28,15 @@ export PATH="$HOME/.local/bin:$PATH"
 
 ## Start it
 
-| Way                    | How                                             |
-| ---------------------- | ----------------------------------------------- |
-| Mac app                | Open U-Cut from `~/Applications`                |
-| Browser                | Run `ucut`, which opens <http://localhost:4173> |
-| Different port         | Run `ucut serve --port 8080`                    |
-| One reel, no interface | Run `ucut make <folder> -o reel.mp4`            |
-| See how photos sort    | Run `ucut sort <folder>`                        |
+| Way                    | How                                                 |
+| ---------------------- | --------------------------------------------------- |
+| Mac app                | Open U-Cut from `~/Applications`                    |
+| Browser                | Run `ucut`, which opens <http://localhost:4173>     |
+| Different port         | Run `ucut serve --port 8080`                        |
+| One reel, no interface | Run `ucut make <folder> -o reel.mp4`                |
+| See how photos sort    | Run `ucut sort <folder>`                            |
+| Learn a reel's style   | Run `ucut study reel.mp4`                           |
+| Copy that style        | Run `ucut make <folder> --like reel.mp4 -o new.mp4` |
 
 ## On Linux or anywhere else
 
