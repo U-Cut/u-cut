@@ -121,9 +121,43 @@ func analyse(_ path: String) async -> Result {
     return result
 }
 
+/// Where text sits in a frame. The words themselves are deliberately left out: U-Cut learns how a
+/// reel's captions look, and never what they say.
+struct TextBox: Encodable, Sendable {
+    let x: Double
+    let y: Double
+    let w: Double
+    let h: Double
+    let upper: Bool
+}
+
+struct TextResult: Encodable, Sendable {
+    let path: String
+    var boxes: [TextBox] = []
+    var error: String?
+}
+
+func readText(_ path: String) async -> TextResult {
+    var result = TextResult(path: path)
+    do {
+        let lines = try await RecognizeTextRequest().perform(on: URL(fileURLWithPath: path))
+        result.boxes = lines.compactMap { line in
+            guard let text = line.topCandidates(1).first?.string else { return nil }
+            let letters = text.filter(\.isLetter)
+            let box = line.boundingBox.cgRect
+            return TextBox(
+                x: Double(box.minX), y: 1 - Double(box.maxY), w: Double(box.width),
+                h: Double(box.height), upper: !letters.isEmpty && letters == letters.uppercased())
+        }
+    } catch {
+        result.error = String(describing: error)
+    }
+    return result
+}
+
 /// Lines can be longer than a pipe's atomic write, so one writer keeps them whole.
 actor Output {
-    func write(_ result: Result) {
+    func write<Line: Encodable & Sendable>(_ result: Line) {
         guard var line = try? JSONEncoder().encode(result) else { return }
         line.append(0x0A)
         FileHandle.standardOutput.write(line)
@@ -142,7 +176,7 @@ func readPaths() -> AsyncStream<String> {
 }
 
 /// Each result is written as soon as it's ready, so this can run for as long as stdin stays open.
-func analyseAll() async {
+func processAll<Line: Encodable & Sendable>(_ work: @Sendable @escaping (String) async -> Line) async {
     let output = Output()
     await withTaskGroup(of: Void.self) { group in
         var running = 0
@@ -151,7 +185,7 @@ func analyseAll() async {
                 await group.next()
                 running -= 1
             }
-            group.addTask { await output.write(await analyse(path)) }
+            group.addTask { await output.write(await work(path)) }
             running += 1
         }
     }
@@ -161,8 +195,10 @@ switch CommandLine.arguments.dropFirst().first {
 case "--version":
     print(#"{"name":"ucut-vision","version":"\#(version)"}"#)
 case "analyze":
-    await analyseAll()
+    await processAll(analyse)
+case "text":
+    await processAll(readText)
 default:
-    FileHandle.standardError.write(Data("usage: ucut-vision analyze < paths\n".utf8))
+    FileHandle.standardError.write(Data("usage: ucut-vision analyze|text < paths\n".utf8))
     exit(2)
 }

@@ -1,8 +1,15 @@
 import { createHash } from "node:crypto";
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { planRules } from "@u-cut/planner-rules";
-import { type Aspect, EditPlan, type MediaItem, type Vibe, validate } from "@u-cut/schema";
+import { matchTrack, matchVibe, planRules } from "@u-cut/planner-rules";
+import {
+  type Aspect,
+  EditPlan,
+  type MediaItem,
+  type StyleRecipe,
+  type Vibe,
+  validate,
+} from "@u-cut/schema";
 import { musicLength } from "./audio-length.ts";
 import { detectBeats } from "./beats.ts";
 import { ingest, type Skipped } from "./ingest.ts";
@@ -11,6 +18,7 @@ import { jobsDir } from "./paths.ts";
 import { type Quality, renderPlan } from "./render.ts";
 import { sortMedia } from "./sort.ts";
 import { storeFile } from "./store.ts";
+import { studyReel } from "./study.ts";
 
 export interface MakeOptions {
   inputs: string[];
@@ -23,6 +31,8 @@ export interface MakeOptions {
   title: string;
   quality: Quality;
   music?: string;
+  /** A reel to copy the style of. Only its structure is used. */
+  like?: string;
   workers?: number;
   excludedScenes?: string[];
 }
@@ -34,12 +44,14 @@ export type MakeEvent =
   | { type: "stage"; stage: string }
   | { type: "progress"; stage: string; progress: number }
   | { type: "skipped"; name: string; reason: string }
+  | { type: "recipe"; description: string }
   | { type: "done"; output: string; job: string; shots: number; duration: number; cached: boolean };
 
 export function planFor(
   items: MediaItem[],
   options: Pick<MakeOptions, "template" | "vibe" | "aspect" | "duration" | "seed" | "title"> & {
     excludedScenes?: string[];
+    recipe?: StyleRecipe;
   },
   music: Parameters<typeof planRules>[0]["music"],
 ): EditPlan {
@@ -52,7 +64,7 @@ export function planFor(
     music,
     copy: { title: options.title },
     excludedScenes: options.excludedScenes ?? defaultExcludedScenes,
-    recipe: null,
+    recipe: options.recipe ?? null,
     seed: options.seed,
   });
   const checked = validate(EditPlan, plan, "plan.json");
@@ -60,13 +72,14 @@ export function planFor(
   return checked.value;
 }
 
-async function musicFor(options: MakeOptions) {
+async function musicFor(options: MakeOptions, recipe?: StyleRecipe) {
   if (options.music) {
     const stored = await storeFile(resolve(options.music));
     const beats = await detectBeats(stored.path);
     return { src: stored.path, length: await musicLength(stored.path), beats };
   }
-  const track = loadTracks().find((candidate) => candidate.vibe === options.vibe);
+  const tracks = loadTracks();
+  const track = recipe ? matchTrack(recipe, tracks) : tracks.find((t) => t.vibe === options.vibe);
   if (!track) throw new Error(`There's no music for the ${options.vibe} vibe.`);
   return { src: track.file, length: track.length, beats: trackBeats(track) };
 }
@@ -93,9 +106,25 @@ export async function make(
     onEvent({ type: "progress", stage: "Sorting your media", progress: done / total });
   });
 
+  let styled = options;
+  let recipe: StyleRecipe | undefined;
+  if (options.like) {
+    onEvent({ type: "stage", stage: "Studying your reel" });
+    ({ recipe } = await studyReel(resolve(options.like)));
+    onEvent({ type: "recipe", description: recipe.notes });
+    styled = {
+      ...options,
+      recipe,
+      template: "recipe",
+      vibe: matchVibe(recipe),
+      aspect: recipe.aspect,
+      duration: recipe.duration,
+    } as MakeOptions;
+  }
+
   onEvent({ type: "stage", stage: "Planning the edit" });
-  const music = await musicFor(options);
-  const plan = planFor(sorted, options, music);
+  const music = await musicFor(styled, recipe);
+  const plan = planFor(sorted, styled, music);
   const job = createHash("sha256").update(JSON.stringify(plan)).digest("hex").slice(0, 12);
   const jobDir = join(jobsDir(), job);
   await mkdir(jobDir, { recursive: true });

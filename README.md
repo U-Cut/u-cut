@@ -18,18 +18,18 @@ No files to hand? Press **Try it with sample photos**.
 
 ## What it does today
 
-| You want to                                                                        | Status                                                                                                                        |
-| ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Turn photos and clips into a reel cut to music                                     | **Works today**                                                                                                               |
-| Remix, switch vibe, change the shape, edit the title, swap a shot, undo anything   | **Works today**                                                                                                               |
-| Export an MP4 balanced for phones                                                  | **Works today**                                                                                                               |
-| Use it as a Mac app, in a browser, or from the command line                        | **Works today**                                                                                                               |
-| Share one computer between up to 20 people on your network                         | **Works today**                                                                                                               |
-| Use your own music                                                                 | Command line only for now                                                                                                     |
-| Sort photos into scenes, skip screenshots and near-copies, and pick the best shots | **Works today** on a Mac. It's right about two times in three on photos from new places, and a wrong one takes a click to fix |
-| Copy the style of a reel you admire                                                | Planned                                                                                                                       |
-| Turn a screen recording into a product demo                                        | Planned                                                                                                                       |
-| Write a reel from a sentence                                                       | Planned                                                                                                                       |
+| You want to                                                                        | Status                                                                                                                                             |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Turn photos and clips into a reel cut to music                                     | **Works today**                                                                                                                                    |
+| Remix, switch vibe, change the shape, edit the title, swap a shot, undo anything   | **Works today**                                                                                                                                    |
+| Export an MP4 balanced for phones                                                  | **Works today**                                                                                                                                    |
+| Use it as a Mac app, in a browser, or from the command line                        | **Works today**                                                                                                                                    |
+| Share one computer between up to 20 people on your network                         | **Works today**                                                                                                                                    |
+| Use your own music                                                                 | Command line only for now                                                                                                                          |
+| Sort photos into scenes, skip screenshots and near-copies, and pick the best shots | **Works today** on a Mac. It's right about two times in three on photos from new places, and a wrong one takes a click to fix                      |
+| Copy the style of a reel you admire                                                | **Works today.** It learns the rhythm, text style and colour, and never uses that reel's footage, sound or words. Tested on generated reels so far |
+| Turn a screen recording into a product demo                                        | Planned                                                                                                                                            |
+| Write a reel from a sentence                                                       | Planned                                                                                                                                            |
 
 The [plan](docs/PLAN.md) has the full roadmap.
 
@@ -45,6 +45,9 @@ Everything is the same reel engine underneath, so pick whichever way suits you.
 
 ```bash
 ucut make ~/Pictures/Goa --vibe hype --title "Goa, day one" -o goa.mp4
+ucut sort ~/Pictures/Goa
+ucut study a-reel-i-love.mp4
+ucut make ~/Pictures/Goa --like a-reel-i-love.mp4 -o goa.mp4
 ```
 
 Run `ucut make --help` for every option.

@@ -1,0 +1,18 @@
+{
+  "id": "recipe",
+  "name": "Your reel's style",
+  "version": "1.0.0",
+  "author": "U-Cut contributors",
+  "licence": "Apache-2.0",
+  "aspects": ["9:16", "1:1", "16:9"],
+  "durationRange": { "min": 3, "max": 60 },
+  "sections": [
+    { "name": "hook", "slots": [{ "accepts": ["any"], "count": 3, "minDur": 0.2, "maxDur": 8 }] },
+    { "name": "body", "slots": [{ "accepts": ["any"], "count": 60, "minDur": 0.2, "maxDur": 8 }] },
+    { "name": "payoff", "slots": [{ "accepts": ["any"], "count": 1, "minDur": 0.2, "maxDur": 8 }] }
+  ],
+  "variables": [{ "id": "title", "type": "string", "label": "Title", "default": "" }],
+  "vibes": ["chill", "hype", "cinematic", "nostalgic"],
+  "preview": "preview.gif",
+  "requires": []
+}

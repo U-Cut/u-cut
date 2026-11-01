@@ -1,10 +1,13 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { extname, join, normalize, resolve } from "node:path";
 import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import { decodePrint, duplicateOf, type Printed } from "@u-cut/classify";
-import { EditPlan, type MediaItem, validate } from "@u-cut/schema";
+import { EditPlan, type MediaItem, type StyleRecipe, validate } from "@u-cut/schema";
 import { type Context, Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { streamSSE } from "hono/streaming";
@@ -33,6 +36,7 @@ import { homeDir, jobsDir, repoRoot } from "../paths.ts";
 import { mediaKind, probe } from "../probe.ts";
 import { type Quality, renderKey, renderPlan } from "../render.ts";
 import { isHash, storedFolder, storeStream } from "../store.ts";
+import { type Study, studyReel } from "../study.ts";
 import { vision } from "../vision.ts";
 import {
   type Capacity,
@@ -52,6 +56,8 @@ export interface Job {
   items: MediaItem[];
   plan: EditPlan | null;
   excludedScenes: string[];
+  /** The style studied from a reel. The reel itself is deleted straight after. */
+  recipe: StyleRecipe | null;
 }
 
 interface RenderState {
@@ -97,6 +103,7 @@ export function createApp(options: ServerOptions) {
   const renders = new Map<string, RenderState>();
   const analysis = new Scheduler<void>({ slots: () => capacity.analysisSlots });
   const rendering = new Scheduler<void>({ slots: () => capacity.renderSlots });
+  const studying = new Scheduler<Study>({ slots: () => 1 });
   const webRoot = options.webRoot ?? join(repoRoot, "apps/web/dist");
   const maxUpload = options.maxUploadBytes ?? defaultMaxUpload;
   /** Seconds of work per second of finished reel, learned from real renders on this machine. */
@@ -155,6 +162,7 @@ export function createApp(options: ServerOptions) {
     if (!text) return undefined;
     const job = {
       excludedScenes: defaultExcludedScenes,
+      recipe: null,
       ...(JSON.parse(text) as Partial<Job>),
     } as Job;
     jobs.set(id, job);
@@ -180,6 +188,7 @@ export function createApp(options: ServerOptions) {
       items: job.items.map(publicItem),
       plan: job.plan,
       excludedScenes: job.excludedScenes,
+      recipe: job.recipe,
     };
   }
 
@@ -350,6 +359,7 @@ export function createApp(options: ServerOptions) {
       items: [],
       plan: null,
       excludedScenes: defaultExcludedScenes,
+      recipe: null,
     };
     jobs.set(job.id, job);
     await persist(job);
@@ -429,6 +439,43 @@ export function createApp(options: ServerOptions) {
     const print = frames ? firstPrint(frames) : undefined;
     if (print && scene !== "other") await addLearned(scene, print);
     return c.json(publicItem(updated));
+  });
+
+  // The reel is read once and deleted. Only what was measured from it is kept.
+  app.put("/api/jobs/:id/reference/:name", async (c) => {
+    const job = await ownedJob(c);
+    if (!job) return notFound(c);
+    const name = safeName(c.req.param("name"));
+    if (mediaKind(extname(name)) !== "video") {
+      return c.json({ error: `${name} isn't a video. Choose the reel you saved.` }, 415);
+    }
+    const body = c.req.raw.body;
+    if (!body) return c.json({ error: "Nothing was uploaded." }, 400);
+    const folder = await mkdtemp(join(tmpdir(), "ucut-reel-"));
+    const path = join(folder, `reel${extname(name)}`);
+    try {
+      await pipeline(Readable.fromWeb(body as NodeReadableStream), createWriteStream(path));
+      const study = await studying.submit({
+        id: `study-${randomUUID()}`,
+        owner: job.owner,
+        run: () => studyReel(path),
+      });
+      job.recipe = study.recipe;
+      await persist(job);
+      return c.json(study);
+    } catch (error) {
+      return c.json({ error: `U-Cut couldn't read that reel. ${(error as Error).message}` }, 422);
+    } finally {
+      await rm(folder, { recursive: true, force: true });
+    }
+  });
+
+  app.delete("/api/jobs/:id/reference", async (c) => {
+    const job = await ownedJob(c);
+    if (!job) return notFound(c);
+    job.recipe = null;
+    await persist(job);
+    return c.json({ ok: true });
   });
 
   app.put("/api/jobs/:id/scenes", async (c) => {

@@ -81,6 +81,12 @@ The planner then uses the results: it leaves out hidden scenes, keeps only the b
 
 A correction made in the sort view is saved on your computer, so nearly identical photos sort themselves next time. [ADR 0016](decisions/0016-scenes-from-apple-vision.md) has the accuracy figures.
 
+## How matching a reel works
+
+`ucut study` measures a reel's cuts, beats, colour and text layout, and writes a small `StyleRecipe`. The reel goes to a temporary folder and is deleted straight after, so it never enters the media store. Text recognition returns positions only, so the reel's words never reach U-Cut at all.
+
+The recipe then drives the same planner as everything else, in the browser: shot lengths per section become whole beats of a licensed track chosen by tempo. [ADR 0017](decisions/0017-reference-reels-keep-structure-only.md) explains the rules and how they're tested.
+
 ## What happens when you export
 
 1. The browser saves the plan and calls `POST /api/jobs/:id/export`.

@@ -133,6 +133,24 @@ describe("composeHtml", () => {
     expect([wide.width, wide.height]).toEqual([1920, 1080]);
   });
 
+  it("sets a matched reel's words its way", () => {
+    const styled = composeHtml({
+      ...input,
+      plan: { ...plan, textStyle: { position: "lower", case: "upper", sizePx: 96 } },
+    });
+    expect(styled).toContain(".text-title{top:58%");
+    expect(styled).toContain("font-size:calc(96*var(--unit))");
+    expect(styled).toContain("text-transform:uppercase");
+  });
+
+  it("keeps huge reel text within reason", () => {
+    const styled = composeHtml({
+      ...input,
+      plan: { ...plan, textStyle: { position: "top", case: "sentence", sizePx: 400 } },
+    });
+    expect(styled).toContain("font-size:calc(150*var(--unit))");
+  });
+
   it("names a missing media item in a plain sentence", () => {
     expect(() => composeHtml({ ...input, items: { a: item("a", "photo") } })).toThrow(
       'The plan uses media "b", which isn\'t in this project.',

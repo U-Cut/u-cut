@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 // Uses U-Cut the way a person does, in a real browser, and checks each step.
 // Run with: pnpm test:e2e [folder-for-screenshots]
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -37,6 +37,24 @@ async function waitForServer(server: ChildProcess) {
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
   throw new Error("The server didn't start.");
+}
+
+/** Half-second shots in bright colours, over a 120 BPM click. */
+function makeTestReel(path: string) {
+  const colours = ["red", "blue", "yellow", "green", "white", "purple"];
+  const inputs = Array.from({ length: 16 }, (_, index) => [
+    "-f",
+    "lavfi",
+    "-i",
+    `color=${colours[index % colours.length]}:s=360x640:r=30:d=0.5`,
+  ]).flat();
+  const joined = `${Array.from({ length: 16 }, (_, index) => `[${index}:v]`).join("")}concat=n=16:v=1:a=0[v]`;
+  execFileSync("ffmpeg", [
+    "-hide_banner", "-loglevel", "error", "-y", ...inputs,
+    "-f", "lavfi", "-i", "aevalsrc=0.8*sin(2*PI*60*t)*exp(-30*mod(t\\,0.5)):d=8:s=48000",
+    "-filter_complex", joined, "-map", "[v]", "-map", "16:a",
+    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", path,
+  ]); // biome-ignore format: flags read better in pairs
 }
 
 const results: string[] = [];
@@ -254,6 +272,24 @@ async function main() {
 
     await clickButton(page, "Done");
     await page.waitForSelector(".sort", { hidden: true });
+
+    const reel = join(home, "reel-to-match.mp4");
+    makeTestReel(reel);
+    const shotsBefore = await page.$$eval(".shot-tile", (tiles) => tiles.length);
+    const reelInput = await page.$('input[aria-label="Choose a reel to match"]');
+    await reelInput?.uploadFile(reel);
+    await page.waitForSelector(".recipe-card", { timeout: 60_000 });
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    await snap(page, "5d-matched-reel");
+    const card = await page.$eval(".recipe-card p", (paragraph) => paragraph.textContent ?? "");
+    if (!card.startsWith("Fast, about 0.5 s a shot")) throw new Error(`The card says: ${card}`);
+    const shotsAfter = await page.$$eval(".shot-tile", (tiles) => tiles.length);
+    if (shotsAfter === shotsBefore) throw new Error("Matching a reel didn't change the cut.");
+    pass("a reel you love is studied and your reel takes on its rhythm", card);
+
+    await clickButton(page, "Hype");
+    await page.waitForSelector(".recipe-card", { hidden: true });
+    pass("choosing a vibe goes back to normal");
 
     await page.reload();
     await page.waitForSelector(".studio", { timeout: 15_000 });

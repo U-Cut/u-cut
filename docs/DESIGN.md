@@ -86,6 +86,10 @@ The sort view is a contact sheet, the sheet of small prints a photographer marks
 - Dragging a photo onto a scene fixes it. Pressing a photo opens the same choice as a menu, so it also works by keyboard and on a phone.
 - Nothing is ever deleted. Screenshots start out left out, and one press brings them back.
 
+## Matching a reel
+
+"Match a reel you love" sits under the vibes, because it's another way of choosing how a reel feels. Once studied, **Your reel** appears as a fifth big word, and a card says in plain English what U-Cut learned, with a promise that nothing from that reel appears in yours. Choosing any vibe or style goes straight back, and undo works as usual.
+
 ## Keyboard
 
 | Key         | Action                |

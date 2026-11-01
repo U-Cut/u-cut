@@ -1,4 +1,11 @@
-import type { BeatGrid, EditPlan, MediaItem, TemplateManifest, Vibe } from "@u-cut/schema";
+import type {
+  BeatGrid,
+  EditPlan,
+  MediaItem,
+  StyleRecipe,
+  TemplateManifest,
+  Vibe,
+} from "@u-cut/schema";
 
 export interface Track {
   file: string;
@@ -24,6 +31,7 @@ export interface Job {
   items: MediaItem[];
   plan: EditPlan | null;
   excludedScenes: string[];
+  recipe: StyleRecipe | null;
 }
 
 export interface RenderEvent {
@@ -82,6 +90,12 @@ export const api = {
       method: "PUT",
       ...json({ scene }),
     }),
+  studyReel: (id: string, file: File) =>
+    request<{ recipe: StyleRecipe; description: string }>(
+      `/api/jobs/${id}/reference/${encodeURIComponent(file.name)}`,
+      { method: "PUT", body: file },
+    ),
+  forgetReel: (id: string) => request(`/api/jobs/${id}/reference`, { method: "DELETE" }),
   setExcluded: (id: string, excluded: string[]) =>
     request(`/api/jobs/${id}/scenes`, { method: "PUT", ...json({ excluded }) }),
   exportReel: (id: string, name: string) =>

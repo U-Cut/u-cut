@@ -49,6 +49,14 @@ export const EditPlan = z
     voice: z.array(Sound.extend({ text: z.string().min(1) })).optional(),
     shots: z.array(Shot).min(1),
     texts: z.array(Overlay),
+    /** How a matched reel's words looked. Without it, the template decides. */
+    textStyle: z
+      .strictObject({
+        position: z.enum(["top", "upper", "center", "lower", "bottom"]),
+        case: z.enum(["upper", "lower", "title", "sentence"]),
+        sizePx: positive,
+      })
+      .optional(),
     transitions: z.array(z.strictObject({ type: TransitionType, at: seconds, duration: seconds })),
     sfx: z.array(Sound),
   })

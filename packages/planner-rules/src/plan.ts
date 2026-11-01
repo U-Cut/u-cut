@@ -1,4 +1,11 @@
-import type { BeatGrid, EditPlan, MediaItem, PlannerInput, TemplateManifest } from "@u-cut/schema";
+import type {
+  BeatGrid,
+  EditPlan,
+  MediaItem,
+  PlannerInput,
+  StyleRecipe,
+  TemplateManifest,
+} from "@u-cut/schema";
 import { seededRng } from "./rng.ts";
 import { type VibeProfile, vibes } from "./vibes.ts";
 
@@ -184,8 +191,20 @@ function monthOf(items: MediaItem[]): string {
   return year && name ? `${name} ${year}` : "";
 }
 
+/** Whole beats of the new music that come closest to the reel's own rhythm, part by part. */
+function paceOf(recipe: StyleRecipe, interval: number): VibeProfile["beats"] {
+  const { sections, cutRhythm } = recipe;
+  const beatsFor = (seconds: number | undefined) =>
+    Math.max(1, Math.round((seconds ?? cutRhythm.median) / interval));
+  return {
+    hook: beatsFor(sections[0]?.cut),
+    body: beatsFor(sections[1]?.cut),
+    close: beatsFor(sections.at(-1)?.cut),
+  };
+}
+
 export function planRules(input: PlannerInput): EditPlan {
-  const { template, vibe, aspect, seed, music, copy } = input;
+  const { template, vibe, aspect, seed, music, copy, recipe } = input;
   const items = usableItems([...input.items].sort(byTimeThenId), input.excludedScenes);
   const allSources = sourcesFrom(items);
   if (allSources.length === 0) {
@@ -202,7 +221,8 @@ export function planRules(input: PlannerInput): EditPlan {
   const target = Math.min(input.duration, template.durationRange.max);
   const beats = beatsFrom(music.beats, startBeat, target + 16);
   const interval = (beats[1] ?? evenBeat) - (beats[0] ?? 0);
-  const expected = Math.ceil(target / (profile.beats.body * interval));
+  const pace = recipe ? paceOf(recipe, interval) : profile.beats;
+  const expected = Math.ceil(target / (pace.body * interval));
   const hookCount = template.sections[0]?.slots[0]?.count ?? 1;
   // With far too little media, each shot holds for longer before the reel gets shorter.
   const stretch = allSources.length * 2 <= expected ? 2 : 1;
@@ -212,11 +232,12 @@ export function planRules(input: PlannerInput): EditPlan {
   let beat = 0;
   for (const source of queue) {
     const start = beats[beat] ?? 0;
-    const timeLeft = target - start;
-    const shotsLeft = Math.min(queue.length - shots.length, Math.ceil(timeLeft / interval));
-    const part = partOf(shots.length, shotsLeft, hookCount);
+    // The closer starts as soon as there's only room for it, so a long final shot gets its length.
+    const closing = target - start <= pace.close * stretch * interval * 1.25;
+    const lastSource = queue.length - shots.length <= 1;
+    const part = partOf(shots.length, closing || lastSource ? 1 : 2, hookCount);
     const available = source.to - source.from;
-    const wanted = profile.beats[part] * stretch;
+    const wanted = pace[part] * stretch;
     const count = fitBeats(beats, beat, wanted, limitsFor(template, part), available);
     if (count === 0) continue;
 
@@ -248,7 +269,9 @@ export function planRules(input: PlannerInput): EditPlan {
 
   const title = copy.title.trim() || monthOf(items);
   const titleEnd = round(Math.min(2.4, duration - 0.1));
-  const fadeOut = Math.min(profile.fadeOut, duration / 3);
+  const reelFades = recipe?.transitions.some((transition) => transition.type === "fade");
+  const fadeOut = Math.min(recipe ? (reelFades ? 0.6 : 0) : profile.fadeOut, duration / 3);
+  const words = recipe?.text;
 
   return {
     schemaVersion: 1,
@@ -264,9 +287,12 @@ export function planRules(input: PlannerInput): EditPlan {
       start: round(music.beats.times[startBeat] ?? 0),
       length: music.length,
     },
-    grade: profile.grade,
+    grade: recipe?.grade ?? profile.grade,
     shots,
     texts: title ? [{ text: title, start: 0.12, end: titleEnd, style: "title" }] : [],
+    ...(words
+      ? { textStyle: { position: words.position, case: words.case, sizePx: words.sizePx } }
+      : {}),
     transitions:
       fadeOut > 0
         ? [{ type: "fade", at: round(duration - fadeOut), duration: round(fadeOut) }]

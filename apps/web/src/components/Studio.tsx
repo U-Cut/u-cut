@@ -67,6 +67,7 @@ export function Studio({ catalog, reel }: Props) {
   const playhead = useRef<HTMLDivElement>(null);
   const room = useRef<HTMLDivElement>(null);
   const picker = useRef<HTMLInputElement>(null);
+  const reelPicker = useRef<HTMLInputElement>(null);
   const [playing, setPlaying] = useState(true);
   const [muted, setMuted] = useState(false);
   const [flash, setFlash] = useState(0);
@@ -120,10 +121,9 @@ export function Studio({ catalog, reel }: Props) {
 
   if (!now || !plan) return null;
   const { settings } = now;
-  const templates = catalog.templates.map((template) => ({
-    value: template.manifest.id,
-    label: template.manifest.name,
-  }));
+  const templates = catalog.templates
+    .filter((template) => template.manifest.id !== "recipe")
+    .map((template) => ({ value: template.manifest.id, label: template.manifest.name }));
 
   return (
     <div className="studio" ref={room}>
@@ -173,12 +173,39 @@ export function Studio({ catalog, reel }: Props) {
           <button
             type="button"
             key={vibe}
-            aria-pressed={settings.vibe === vibe}
-            onClick={() => actions.change({ vibe })}
+            aria-pressed={settings.vibe === vibe && !settings.recipe}
+            onClick={() =>
+              settings.recipe ? actions.forgetReel({ vibe }) : actions.change({ vibe })
+            }
           >
             {vibeLabels[vibe]}
           </button>
         ))}
+        {settings.recipe ? (
+          <button type="button" aria-pressed={true} disabled>
+            Your reel
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="button-text match-reel"
+          disabled={state.studying}
+          onClick={() => reelPicker.current?.click()}
+        >
+          {state.studying ? "Studying your reel" : "Match a reel you love"}
+        </button>
+        <input
+          ref={reelPicker}
+          type="file"
+          accept="video/*,.mov"
+          hidden
+          aria-label="Choose a reel to match"
+          onChange={(event) => {
+            const [file] = event.target.files ?? [];
+            if (file) void actions.matchReel(file);
+            event.target.value = "";
+          }}
+        />
       </nav>
 
       <section className="center" aria-label="Your reel">
@@ -234,6 +261,14 @@ export function Studio({ catalog, reel }: Props) {
       </section>
 
       <aside className="controls" aria-label="Reel settings">
+        {settings.recipe ? (
+          <div className="recipe-card">
+            <p>{settings.recipe.notes}</p>
+            <p className="recipe-promise">
+              Your reel uses this style. Nothing from that reel appears in it.
+            </p>
+          </div>
+        ) : null}
         <label className="title-field">
           <span>Title</span>
           <input
@@ -247,8 +282,10 @@ export function Studio({ catalog, reel }: Props) {
         <Choice
           label="Style"
           options={templates}
-          value={settings.template}
-          onChange={(template) => actions.change({ template })}
+          value={settings.recipe ? "" : settings.template}
+          onChange={(template) =>
+            settings.recipe ? actions.forgetReel({ template }) : actions.change({ template })
+          }
         />
         <Choice
           label="Length"

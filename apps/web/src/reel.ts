@@ -1,6 +1,13 @@
 import { composeParts } from "@u-cut/compose";
-import { planRules, replaceShot, setTitle, swapShots } from "@u-cut/planner-rules";
-import type { Aspect, EditPlan, MediaItem, Vibe } from "@u-cut/schema";
+import {
+  matchTrack,
+  matchVibe,
+  planRules,
+  replaceShot,
+  setTitle,
+  swapShots,
+} from "@u-cut/planner-rules";
+import type { Aspect, EditPlan, MediaItem, StyleRecipe, Vibe } from "@u-cut/schema";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import {
   api,
@@ -20,6 +27,8 @@ export interface Settings {
   seed: number;
   title: string;
   excludedScenes: string[];
+  /** The style of a reel you matched. It takes over from the vibe and template while it's on. */
+  recipe: StyleRecipe | null;
 }
 
 interface Snapshot {
@@ -38,6 +47,7 @@ interface State {
   future: Snapshot[];
   render: RenderEvent | null;
   notice: string | null;
+  studying: boolean;
 }
 
 type Action =
@@ -53,6 +63,7 @@ type Action =
   | { type: "redo" }
   | { type: "render"; render: RenderEvent | null }
   | { type: "notice"; notice: string | null }
+  | { type: "studying"; studying: boolean }
   | { type: "reset" };
 
 const historyLimit = 100;
@@ -66,6 +77,7 @@ const empty: State = {
   future: [],
   render: null,
   notice: null,
+  studying: false,
 };
 
 function reducer(state: State, action: Action): State {
@@ -124,6 +136,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, render: action.render };
     case "notice":
       return { ...state, notice: action.notice };
+    case "studying":
+      return { ...state, studying: action.studying };
     case "reset":
       return empty;
   }
@@ -137,22 +151,27 @@ const defaults: Settings = {
   seed: 1,
   title: "",
   excludedScenes: ["documents"],
+  recipe: null,
 };
 
 export function planWith(catalog: Catalog, items: MediaItem[], settings: Settings): EditPlan {
-  const template = catalog.templates.find((entry) => entry.manifest.id === settings.template);
-  const track = catalog.tracks.find((entry) => entry.vibe === settings.vibe);
+  const { recipe } = settings;
+  const templateId = recipe ? "recipe" : settings.template;
+  const template = catalog.templates.find((entry) => entry.manifest.id === templateId);
+  const track = recipe
+    ? matchTrack(recipe, catalog.tracks)
+    : catalog.tracks.find((entry) => entry.vibe === settings.vibe);
   if (!template || !track) throw new Error("U-Cut's templates didn't load. Reload the page.");
   return planRules({
     items,
     template: template.manifest,
-    vibe: settings.vibe,
+    vibe: recipe ? matchVibe(recipe) : settings.vibe,
     aspect: settings.aspect,
     duration: settings.duration,
     music: { src: track.file, length: track.length, beats: track.beats },
     copy: { title: settings.title },
     excludedScenes: settings.excludedScenes,
-    recipe: null,
+    recipe,
     seed: settings.seed,
   });
 }
@@ -169,7 +188,11 @@ export function compositionFor(catalog: Catalog, items: MediaItem[], plan: EditP
   });
 }
 
-const settingsFrom = (plan: EditPlan, excludedScenes: string[]): Settings => ({
+const settingsFrom = (
+  plan: EditPlan,
+  excludedScenes: string[],
+  recipe: StyleRecipe | null,
+): Settings => ({
   vibe: plan.vibe,
   template: plan.template,
   aspect: plan.aspect,
@@ -177,6 +200,7 @@ const settingsFrom = (plan: EditPlan, excludedScenes: string[]): Settings => ({
   seed: plan.seed,
   title: plan.texts.find((text) => text.style === "title")?.text ?? "",
   excludedScenes,
+  recipe,
 });
 
 const jobKey = "ucut-job";
@@ -220,7 +244,10 @@ export function useReel(catalog: Catalog | null) {
         for (const item of job.items) dispatch({ type: "ready", id: item.id });
         dispatch({
           type: "commit",
-          snapshot: { plan: job.plan, settings: settingsFrom(job.plan, job.excludedScenes) },
+          snapshot: {
+            plan: job.plan,
+            settings: settingsFrom(job.plan, job.excludedScenes, job.recipe),
+          },
         });
       },
       () => window.localStorage.removeItem(jobKey),
@@ -373,6 +400,32 @@ export function useReel(catalog: Catalog | null) {
     [change],
   );
 
+  /** Studies a reel on this computer, then re-cuts yours to its structure. */
+  const matchReel = useCallback(
+    async (file: File) => {
+      const { job } = latest.current;
+      if (!job) return;
+      dispatch({ type: "studying", studying: true });
+      try {
+        const { recipe } = await api.studyReel(job.id, file);
+        change({ recipe, aspect: recipe.aspect, duration: Math.round(recipe.duration) });
+      } catch (error) {
+        dispatch({ type: "notice", notice: (error as Error).message });
+      }
+      dispatch({ type: "studying", studying: false });
+    },
+    [change],
+  );
+
+  const forgetReel = useCallback(
+    (patch: Partial<Settings>) => {
+      const { job } = latest.current;
+      change({ ...patch, recipe: null });
+      if (job) void api.forgetReel(job.id).catch(() => {});
+    },
+    [change],
+  );
+
   const replace = useCallback(
     (index: number, item: MediaItem) => editPlan((plan) => replaceShot(plan, index, item)),
     [editPlan],
@@ -421,6 +474,8 @@ export function useReel(catalog: Catalog | null) {
       swap,
       setScene,
       setExcluded,
+      matchReel,
+      forgetReel,
       exportReel,
       cancelExport,
       startOver,
@@ -438,6 +493,8 @@ export function useReel(catalog: Catalog | null) {
       swap,
       setScene,
       setExcluded,
+      matchReel,
+      forgetReel,
       exportReel,
       cancelExport,
       startOver,

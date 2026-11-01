@@ -1,4 +1,10 @@
-import type { BeatGrid, MediaItem, PlannerInput, TemplateManifest } from "@u-cut/schema";
+import type {
+  BeatGrid,
+  MediaItem,
+  PlannerInput,
+  StyleRecipe,
+  TemplateManifest,
+} from "@u-cut/schema";
 import { EditPlan, validate } from "@u-cut/schema";
 import { describe, expect, it } from "vitest";
 import { PlanError, planRules } from "./plan.ts";
@@ -267,6 +273,73 @@ describe("planRules", () => {
       const pushes = planRules(input(items)).shots.filter((shot) => shot.motion.type === "push-in");
       expect(pushes.length).toBeGreaterThan(0);
       for (const shot of pushes) expect(shot.motion.to.x).toBeGreaterThan(0.5);
+    });
+  });
+
+  describe("with a recipe from a reel", () => {
+    const recipe: StyleRecipe = {
+      aspect: "9:16",
+      duration: 12,
+      cutRhythm: { median: 1, p90: 1, onBeat: true },
+      sections: [
+        { name: "hook", start: 0, end: 3, energy: 1, cut: 0.5 },
+        { name: "body", start: 3, end: 9, energy: 0.5, cut: 1 },
+        { name: "payoff", start: 9, end: 12, energy: 0.5, cut: 2 },
+      ],
+      text: { font: "sans-bold", sizePx: 96, position: "lower", case: "upper", timing: "line" },
+      transitions: [{ type: "cut", share: 1 }],
+      grade: { temp: 0.2, contrast: 0.1, sat: 0 },
+      notes: "",
+    };
+    const open = {
+      ...template,
+      sections: [
+        { name: "hook", slots: [{ accepts: ["any"], count: 3, minDur: 0.2, maxDur: 6 }] },
+        { name: "body", slots: [{ accepts: ["any"], count: 40, minDur: 0.2, maxDur: 6 }] },
+        { name: "close", slots: [{ accepts: ["any"], count: 1, minDur: 0.2, maxDur: 6 }] },
+      ],
+    };
+    const planned = (overrides: Partial<PlannerInput> = {}) =>
+      planRules(input(many(40), { recipe, template: open, duration: 12, ...overrides }));
+
+    it("cuts to the reel's rhythm, on the new music's beat", () => {
+      const lengths = planned().shots.map((shot) => shot.end - shot.start);
+      expect(lengths.filter((length) => Math.abs(length - 1) < 0.01).length).toBeGreaterThan(4);
+    });
+
+    it("copies a faster opening", () => {
+      const lengths = planned().shots.map((shot) => shot.end - shot.start);
+      expect(lengths[0]).toBeCloseTo(0.5, 1);
+      expect(lengths[1]).toBeCloseTo(0.5, 1);
+      expect(lengths.at(-1)).toBeCloseTo(2, 1);
+    });
+
+    it("uses the reel's look", () => {
+      expect(planned().grade).toEqual(recipe.grade);
+    });
+
+    it("sets words the way the reel did", () => {
+      expect(planned().textStyle).toEqual({ position: "lower", case: "upper", sizePx: 96 });
+    });
+
+    it("needs no text style when the reel had no words", () => {
+      expect(planned({ recipe: { ...recipe, text: null } }).textStyle).toBeUndefined();
+    });
+
+    it("fades out only if the reel did", () => {
+      expect(planned().transitions).toEqual([]);
+      const fading: StyleRecipe = {
+        ...recipe,
+        transitions: [
+          { type: "cut", share: 0.9 },
+          { type: "fade", share: 0.1 },
+        ],
+      };
+      expect(planned({ recipe: fading }).transitions[0]?.type).toBe("fade");
+    });
+
+    it("stays byte-identical", () => {
+      expect(JSON.stringify(planned())).toBe(JSON.stringify(planned()));
     });
   });
 

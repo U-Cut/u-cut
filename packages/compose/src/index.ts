@@ -86,6 +86,21 @@ function shotCss(plan: EditPlan): string {
     .join("\n");
 }
 
+/** Sets a matched reel's words the way the reel did, inside the title-safe area. */
+function textStyleCss(plan: EditPlan): string {
+  const style = plan.textStyle;
+  if (!style) return "";
+  const top = { top: 12, upper: 28, center: 46, lower: 58, bottom: 66 }[style.position];
+  const transform = {
+    upper: "uppercase",
+    lower: "lowercase",
+    title: "capitalize",
+    sentence: "none",
+  }[style.case];
+  const size = Math.max(44, Math.min(150, style.sizePx));
+  return `.text-title{top:${top}%;bottom:auto;left:10%;right:10%;margin:0;text-align:center;font-size:calc(${size}*var(--unit));text-transform:${transform}}`;
+}
+
 function shotHtml(input: ComposeInput): string {
   return input.plan.shots
     .map((shot, index) => {
@@ -150,6 +165,7 @@ export function composeParts(input: ComposeInput): Composition {
       : "",
     "@keyframes ucut-fade{from{opacity:0}to{opacity:1}}",
     input.templateCss,
+    textStyleCss(plan),
     shotCss(plan),
   ]
     .filter(Boolean)

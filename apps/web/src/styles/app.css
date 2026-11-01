@@ -366,6 +366,47 @@ button {
   transform: scale(1.04);
 }
 
+.vibes .match-reel {
+  margin-top: 16px;
+  font: 500 14px / 1.3 var(--sans);
+  letter-spacing: 0;
+  color: var(--ash);
+  transform: none;
+}
+
+.vibes .match-reel:hover {
+  color: var(--white);
+}
+
+.vibes .match-reel:disabled {
+  cursor: default;
+  animation: studying 1.4s ease-in-out infinite;
+}
+
+@keyframes studying {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.recipe-card {
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--smoke);
+}
+
+.recipe-card p {
+  margin: 0;
+  font: 600 16px / 1.32 var(--display);
+  letter-spacing: -0.015em;
+}
+
+.recipe-card .recipe-promise {
+  margin-top: 8px;
+  font: 400 12px / 1.35 var(--sans);
+  letter-spacing: 0;
+  color: var(--ash);
+}
+
 .center {
   grid-area: center;
   display: flex;

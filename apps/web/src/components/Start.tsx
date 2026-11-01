@@ -31,6 +31,7 @@ export function Start({ catalog, items, ready, arriving, onFiles, onSamples }: P
       seed: 4,
       title: "Your reel",
       excludedScenes: [],
+      recipe: null,
     });
   }, [catalog]);
 

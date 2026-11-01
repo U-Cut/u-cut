@@ -8,6 +8,7 @@ import { make } from "./make.ts";
 import type { Quality } from "./render.ts";
 import { serve } from "./server/serve.ts";
 import { sortMedia } from "./sort.ts";
+import { studyReel } from "./study.ts";
 
 const { version } = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -37,6 +38,7 @@ const makeCommand = defineCommand({
     title: { type: "string", default: "", description: "Title shown at the start" },
     quality: { type: "string", default: "looks", description: "draft, looks or delivery" },
     music: { type: "string", description: "Your own music file" },
+    like: { type: "string", description: "A reel whose style to copy" },
     json: { type: "boolean", default: false, description: "Print progress as JSON lines" },
   },
   async run({ args }) {
@@ -53,6 +55,7 @@ const makeCommand = defineCommand({
         title: args.title,
         quality: args.quality as Quality,
         ...(args.music ? { music: args.music } : {}),
+        ...(args.like ? { like: args.like } : {}),
       },
       (event) => {
         if (args.json) {
@@ -60,6 +63,8 @@ const makeCommand = defineCommand({
         } else if (event.type === "stage" && event.stage !== lastStage) {
           lastStage = event.stage;
           console.log(`${event.stage}…`);
+        } else if (event.type === "recipe") {
+          console.log(event.description);
         } else if (event.type === "skipped") {
           console.log(`Skipped ${event.name}: it ${event.reason}.`);
         } else if (event.type === "done") {
@@ -142,6 +147,18 @@ const sortCommand = defineCommand({
   },
 });
 
+const studyCommand = defineCommand({
+  meta: { name: "study", description: "Learn the style of a reel you admire." },
+  args: {
+    reel: { type: "positional", description: "A video file", required: true },
+    json: { type: "boolean", default: false, description: "Print the recipe as JSON" },
+  },
+  async run({ args }) {
+    const { recipe, description } = await studyReel(args.reel);
+    console.log(args.json ? JSON.stringify(recipe, null, 2) : description);
+  },
+});
+
 const setupCommand = defineCommand({
   meta: { name: "setup", description: "Download the browser U-Cut renders with." },
   async run() {
@@ -171,13 +188,14 @@ const main = defineCommand({
   subCommands: {
     make: makeCommand,
     sort: sortCommand,
+    study: studyCommand,
     serve: serveCommand,
     setup: setupCommand,
     doctor: doctorCommand,
   },
 });
 
-const commands = ["make", "sort", "serve", "setup", "doctor"];
+const commands = ["make", "sort", "study", "serve", "setup", "doctor"];
 
 export async function run(argv: string[]): Promise<RunResult> {
   const [first] = argv;

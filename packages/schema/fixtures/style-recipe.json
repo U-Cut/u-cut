@@ -4,9 +4,9 @@
   "bpm": 128,
   "cutRhythm": { "median": 0.42, "p90": 0.9, "onBeat": true },
   "sections": [
-    { "name": "hook", "start": 0, "end": 2.5, "energy": 0.9 },
-    { "name": "body", "start": 2.5, "end": 12, "energy": 0.6 },
-    { "name": "payoff", "start": 12, "end": 15.2, "energy": 0.8 }
+    { "name": "hook", "start": 0, "end": 2.5, "energy": 0.9, "cut": 0.4 },
+    { "name": "body", "start": 2.5, "end": 12, "energy": 0.6, "cut": 0.5 },
+    { "name": "payoff", "start": 12, "end": 15.2, "energy": 0.8, "cut": 0.5 }
   ],
   "text": {
     "font": "sans-bold",
