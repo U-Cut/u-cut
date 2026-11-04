@@ -1,10 +1,11 @@
-import { createHash } from "node:crypto";
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { writeWithClaude } from "@u-cut/planner-api";
 import {
   defaultReelLength,
   planScript,
   readPrompt,
+  scriptFrom,
   usableItems,
   writeScript,
 } from "@u-cut/planner-rules";
@@ -16,9 +17,10 @@ import {
   type Vibe,
   validate,
 } from "@u-cut/schema";
+import { keyFor, splitVoice } from "./connections/index.ts";
 import { ingest } from "./ingest.ts";
 import { loadTracks, trackBeats } from "./library.ts";
-import { defaultExcludedScenes, type MakeEvent } from "./make.ts";
+import { defaultExcludedScenes, jobName, type MakeEvent } from "./make.ts";
 import { jobsDir } from "./paths.ts";
 import { type Quality, renderPlan } from "./render.ts";
 import { sortMedia } from "./sort.ts";
@@ -28,13 +30,20 @@ export interface StoryOptions {
   prompt: string;
   inputs: string[];
   output: string;
-  /** A Kokoro voice, or null for words on screen only. */
+  /** A Kokoro voice, `service:id` for a connected service, or null for words on screen only. */
   voice: string | null;
   quality: Quality;
   seed: number;
   vibe?: Vibe;
   aspect?: Aspect;
   duration?: number;
+  /** Lines someone or an assistant wrote. When set, nothing else writes the script. */
+  lines?: { text: string; scene?: string | null | undefined }[];
+  /** Who writes the script when no lines are given. Claude needs a connected key. */
+  writer?: "rules" | "claude";
+  signal?: AbortSignal;
+  /** Give the job a folder of its own, for an assistant that may edit it afterwards. */
+  fresh?: boolean;
 }
 
 /** The scenes in someone's media, in the order they happened. */
@@ -66,21 +75,48 @@ export async function makeStory(
   onEvent({ type: "stage", stage: "Writing the script" });
   const vibe = options.vibe ?? request.vibe ?? "chill";
   const duration = options.duration ?? request.duration ?? defaultReelLength;
-  const script = writeScript({
-    request,
-    scenes: scenesIn(items),
-    vibe,
-    duration,
-    seed: options.seed,
-  });
+  const scenes = scenesIn(items);
+  let script: ScriptLine[] = options.lines?.length
+    ? scriptFrom(options.lines, vibe, scenes)
+    : writeScript({ request, scenes, vibe, duration, seed: options.seed });
+  if (!options.lines?.length && options.writer === "claude") {
+    const apiKey = await keyFor("claude");
+    if (!apiKey) {
+      onEvent({
+        type: "skipped",
+        name: "Claude",
+        reason: "isn't connected, so run `ucut connect claude`",
+      });
+    } else {
+      try {
+        script = await writeWithClaude({
+          prompt: options.prompt,
+          request,
+          scenes,
+          vibe,
+          duration,
+          apiKey,
+          ...(options.signal ? { signal: options.signal } : {}),
+        });
+      } catch (error) {
+        onEvent({
+          type: "skipped",
+          name: "Claude's script",
+          reason: `didn't arrive: ${(error as Error).message}`,
+        });
+      }
+    }
+  }
 
   let lines: ScriptLine[] = script;
   const { voice } = options;
-  if (voice && voiceReady()) {
+  const kokoro = voice !== null && splitVoice(voice).service === "kokoro";
+  if (voice && (!kokoro || voiceReady())) {
     lines = [];
     for (const [index, line] of script.entries()) {
       onEvent({ type: "progress", stage: "Voicing the script", progress: index / script.length });
-      lines.push({ ...line, voice: await speak(line, voice) });
+      options.signal?.throwIfAborted();
+      lines.push({ ...line, voice: await speak(line, voice, options.signal) });
     }
   } else if (voice) {
     onEvent({
@@ -108,14 +144,16 @@ export async function makeStory(
   if (!checked.ok) throw new Error(checked.errors.join(" "));
   const plan = checked.value;
 
-  const job = createHash("sha256").update(JSON.stringify(plan)).digest("hex").slice(0, 12);
-  const jobDir = join(jobsDir(), job);
+  const jobDir = join(jobsDir(), jobName(plan, options.fresh === true));
   await mkdir(jobDir, { recursive: true });
   await writeFile(join(jobDir, "plan.json"), `${JSON.stringify(plan, null, 2)}\n`);
   await writeFile(join(jobDir, "script.txt"), `${lines.map((line) => line.text).join("\n")}\n`);
+  await writeFile(join(jobDir, "media.json"), `${JSON.stringify(items, null, 2)}\n`);
 
   onEvent({ type: "stage", stage: "Rendering" });
+  options.signal?.throwIfAborted();
   const result = await renderPlan(plan, items, {
+    ...(options.signal ? { signal: options.signal } : {}),
     quality: options.quality,
     projectDir: join(jobDir, "project"),
     onProgress: ({ stage, progress }) => onEvent({ type: "progress", stage, progress }),

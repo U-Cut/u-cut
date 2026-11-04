@@ -1,11 +1,10 @@
-import { createHash } from "node:crypto";
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { planDemo } from "@u-cut/planner-rules";
 import { type Aspect, EditPlan, type MediaItem, validate } from "@u-cut/schema";
 import { ingest } from "./ingest.ts";
 import { loadTracks } from "./library.ts";
-import type { MakeEvent } from "./make.ts";
+import { jobName, type MakeEvent } from "./make.ts";
 import { jobsDir } from "./paths.ts";
 import { readRecording } from "./recording.ts";
 import { type Quality, renderPlan } from "./render.ts";
@@ -19,6 +18,15 @@ export interface DemoOptions {
   aspect?: Aspect;
   captions: boolean;
   quality: Quality;
+  /** `whisper` on this Mac, or a connected service. */
+  listen?: string;
+  /** Words to listen for. The name on the cards is always one. */
+  hints?: string[];
+  /** Moments to leave out, counted from 0 in the order U-Cut finds them. */
+  skip?: number[];
+  signal?: AbortSignal;
+  /** Give the job a folder of its own, for an assistant that may edit it afterwards. */
+  fresh?: boolean;
 }
 
 /** A recording keeps its own shape unless asked otherwise, so nothing on screen gets small. */
@@ -44,7 +52,21 @@ export async function makeDemo(
   if (item?.kind !== "video") throw new Error("That isn't a video. Choose a screen recording.");
 
   onEvent({ type: "stage", stage: "Finding the moments" });
-  const { sound, words, moments, speech } = await readRecording(item);
+  const hints = [
+    ...new Set([options.name, ...(options.hints ?? [])].map((hint) => hint.trim())),
+  ].filter(Boolean);
+  const {
+    sound,
+    words,
+    moments: found,
+    speech,
+  } = await readRecording(item, {
+    ...(options.listen ? { listen: options.listen } : {}),
+    ...(options.signal ? { signal: options.signal } : {}),
+    hints,
+  });
+  options.signal?.throwIfAborted();
+  const moments = found.filter((_, index) => !options.skip?.includes(index));
   if (speech === "no-model") {
     onEvent({
       type: "skipped",
@@ -70,13 +92,14 @@ export async function makeDemo(
   if (!checked.ok) throw new Error(checked.errors.join(" "));
   const plan = checked.value;
 
-  const job = createHash("sha256").update(JSON.stringify(plan)).digest("hex").slice(0, 12);
-  const jobDir = join(jobsDir(), job);
+  const jobDir = join(jobsDir(), jobName(plan, options.fresh === true));
   await mkdir(jobDir, { recursive: true });
   await writeFile(join(jobDir, "plan.json"), `${JSON.stringify(plan, null, 2)}\n`);
+  await writeFile(join(jobDir, "media.json"), `${JSON.stringify(items, null, 2)}\n`);
 
   onEvent({ type: "stage", stage: "Rendering" });
   const result = await renderPlan(plan, items, {
+    ...(options.signal ? { signal: options.signal } : {}),
     quality: options.quality,
     projectDir: join(jobDir, "project"),
     onProgress: ({ stage, progress }) => onEvent({ type: "progress", stage, progress }),

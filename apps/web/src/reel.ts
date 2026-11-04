@@ -8,6 +8,7 @@ import {
   planScript,
   readPrompt,
   replaceShot,
+  scriptFrom,
   setTitle,
   swapShots,
   usableItems,
@@ -26,6 +27,7 @@ import type {
 } from "@u-cut/schema";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import {
+  type AssistantChange,
   api,
   type Catalog,
   connectEvents,
@@ -77,6 +79,8 @@ interface State {
   /** The voice has been asked for and is downloading. */
   installingVoice: boolean;
   voiceReady: boolean | null;
+  /** Claude is writing a better script for the reel that's already playing. */
+  writing: boolean;
 }
 
 type Action =
@@ -97,6 +101,7 @@ type Action =
   | { type: "voicing"; voicing: State["voicing"] }
   | { type: "installingVoice"; installing: boolean }
   | { type: "voiceReady" }
+  | { type: "writing"; writing: boolean }
   | { type: "reset" };
 
 const historyLimit = 100;
@@ -115,6 +120,7 @@ const empty: State = {
   voicing: null,
   installingVoice: false,
   voiceReady: null,
+  writing: false,
 };
 
 function reducer(state: State, action: Action): State {
@@ -183,6 +189,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, installingVoice: action.installing };
     case "voiceReady":
       return { ...state, voiceReady: true };
+    case "writing":
+      return { ...state, writing: action.writing };
     case "reset":
       return { ...empty, voiceReady: state.voiceReady };
   }
@@ -287,6 +295,15 @@ const settingsFrom = (
 });
 
 /** The scenes in someone's photos, in the order the reel should reach them. */
+/** The voice a new written reel starts with: Kokoro, or the first of the chosen service's. */
+async function firstVoice(catalog: Catalog): Promise<string | null> {
+  if (catalog.uses.voice === "kokoro") return catalog.voice.defaultVoice;
+  if (catalog.uses.voice === "deepgram") return "deepgram:aura-2-thalia-en";
+  if (catalog.uses.voice === "voicestudio") return "voicestudio:default";
+  const listed = await api.voices().catch(() => null);
+  return listed?.voices[0]?.id ?? catalog.voice.defaultVoice;
+}
+
 function scenesOf(items: MediaItem[]): string[] {
   const shown = usableItems(items, defaults.excludedScenes);
   return [...new Set(shown.flatMap((item) => item.labels.slice(0, 1).map((label) => label.id)))];
@@ -303,6 +320,8 @@ export function useReel(catalog: Catalog | null) {
 
   // Lives in a ref because the event stream is opened once, before the catalog has loaded.
   const showDemo = useRef<(event: RecordingEvent) => void>(() => {});
+  /** Applies an assistant's change, and returns what went wrong, if anything. */
+  const applyAssistant = useRef<(change: AssistantChange) => string | null>(() => null);
   showDemo.current = (event) => {
     dispatch({ type: "reading", reading: false });
     const { demo } = event;
@@ -330,6 +349,22 @@ export function useReel(catalog: Catalog | null) {
           dispatch({ type: "voicing", voicing: finished ? null : event });
         } else if (event.type === "recording") {
           if (event.job === latest.current.job?.id) showDemo.current(event);
+        } else if (event.type === "assistant") {
+          // Only the reel that's open takes it. Anything else says so, so the assistant knows.
+          const open = event.job === latest.current.job?.id && latest.current.now !== null;
+          const error = open ? applyAssistant.current(event.change) : null;
+          void api
+            .answerAssistant(
+              event.job,
+              event.id,
+              open && !error
+                ? { applied: true }
+                : {
+                    applied: false,
+                    ...(error ? { error } : {}),
+                  },
+            )
+            .catch(() => {});
         } else if (event.type === "media") {
           if (event.job !== latest.current.job?.id) return;
           if (event.state === "ready") dispatch({ type: "ready", id: event.id, item: event.item });
@@ -408,12 +443,17 @@ export function useReel(catalog: Catalog | null) {
   const speaking = useRef(false);
   const voiceFailed = useRef(false);
   const [readRound, readAgain] = useReducer((round: number) => round + 1, 0);
-  const voiceAvailable = state.voiceReady ?? catalog?.voice.ready ?? false;
+  // A connected service's voice is checked by the server, so only Kokoro needs installing here.
+  const writing = state.writing;
+  const voiceAvailable =
+    Boolean(script?.voice?.includes(":")) || (state.voiceReady ?? catalog?.voice.ready ?? false);
   // biome-ignore lint/correctness/useExhaustiveDependencies: readRound runs this again after a read.
   useEffect(() => {
     const voice = script?.voice;
     const unread = script?.lines.filter((line) => !line.voice) ?? [];
     if (!voice || !voiceAvailable || unread.length === 0) return;
+    // Claude's script replaces this one in a moment, so reading it now would be paid for twice.
+    if (writing) return;
     if (speaking.current || voiceFailed.current) return;
     const job = latest.current.job;
     if (!job) return;
@@ -448,7 +488,7 @@ export function useReel(catalog: Catalog | null) {
         // Anything changed while this was reading gets picked up by the next round.
         readAgain();
       });
-  }, [catalog, script, voiceAvailable, readRound]);
+  }, [catalog, script, voiceAvailable, readRound, writing]);
 
   const ensureJob = useCallback(async () => {
     if (latest.current.job) return latest.current.job;
@@ -511,7 +551,8 @@ export function useReel(catalog: Catalog | null) {
       const vibe = request.vibe ?? "chill";
       const duration = request.duration ?? defaultReelLength;
       const seed = 1;
-      const lines = writeScript({ request, scenes: scenesOf(items), vibe, duration, seed });
+      const scenes = scenesOf(items);
+      const lines = writeScript({ request, scenes, vibe, duration, seed });
       const settings: Settings = {
         ...defaults,
         template: "explainer",
@@ -520,7 +561,7 @@ export function useReel(catalog: Catalog | null) {
         duration,
         seed,
         title: request.subject,
-        script: { prompt, lines, voice: catalog.voice.defaultVoice },
+        script: { prompt, lines, voice: await firstVoice(catalog) },
       };
       plannedCount.current = items.length;
       try {
@@ -530,6 +571,40 @@ export function useReel(catalog: Catalog | null) {
         });
       } catch (error) {
         dispatch({ type: "notice", notice: (error as Error).message });
+        return;
+      }
+      if (catalog.uses.write !== "claude") return;
+      // The rules' script is already playing. Claude's replaces it as one edit, so undo goes back.
+      dispatch({ type: "writing", writing: true });
+      try {
+        const job = await ensureJob();
+        const written = await api.writeWithClaude(job.id, { prompt, scenes, vibe, duration });
+        const now = latest.current.now?.settings;
+        if (now?.script?.prompt !== prompt) return;
+        const untouched =
+          now.script.lines.map((line) => line.text).join("\n") ===
+          lines.map((line) => line.text).join("\n");
+        if (!untouched) {
+          dispatch({
+            type: "notice",
+            notice: "Claude wrote a script, but you'd already changed yours, so it's kept.",
+          });
+          return;
+        }
+        const script = { ...now.script, lines: written.lines };
+        const next = { ...now, script };
+        dispatch({
+          type: "commit",
+          snapshot: { settings: next, plan: planWith(catalog, latest.current.items, next) },
+        });
+        dispatch({ type: "notice", notice: "Claude wrote this script. Undo brings back U-Cut's." });
+      } catch (error) {
+        dispatch({
+          type: "notice",
+          notice: `${(error as Error).message} U-Cut's own script is still there.`,
+        });
+      } finally {
+        dispatch({ type: "writing", writing: false });
       }
     },
     [catalog, ensureJob],
@@ -613,6 +688,46 @@ export function useReel(catalog: Catalog | null) {
     },
     [change],
   );
+
+  // An assistant's change lands as one edit, so the person can always undo it.
+  applyAssistant.current = (asked) => {
+    const { now, items } = latest.current;
+    if (!now || !catalog) return "That reel isn't open.";
+    const patch: Partial<Settings> = {};
+    if (asked.vibe) Object.assign(patch, { vibe: asked.vibe, recipe: null });
+    if (asked.duration) patch.duration = asked.duration;
+    if (asked.aspect) patch.aspect = asked.aspect;
+    if (asked.seed) patch.seed = asked.seed;
+    if (asked.title !== undefined) {
+      if (now.settings.demo) {
+        const { demo } = now.settings;
+        patch.demo = { ...demo, brand: { ...demo.brand, name: asked.title } };
+      } else {
+        patch.title = asked.title;
+      }
+    }
+    if (asked.lines && now.settings.script) {
+      const vibe = patch.vibe ?? now.settings.vibe;
+      const lines = scriptFrom(
+        asked.lines.map((text) => ({ text })),
+        vibe,
+        scenesOf(items),
+      );
+      patch.script = { ...now.settings.script, lines };
+    }
+    const settings = { ...now.settings, ...patch };
+    try {
+      const plan = planWith(catalog, items, settings);
+      dispatch({ type: "commit", snapshot: { settings, plan } });
+    } catch (error) {
+      return (error as Error).message;
+    }
+    dispatch({
+      type: "notice",
+      notice: "Your assistant changed this reel. Undo brings back what you had.",
+    });
+    return null;
+  };
 
   const setLine = useCallback(
     (index: number, text: string) => {

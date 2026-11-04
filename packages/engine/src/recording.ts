@@ -1,9 +1,11 @@
+import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { findMoments, type ScreenWindow } from "@u-cut/planner-rules";
 import type { Demo, DemoWord, MediaItem } from "@u-cut/schema";
+import { listenWith } from "./connections/index.ts";
 import { run } from "./exec.ts";
 import { hf } from "./hf.ts";
 import { derived } from "./store.ts";
@@ -57,6 +59,54 @@ async function listen(path: string, duration: number): Promise<DemoWord[]> {
   }
 }
 
+/** Small mono sound, so a recording uploads quickly and fits every service's size limit. */
+async function soundOf(path: string, folder: string): Promise<Uint8Array> {
+  const target = join(folder, "sound.m4a");
+  await run("ffmpeg", [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-y",
+    "-i",
+    path,
+    "-vn",
+    "-ac",
+    "1",
+    "-ar",
+    "16000",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "48k",
+    target,
+  ]);
+  return new Uint8Array(await readFile(target));
+}
+
+/** Sends the sound to the chosen service. Its words are cleaned the same way Whisper's are. */
+async function listenElsewhere(
+  path: string,
+  service: string,
+  hints: string[],
+  signal?: AbortSignal,
+): Promise<DemoWord[]> {
+  const folder = await mkdtemp(join(tmpdir(), "ucut-listen-"));
+  try {
+    const audio = await soundOf(path, folder);
+    return cleanWords(await listenWith(service, { audio, hints, ...(signal ? { signal } : {}) }));
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+}
+
+export interface ListenOptions {
+  /** `whisper` on this Mac, or a connected service such as `deepgram`. */
+  listen?: string;
+  /** Names to listen for, such as the product's, so "Claude" isn't heard as "clock". */
+  hints?: string[];
+  signal?: AbortSignal;
+}
+
 interface ScreenActivity {
   windows: ScreenWindow[];
   grid: { cols: number; rows: number };
@@ -86,24 +136,45 @@ interface Signals extends ScreenActivity {
   speech: Demo["speech"];
 }
 
-async function read(item: MediaItem): Promise<Signals> {
+async function read(item: MediaItem, options: ListenOptions): Promise<Signals> {
   const duration = item.duration ?? 0;
+  const service = options.listen ?? "whisper";
   const screen = await watch(item.path, duration).catch(
     (): ScreenActivity => ({ windows: [], grid: { cols: 4, rows: 4 } }),
   );
   const sound = await hasSound(item.path);
+  if (sound && service !== "whisper") {
+    // A service that fails says why, rather than quietly leaving the demo without captions.
+    const words = await listenElsewhere(item.path, service, options.hints ?? [], options.signal);
+    return { ...screen, sound, words, speech: words.length > 0 ? "heard" : "none" };
+  }
   // A recording U-Cut can't hear is still a recording it can watch.
   const words = sound && speechReady() ? await listen(item.path, duration).catch(() => []) : [];
   const speech = words.length > 0 ? "heard" : sound && !speechReady() ? "no-model" : "none";
   return { ...screen, sound, words, speech };
 }
 
+function signalsName(options: ListenOptions): string {
+  const service = options.listen ?? "whisper";
+  if (service === "whisper") {
+    // Installing the model later has to give the next try a fresh listen.
+    return speechReady() ? "recording-signals.json" : "recording-signals-silent.json";
+  }
+  const hints = createHash("sha256")
+    .update((options.hints ?? []).join("\n"))
+    .digest("hex")
+    .slice(0, 8);
+  return `recording-signals-${service}-${hints}.json`;
+}
+
 /** Works out the moments in a recording, listening to and watching each file only once. */
-export async function readRecording(item: MediaItem): Promise<Reading> {
-  // Installing the model later has to give the next try a fresh listen.
-  const name = speechReady() ? "recording-signals.json" : "recording-signals-silent.json";
+export async function readRecording(
+  item: MediaItem,
+  options: ListenOptions = {},
+): Promise<Reading> {
+  const name = signalsName(options);
   const path = await derived(item.id, name, async (partial) => {
-    await writeFile(partial, JSON.stringify(await read(item)));
+    await writeFile(partial, JSON.stringify(await read(item, options)));
   });
   const { sound, words, speech, windows, grid } = JSON.parse(
     await readFile(path, "utf8"),

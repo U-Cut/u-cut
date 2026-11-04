@@ -1,0 +1,17 @@
+{
+  "name": "u-cut",
+  "owner": {
+    "name": "Mayank Narayan",
+    "url": "https://github.com/mayank29deo"
+  },
+  "description": "U-Cut's plugin: make reels and demos on your own Mac with your own Claude plan.",
+  "plugins": [
+    {
+      "name": "u-cut",
+      "source": "./plugin",
+      "description": "Make finished vertical reels and product demos on your own Mac, rendered with HyperFrames. Needs U-Cut installed.",
+      "homepage": "https://github.com/mayank29deo/U-Cut",
+      "license": "Apache-2.0"
+    }
+  ]
+}

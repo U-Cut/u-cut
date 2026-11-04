@@ -1,0 +1,22 @@
+{
+  "name": "@u-cut/planner-api",
+  "version": "0.0.0",
+  "description": "The optional planner that writes scripts with Claude, using the person's own API key.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.4.0",
+    "@u-cut/planner-rules": "workspace:*",
+    "@u-cut/schema": "workspace:*",
+    "zod": "4.6.7"
+  }
+}

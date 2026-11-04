@@ -142,3 +142,29 @@ describe("writeScript", () => {
     expect(lines.map((line) => line.text).join(" ")).toBe(words);
   });
 });
+
+describe("scripts written elsewhere", () => {
+  it("splits long lines, keeps known scenes and paces each line like U-Cut's own", async () => {
+    const { scriptFrom } = await import("./prompt.ts");
+    const script = scriptFrom(
+      [
+        { text: "Goa slowed   everything down.", scene: "beach" },
+        {
+          text: "We ate fish curry by the water and talked until the sun went down",
+          scene: "nowhere",
+        },
+        { text: "Back soon." },
+      ],
+      "chill",
+      ["beach", "food"],
+    );
+    expect(script[0]).toMatchObject({
+      text: "Goa slowed everything down.",
+      scene: "beach",
+      voice: null,
+    });
+    expect(script.every((line) => line.text.split(" ").length <= 8)).toBe(true);
+    expect(script.filter((line) => line.scene === "nowhere")).toHaveLength(0);
+    expect(script.at(-1)?.speed).toBeLessThan(script[1]?.speed ?? 0);
+  });
+});

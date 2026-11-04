@@ -31,6 +31,56 @@ export interface Catalog {
     defaultVoice: string;
     size: string;
   };
+  /** Whether this browser is on the Mac running U-Cut, which is the only place connections change. */
+  local: boolean;
+  /** What writes, reads aloud and listens for this person. */
+  uses: Uses;
+}
+
+export interface Uses {
+  write: "rules" | "claude";
+  voice: "kokoro" | "voicestudio" | "elevenlabs" | "deepgram";
+  listen: "whisper" | "voicestudio" | "deepgram" | "elevenlabs" | "openai";
+}
+
+export type Task = keyof Uses;
+
+export interface Service {
+  id: "claude" | "elevenlabs" | "deepgram" | "openai" | "voicestudio";
+  name: string;
+  tasks: Task[];
+  local: boolean;
+  needsKey: boolean;
+  keyUrl?: string;
+  sends: Partial<Record<Task, string>>;
+  connected: boolean;
+  keyEnding: string | null;
+}
+
+export interface Connections {
+  local: boolean;
+  services: Service[];
+  choices: Uses;
+  voiceStudio: { installed: boolean; running: boolean; allowed: boolean } | null;
+  /** The full path to `ucut`, for assistants that don't read the shell's PATH. */
+  launcher?: string;
+}
+
+export interface VoiceList {
+  service: string;
+  ready: boolean;
+  voices: { id: string; name: string; detail?: string }[];
+  error?: string;
+}
+
+/** What an assistant asked to change, through the link someone gave it. */
+export interface AssistantChange {
+  lines?: string[];
+  title?: string;
+  vibe?: Vibe;
+  duration?: number;
+  aspect?: "9:16" | "1:1" | "16:9";
+  seed?: number;
 }
 
 export interface Job {
@@ -83,7 +133,14 @@ export interface VoicingEvent {
   total: number;
 }
 
-export type ServerEvent = RenderEvent | MediaEvent | RecordingEvent | VoicingEvent;
+export interface AssistantEvent {
+  type: "assistant";
+  job: string;
+  id: string;
+  change: AssistantChange;
+}
+
+export type ServerEvent = RenderEvent | MediaEvent | RecordingEvent | VoicingEvent | AssistantEvent;
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init).catch(() => {
@@ -147,6 +204,26 @@ export const api = {
   exportReel: (id: string, name: string) =>
     request<RenderEvent>(`/api/jobs/${id}/export`, { method: "POST", ...json({ name }) }),
   cancelRender: (id: string) => request(`/api/renders/${id}`, { method: "DELETE" }),
+  connections: () => request<Connections>("/api/connections"),
+  connect: (service: string, key: string) =>
+    request<Connections>(`/api/connections/${service}/key`, { method: "PUT", ...json({ key }) }),
+  disconnect: (service: string) =>
+    request<Connections>(`/api/connections/${service}`, { method: "DELETE" }),
+  choose: (choices: Partial<Uses>) =>
+    request<Connections>("/api/connections/choices", { method: "PUT", ...json(choices) }),
+  allowVoiceStudio: (allowed: boolean) =>
+    request<Connections>("/api/connections/voicestudio", { method: "PUT", ...json({ allowed }) }),
+  openVoiceStudio: () => request("/api/connections/voicestudio/open", { method: "POST" }),
+  voices: () => request<VoiceList>("/api/voices"),
+  writeWithClaude: (
+    id: string,
+    body: { prompt: string; scenes: string[]; vibe: Vibe; duration: number },
+  ) =>
+    request<{ lines: Script["lines"] }>(`/api/jobs/${id}/write`, { method: "POST", ...json(body) }),
+  answerAssistant: (job: string, change: string, outcome: { applied: boolean; error?: string }) =>
+    request(`/api/jobs/${job}/assistant-changes/${change}`, { method: "POST", ...json(outcome) }),
+  assistantLink: (id: string) =>
+    request<{ link: string }>(`/api/jobs/${id}/assistant`, { method: "POST" }),
 };
 
 export function connectEvents(onEvent: (event: ServerEvent) => void): () => void {

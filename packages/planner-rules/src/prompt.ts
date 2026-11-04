@@ -360,7 +360,7 @@ function fill(template: string, values: Record<string, string>): string {
 }
 
 /** Hooks are punchy and closes settle, so each line gets its own pace. */
-function speedFor(vibe: Vibe, index: number, count: number): number {
+export function speedFor(vibe: Vibe, index: number, count: number): number {
   const base = speeds[vibe];
   if (index === count - 1) return Math.round(base * 92) / 100;
   return index === 0 ? Math.round(base * 104) / 100 : base;
@@ -447,3 +447,26 @@ export function writeScript(input: ScriptInput): ScriptLine[] {
 
 export const defaultReelLength = defaultLength;
 export const longestReel = longest;
+
+/**
+ * Turns lines written somewhere else, by a person or an assistant, into a script U-Cut can voice.
+ * Long lines are split at natural pauses, and each line gets the pace U-Cut gives its own.
+ */
+export function scriptFrom(
+  written: { text: string; scene?: string | null | undefined }[],
+  vibe: Vibe,
+  scenes: string[] = [],
+): ScriptLine[] {
+  const known = new Set(scenes);
+  const pieces = written.flatMap(({ text, scene }) =>
+    splitIntoLines(text.replace(/\s+/g, " ").trim().slice(0, 600)).map((piece) => ({
+      text: piece.slice(0, 160),
+      scene: scene && known.has(scene) ? scene : null,
+    })),
+  );
+  return pieces.map((piece, index) => ({
+    ...piece,
+    speed: speedFor(vibe, index, pieces.length),
+    voice: null,
+  }));
+}

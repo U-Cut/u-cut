@@ -1,0 +1,20 @@
+{
+  "name": "u-cut",
+  "displayName": "U-Cut",
+  "version": "0.1.0",
+  "description": "Make finished vertical reels and product demos on your own Mac: from photos and clips, a reel you admire, a screen recording or a sentence. Rendered locally with HyperFrames.",
+  "author": {
+    "name": "Mayank Narayan",
+    "url": "https://github.com/mayank29deo"
+  },
+  "homepage": "https://github.com/mayank29deo/U-Cut",
+  "repository": "https://github.com/mayank29deo/U-Cut",
+  "license": "Apache-2.0",
+  "keywords": ["video", "reels", "hyperframes", "demo", "shorts"],
+  "skills": "./skills/",
+  "mcpServers": {
+    "u-cut": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/bin/ucut-mcp"
+    }
+  }
+}

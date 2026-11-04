@@ -18,18 +18,20 @@ No files to hand? Press **Try it with sample photos**.
 
 ## What it does today
 
-| You want to                                                                        | Status                                                                                                                                                                                                                |
-| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Turn photos and clips into a reel cut to music                                     | **Works today**                                                                                                                                                                                                       |
-| Remix, switch vibe, change the shape, edit the title, swap a shot, undo anything   | **Works today**                                                                                                                                                                                                       |
-| Export an MP4 balanced for phones                                                  | **Works today**                                                                                                                                                                                                       |
-| Use it as a Mac app, in a browser, or from the command line                        | **Works today**                                                                                                                                                                                                       |
-| Share one computer between up to 20 people on your network                         | **Works today**                                                                                                                                                                                                       |
-| Use your own music                                                                 | Command line only for now                                                                                                                                                                                             |
-| Sort photos into scenes, skip screenshots and near-copies, and pick the best shots | **Works today** on a Mac. It's right about two times in three on photos from new places, and a wrong one takes a click to fix                                                                                         |
-| Copy the style of a reel you admire                                                | **Works today.** It learns the rhythm, text style and colour, and never uses that reel's footage, sound or words. Tested on generated reels so far                                                                    |
-| Turn a screen recording into a product demo                                        | **Works today.** It finds the moments, pushes in on the action, and adds captions and title cards. Captions are in English for now                                                                                    |
-| Write a reel from a sentence                                                       | **Works today.** It writes a short script, reads it in a local voice, and builds the reel from your photos or from words and colour. Better scripts come with the Claude lanes, and you can always use your own words |
+| You want to                                                                        | Status                                                                                                                                                                                        |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Turn photos and clips into a reel cut to music                                     | **Works today**                                                                                                                                                                               |
+| Remix, switch vibe, change the shape, edit the title, swap a shot, undo anything   | **Works today**                                                                                                                                                                               |
+| Export an MP4 balanced for phones                                                  | **Works today**                                                                                                                                                                               |
+| Use it as a Mac app, in a browser, or from the command line                        | **Works today**                                                                                                                                                                               |
+| Share one computer between up to 20 people on your network                         | **Works today**                                                                                                                                                                               |
+| Use your own music                                                                 | Command line only for now                                                                                                                                                                     |
+| Sort photos into scenes, skip screenshots and near-copies, and pick the best shots | **Works today** on a Mac. It's right about two times in three on photos from new places, and a wrong one takes a click to fix                                                                 |
+| Copy the style of a reel you admire                                                | **Works today.** It learns the rhythm, text style and colour, and never uses that reel's footage, sound or words. Tested on generated reels so far                                            |
+| Turn a screen recording into a product demo                                        | **Works today.** It finds the moments, pushes in on the action, and adds captions and title cards. Captions are in English for now                                                            |
+| Write a reel from a sentence                                                       | **Works today.** It writes a short script, reads it in a local voice, and builds the reel from your photos or from words and colour. Connect Claude for better scripts, or use your own words |
+| Make reels from your assistant: Claude Code, Claude Desktop, Cursor and others     | **Works today**, through `ucut mcp` and the Claude Code plugin. An assistant can also change the reel you have open                                                                           |
+| Use your own services for writing, voices and listening                            | **Built, not yet tried against the live services:** Claude, ElevenLabs, Deepgram, OpenAI and Voice Studio. Each is off until you choose it                                                    |
 
 The [plan](docs/PLAN.md) has the full roadmap.
 
@@ -58,8 +60,17 @@ Run `ucut make --help` for every option.
 
 ```bash
 docker build -t u-cut https://github.com/mayank29deo/U-Cut.git
-docker run --rm -p 4173:4173 -v u-cut-data:/data u-cut
+docker run --rm -p 127.0.0.1:4173:4173 -v u-cut-data:/data u-cut
 ```
+
+**With your assistant.** In Claude Code:
+
+```
+/plugin marketplace add mayank29deo/U-Cut
+/plugin install u-cut@u-cut
+```
+
+Claude Desktop, Cursor and other assistants can use `ucut mcp` too. [Connecting your assistant and services](docs/CONNECT.md) covers every setup, including bringing your own ElevenLabs, Deepgram or Voice Studio voices.
 
 **With other people on your network.**
 
@@ -73,8 +84,9 @@ Stuck? [The install guide](docs/INSTALL.md) covers updating, uninstalling and co
 
 ## Good to know
 
-- **Your files stay with you.** Nothing is uploaded anywhere. A test blocks the network and makes a full reel to prove it.
-- **It's free.** There are no accounts and no per-render fees. Claude is optional, and the plugin for people who use Claude Code arrives in a later phase.
+- **Your files stay with you.** Nothing leaves your computer unless you choose a service, and U-Cut says what goes. A test blocks the network and makes every kind of reel to prove it.
+- **It's free.** There are no accounts and no per-render fees. Claude is optional: use it through your own Claude Code with the plugin, or with your own API key.
+- **Services are yours to choose.** Connect ElevenLabs, Deepgram, OpenAI or Voice Studio if you like. Nothing is sent until you choose a service, and the app says what goes to it.
 - **It's fast on ordinary Macs.** On an 8 GB MacBook, a 27-second reel took 27 seconds to export.
 - **Reels are yours.** The bundled music and sample photos are CC0, so you can post your reels anywhere.
 
@@ -104,6 +116,8 @@ The plan is a small JSON file. The same plan produces the preview and the final 
 | [`apps/mac`](apps/mac)                             | The native Mac app that hosts the interface.                              |
 | [`packages/engine`](packages/engine)               | The `ucut` command, the media pipeline and the server.                    |
 | [`packages/planner-rules`](packages/planner-rules) | Decides what goes where. Runs in the browser.                             |
+| [`packages/planner-api`](packages/planner-api)     | Writes scripts with Claude, using your own API key.                       |
+| [`plugin`](plugin)                                 | The Claude Code plugin: U-Cut's MCP server, a skill and commands.         |
 | [`packages/compose`](packages/compose)             | Turns a plan into the composition that gets previewed and rendered.       |
 | [`packages/schema`](packages/schema)               | The shape of every data file, for TypeScript and Swift.                   |
 | [`templates`](templates)                           | Styles of reel. [Adding one](templates/README.md) takes five minutes.     |

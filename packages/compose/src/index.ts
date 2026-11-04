@@ -29,7 +29,8 @@ export interface MusicSegment {
   length: number;
 }
 
-const sizes: Record<Aspect, { width: number; height: number; unit: number }> = {
+/** The frame size for each shape. */
+export const sizes: Record<Aspect, { width: number; height: number; unit: number }> = {
   "9:16": { width: 1080, height: 1920, unit: 1 },
   "1:1": { width: 1080, height: 1080, unit: 0.86 },
   "16:9": { width: 1920, height: 1080, unit: 0.86 },

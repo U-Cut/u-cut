@@ -3,8 +3,8 @@ import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { copyFile, mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { cpus, platform } from "node:os";
-import { extname, join } from "node:path";
-import { composeHtml, composeParts } from "@u-cut/compose";
+import { dirname, extname, join } from "node:path";
+import { composeHtml, composeParts, sizes } from "@u-cut/compose";
 import type { EditPlan, MediaItem } from "@u-cut/schema";
 import { renderPhoto } from "./derive.ts";
 import { hf } from "./hf.ts";
@@ -69,6 +69,16 @@ async function link(source: string, target: string) {
   await copyFile(source, target, constants.COPYFILE_FICLONE);
 }
 
+/** Whether someone has changed a project's composition since U-Cut wrote it. */
+export async function projectEdited(projectDir: string): Promise<boolean> {
+  const [html, written] = await Promise.all([
+    readFile(join(projectDir, "index.html"), "utf8").catch(() => null),
+    readFile(join(projectDir, ".ucut-written"), "utf8").catch(() => null),
+  ]);
+  if (html === null || written === null) return false;
+  return createHash("sha256").update(html).digest("hex") !== written.trim();
+}
+
 /** Writes the HyperFrames project that people can open and edit. */
 export async function writeProject(plan: EditPlan, items: MediaItem[], projectDir: string) {
   const template = findTemplate(plan.template);
@@ -115,7 +125,13 @@ export async function writeProject(plan: EditPlan, items: MediaItem[], projectDi
       voice: (src: string) => `assets/${src}.wav`,
     },
   };
-  await writeFile(join(projectDir, "index.html"), composeHtml(input));
+  const html = composeHtml(input);
+  await writeFile(join(projectDir, "index.html"), html);
+  // A fingerprint of what U-Cut wrote, so edits made afterwards are never overwritten by surprise.
+  await writeFile(
+    join(projectDir, ".ucut-written"),
+    `${createHash("sha256").update(html).digest("hex")}\n`,
+  );
   await writeFile(
     join(projectDir, "hyperframes.json"),
     `${JSON.stringify({ paths: { assets: "assets" }, media: { autoProxy: true } }, null, 2)}\n`,
@@ -128,6 +144,95 @@ interface ProgressLine {
   done?: number;
   total?: number;
   pct?: number;
+}
+
+/** HyperFrames renders the folder's composition, frame by frame, with every offline switch on. */
+async function renderFrames(
+  projectDir: string,
+  raw: string,
+  options: {
+    quality: Quality;
+    workers: number;
+    screen: boolean;
+    report: (progress: RenderProgress) => void;
+    signal?: AbortSignal;
+  },
+) {
+  await hf(
+    [
+      "render",
+      projectDir,
+      "-o",
+      raw,
+      "--sdr",
+      "--no-best-effort",
+      "--quality",
+      options.quality,
+      "--workers",
+      String(options.workers),
+      ...(platform() === "darwin" ? ["--gpu"] : []),
+      // Lossless frames, because JPEG smears the small text on a screen.
+      ...(options.screen ? ["--video-frame-format", "png"] : []),
+    ],
+    {
+      nice: 10,
+      ...(options.signal ? { signal: options.signal } : {}),
+      onLine: (line) => {
+        if (!line.startsWith("@hf-progress")) return;
+        try {
+          const { pct } = JSON.parse(line.slice("@hf-progress".length)) as ProgressLine;
+          if (typeof pct === "number") options.report({ stage: "rendering", progress: pct / 100 });
+        } catch {
+          // A malformed progress line only costs one update.
+        }
+      },
+    },
+  );
+}
+
+/**
+ * Renders a project folder as it stands, for when someone has edited the composition by hand or
+ * with the HyperFrames skills. The sound is still mastered and the file still checked.
+ */
+export async function renderProject(
+  projectDir: string,
+  plan: EditPlan,
+  options: Omit<RenderOptions, "projectDir"> & { output: string },
+): Promise<string> {
+  const report = options.onProgress ?? (() => {});
+  const html = await readFile(join(projectDir, "index.html"), "utf8");
+  const duration = Number(/data-duration="([\d.]+)"/.exec(html)?.[1] ?? plan.duration);
+  const { width, height } = sizes[plan.aspect];
+  await mkdir(rendersDir(), { recursive: true });
+  const stamp = `project-${Date.now()}`;
+  const raw = join(rendersDir(), `${stamp}.raw.mp4`);
+  const mastered = join(rendersDir(), `${stamp}.master.mp4`);
+  const awake =
+    platform() === "darwin" ? spawn("caffeinate", ["-i"], { stdio: "ignore" }) : undefined;
+  try {
+    report({ stage: "rendering", progress: 0 });
+    await renderFrames(projectDir, raw, {
+      quality: options.quality ?? "looks",
+      workers: options.workers ?? defaultWorkers(),
+      screen: plan.template === "demo",
+      report,
+      ...(options.signal ? { signal: options.signal } : {}),
+    });
+    report({ stage: "finishing", progress: 0.97 });
+    await master(raw, mastered, options.signal);
+    const spec = await verifyOutput(mastered, { width, height, duration, fps: plan.fps });
+    if (!spec.ok) throw new Error(`The finished reel isn't right: ${spec.problems.join(" ")}`);
+    await mkdir(dirname(options.output), { recursive: true });
+    await rename(mastered, options.output).catch(async () => {
+      await copyFile(mastered, options.output);
+    });
+    report({ stage: "finishing", progress: 1 });
+    return options.output;
+  } finally {
+    awake?.kill();
+    await rm(raw, { force: true });
+    await rm(mastered, { force: true });
+  }
 }
 
 export async function renderPlan(
@@ -156,36 +261,13 @@ export async function renderPlan(
   const workers = options.workers ?? defaultWorkers();
 
   try {
-    await hf(
-      [
-        "render",
-        options.projectDir,
-        "-o",
-        raw,
-        "--sdr",
-        "--no-best-effort",
-        "--quality",
-        quality,
-        "--workers",
-        String(workers),
-        ...(platform() === "darwin" ? ["--gpu"] : []),
-        // Lossless frames, because JPEG smears the small text on a screen.
-        ...(plan.template === "demo" ? ["--video-frame-format", "png"] : []),
-      ],
-      {
-        nice: 10,
-        ...(options.signal ? { signal: options.signal } : {}),
-        onLine: (line) => {
-          if (!line.startsWith("@hf-progress")) return;
-          try {
-            const { pct } = JSON.parse(line.slice("@hf-progress".length)) as ProgressLine;
-            if (typeof pct === "number") report({ stage: "rendering", progress: pct / 100 });
-          } catch {
-            // A malformed progress line only costs one update.
-          }
-        },
-      },
-    );
+    await renderFrames(options.projectDir, raw, {
+      quality,
+      workers,
+      screen: plan.template === "demo",
+      report,
+      ...(options.signal ? { signal: options.signal } : {}),
+    });
     report({ stage: "finishing", progress: 0.97 });
     await master(raw, mastered, options.signal);
     const spec = await verifyOutput(mastered, {

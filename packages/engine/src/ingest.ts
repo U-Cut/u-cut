@@ -62,9 +62,10 @@ export async function ingestFile(file: FoundFile): Promise<MediaItem> {
 export async function ingest(
   paths: string[],
   options: { concurrency?: number; onItem?: (done: number, total: number) => void } = {},
-): Promise<{ items: MediaItem[]; skipped: Skipped[] }> {
+): Promise<{ items: MediaItem[]; skipped: Skipped[]; names: Record<string, string> }> {
   const { files, skipped } = await findMedia(paths);
   const items = new Map<string, MediaItem>();
+  const names: Record<string, string> = {};
   let next = 0;
   let done = 0;
   const worker = async () => {
@@ -72,6 +73,7 @@ export async function ingest(
       try {
         const item = await ingestFile(file);
         items.set(item.id, item);
+        names[item.id] ??= basename(file.path);
       } catch (error) {
         skipped.push({ name: basename(file.path), reason: (error as Error).message });
       }
@@ -80,5 +82,6 @@ export async function ingest(
     }
   };
   await Promise.all(Array.from({ length: options.concurrency ?? 4 }, worker));
-  return { items: [...items.values()].sort((a, b) => a.id.localeCompare(b.id)), skipped };
+  const sorted = [...items.values()].sort((a, b) => a.id.localeCompare(b.id));
+  return { items: sorted, skipped, names };
 }

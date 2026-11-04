@@ -20,6 +20,11 @@ node_is_new_enough() {
   have node && [ "$(node -p 'process.versions.node.split(".")[0]')" -ge "$minimum_node" ]
 }
 
+# Homebrew's installer asks people to add it to their PATH, and many skip that step.
+for brew_path in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+  if ! have brew && [ -x "$brew_path" ]; then eval "$("$brew_path" shellenv)"; fi
+done
+
 need_tools() {
   local missing=()
   node_is_new_enough || missing+=(node)
@@ -80,9 +85,15 @@ else
 fi
 
 mkdir -p "$bin"
+# Version managers hand out temporary paths, so this asks Node where it really is.
+node_bin="$(node -p process.execPath)"
+# Assistants such as Claude Desktop start this without your shell's settings, so it carries the
+# paths to Node, FFmpeg and Homebrew itself, and says where it lives for the setup snippets.
 cat > "$bin/ucut" <<WRAPPER
 #!/usr/bin/env bash
-exec node "$dir/packages/engine/dist/bin.js" "\$@"
+export PATH="$(dirname "$node_bin"):/opt/homebrew/bin:/usr/local/bin:\$PATH"
+export UCUT_LAUNCHER="$bin/ucut"
+exec "$node_bin" "$dir/packages/engine/dist/bin.js" "\$@"
 WRAPPER
 chmod +x "$bin/ucut"
 
@@ -103,5 +114,14 @@ node packages/engine/dist/bin.js doctor
 say "U-Cut is ready."
 case ":$PATH:" in
   *":$bin:"*) echo "Start it with: ucut" ;;
-  *) echo "Start it with: $bin/ucut" ;;
+  *)
+    # A stock Mac doesn't look in ~/.local/bin, so new Terminal windows are told to.
+    profile="$HOME/.zprofile"
+    [ "$(basename "${SHELL:-zsh}")" = "bash" ] && profile="$HOME/.bash_profile"
+    if ! grep -qs "$bin" "$profile"; then
+      printf '\n# Added by the U-Cut installer\nexport PATH="%s:$PATH"\n' "$bin" >> "$profile"
+      echo "Added $bin to your PATH in $profile."
+    fi
+    echo "Start it with: ucut  (in a new Terminal window), or $bin/ucut now"
+    ;;
 esac

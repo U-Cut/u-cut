@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import puppeteer, { type Page } from "puppeteer-core";
+import { appChange, appReel } from "../packages/engine/src/mcp/app-link.ts";
 
 const port = 4198;
 const base = `http://localhost:${port}`;
@@ -129,6 +130,8 @@ async function main() {
       env: {
         ...process.env,
         UCUT_HOME: home,
+        // Keys stay in the test's own folder, never in this Mac's Keychain.
+        UCUT_SECRETS: "file",
         ...(process.env.CI ? { UCUT_EXPORT_QUALITY: "draft" } : {}),
       },
       stdio: "ignore",
@@ -235,6 +238,58 @@ async function main() {
     );
     if (shown !== title) throw new Error(`The title on the reel says "${shown}".`);
     pass("the title appears on the reel as you type");
+
+    await page.$eval(".title-field input", (input) => (input as HTMLInputElement).blur());
+    await clickButton(page, "Connections");
+    await page.waitForSelector(".connections .connections-row");
+    const chosen = await page.$$eval('.connections-row button[aria-pressed="true"]', (buttons) =>
+      buttons.map((button) => button.textContent),
+    );
+    if (chosen.join() !== "U\u2011Cut,This computer,This computer") {
+      throw new Error(`Connections starts with ${chosen.join(", ")} chosen.`);
+    }
+    pass("connections start with everything on this Mac");
+
+    await clickButton(page, "Give this reel to your assistant");
+    await page.waitForFunction(() =>
+      document.querySelector(".handoff code")?.textContent?.includes("/assistant/"),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await snap(page, "4b-connections");
+    const prompt = await page.$eval(".handoff code", (code) => code.textContent ?? "");
+    const link = /http:\/\/\S+\/assistant\/[a-f0-9]{48}/.exec(prompt)?.[0];
+    if (!link) throw new Error(`The assistant prompt has no link: ${prompt}`);
+    // The same calls `ucut mcp` makes for app_reel and app_change.
+    const opened = (await appReel(link)) as { kind: string; open: boolean };
+    if (opened.kind !== "photos" || !opened.open) {
+      throw new Error(`The assistant sees: ${JSON.stringify(opened)}`);
+    }
+    await appChange(link, { title: "Made with an assistant" });
+    await clickButton(page, "Done");
+    await page.waitForFunction(
+      () =>
+        document.querySelector(".stage-host")?.shadowRoot?.querySelector(".text-title")
+          ?.textContent === "Made with an assistant",
+      { timeout: 10_000 },
+    );
+    pass("an assistant changes the open reel through its link");
+
+    await page.keyboard.down("Meta");
+    await page.keyboard.press("z");
+    await page.keyboard.up("Meta");
+    await page.waitForFunction(
+      (expected) =>
+        document.querySelector(".stage-host")?.shadowRoot?.querySelector(".text-title")
+          ?.textContent === expected,
+      { timeout: 10_000 },
+      title,
+    );
+    pass("undo takes back the assistant's change");
+    // Its notice would otherwise still be showing when later steps read notices.
+    await page
+      .$eval(".notice button", (button) => (button as HTMLButtonElement).click())
+      .catch(() => {});
+    await page.waitForSelector(".notice button", { hidden: true, timeout: 5000 });
 
     await page.$eval(".title-field input", (input) => (input as HTMLInputElement).blur());
     await clickButton(page, "Square");

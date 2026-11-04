@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, rm } from "node:fs/promises";
-import { homedir } from "node:os";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { speakWith, splitVoice, voiceModel } from "./connections/index.ts";
 import { run } from "./exec.ts";
 import { hf } from "./hf.ts";
 import { derived } from "./store.ts";
@@ -35,8 +36,8 @@ function json<T>(output: string): T {
   return JSON.parse(output.slice(output.indexOf("{"))) as T;
 }
 
-export function speechHash(text: string, voice: string, speed: number): string {
-  const line = [model, voice, speed, text].join("\n");
+export function speechHash(text: string, voice: string, speed: number, by = model): string {
+  const line = [by, voice, speed, text].join("\n");
   return createHash("sha256").update(line).digest("hex").slice(0, 32);
 }
 
@@ -45,15 +46,63 @@ export interface Spoken {
   length: number;
 }
 
-/** Voices one line. The same words in the same voice are only ever spoken once. */
+/** Turns a service's sound into the same mono 48 kHz WAV that Kokoro's lines are. */
+async function saveAsWav(data: Uint8Array, extension: string, target: string) {
+  const folder = await mkdtemp(join(tmpdir(), "ucut-voice-"));
+  try {
+    const raw = join(folder, `spoken${extension}`);
+    await writeFile(raw, data);
+    await run("ffmpeg", [
+      "-hide_banner",
+      "-loglevel",
+      "error",
+      "-y",
+      "-i",
+      raw,
+      "-ac",
+      "1",
+      "-ar",
+      "48000",
+      "-c:a",
+      "pcm_s16le",
+      target,
+    ]);
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Voices one line. The same words in the same voice are only ever spoken once. A voice is a
+ * Kokoro id such as `af_heart`, or `service:id` for a connected service.
+ */
 export async function speak(
   line: { text: string; speed: number },
   voice: string,
   signal?: AbortSignal,
 ): Promise<Spoken> {
-  const src = speechHash(line.text, voice, line.speed);
+  const { service, id } = splitVoice(voice);
+  if (service === "kokoro" && !voices.some((known) => known.id === id)) {
+    throw new Error(
+      `"${voice}" isn't a voice U-Cut has. Pick one from \`ucut voices\` or the catalog.`,
+    );
+  }
+  const src =
+    service === "kokoro"
+      ? speechHash(line.text, voice, line.speed)
+      : speechHash(line.text, voice, line.speed, voiceModel(service));
   const path = await derived(src, voiceFile, async (partial) => {
-    await hf(["tts", line.text, "-o", partial, "--voice", voice, "--speed", String(line.speed)], {
+    if (service !== "kokoro") {
+      const spoken = await speakWith(service, {
+        voice: id,
+        text: line.text,
+        speed: line.speed,
+        ...(signal ? { signal } : {}),
+      });
+      await saveAsWav(spoken.data, spoken.extension, partial);
+      return;
+    }
+    await hf(["tts", line.text, "-o", partial, "--voice", id, "--speed", String(line.speed)], {
       env: voiceEnv,
       nice: 5,
       timeoutMs: 60_000,

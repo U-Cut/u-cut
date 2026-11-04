@@ -727,23 +727,23 @@ kbd {
   padding: 0;
 }
 
-.choice div {
+.choice > div {
   display: flex;
   flex-wrap: wrap;
   gap: 2px 14px;
 }
 
-.choice button {
+.choice > div > button {
   padding: 3px 0;
   color: rgba(255, 255, 255, 0.46);
   transition: color 0.15s;
 }
 
-.choice button:hover {
+.choice > div > button:hover {
   color: var(--white);
 }
 
-.choice button[aria-pressed="true"] {
+.choice > div > button[aria-pressed="true"] {
   color: var(--white);
   font-weight: 600;
 }
@@ -1528,4 +1528,282 @@ kbd {
   margin: 8px 0 0;
   font-size: 12px;
   color: var(--ash);
+}
+
+/* Connections: the services someone brings, chosen per job, plus their assistant. */
+.topbar-connections {
+  gap: 7px;
+  margin-right: 8px;
+  font-size: 14px;
+}
+.topbar-connections svg {
+  width: 17px;
+  height: 17px;
+}
+.start-connections {
+  display: block;
+  margin-top: 10px;
+  font-size: 14px;
+}
+.connections {
+  width: min(640px, calc(100vw - 32px));
+}
+.connections-body {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  max-height: calc(100dvh - 64px);
+  overflow-y: auto;
+  padding: 36px 40px 40px;
+}
+.connections-head {
+  position: sticky;
+  top: -36px;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: -36px;
+  padding-top: 36px;
+  padding-bottom: 6px;
+  background: rgba(14, 11, 26, 0.96);
+}
+.connections-head h2:focus,
+.connections-head h2:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.connections-row > .connections-ask {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 10px;
+}
+.connections .connections-head h2 {
+  font-size: clamp(30px, 4vw, 40px);
+}
+.connections p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.connections-lede {
+  max-width: 34em;
+}
+.connections-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.connections-section h3 {
+  margin: 0;
+  font: 600 15px / 1.3 var(--display);
+}
+.connections-row > div {
+  gap: 4px 18px;
+}
+.connections-row > div > button {
+  font: 600 19px / 1.3 var(--display);
+  letter-spacing: -0.02em;
+}
+.connections-row > div > button[aria-pressed="true"] {
+  font-weight: 700;
+}
+.connections .connections-sends {
+  margin-top: 6px;
+  font-size: 13px;
+}
+.connections-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 2px 0 2px 16px;
+  border-left: 1px solid var(--smoke);
+}
+.connections-row > div > button[aria-expanded="true"] {
+  color: var(--white);
+  text-decoration: underline 1px;
+  text-underline-offset: 6px;
+}
+.connections-ask a {
+  color: var(--white);
+}
+.connections-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+.connections-actions p {
+  flex-basis: 100%;
+}
+.key-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 14px;
+}
+.key-form label {
+  flex: 1 1 240px;
+}
+.key-form span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: var(--ash);
+}
+.key-form input {
+  width: 100%;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--smoke);
+  background: none;
+  font:
+    500 15px / 1.3 ui-monospace,
+    "SF Mono",
+    Menlo,
+    monospace;
+}
+.key-form input::placeholder {
+  font-family: var(--sans);
+  color: rgba(255, 255, 255, 0.34);
+}
+.key-form .connections-problem {
+  flex-basis: 100%;
+}
+.key-form input:focus-visible {
+  border-color: var(--white);
+  outline: none;
+  box-shadow: 0 1px 0 var(--white);
+}
+.key-form .button-solid:disabled {
+  opacity: 0.32;
+  cursor: default;
+}
+.copy-line {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 2px 12px;
+  width: 100%;
+}
+.copy-line span {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--ash);
+}
+.copy-line code {
+  overflow-x: auto;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px var(--smoke);
+  font:
+    13px / 1.4 ui-monospace,
+    "SF Mono",
+    Menlo,
+    monospace;
+  white-space: nowrap;
+}
+.handoff {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.handoff .copy-line code {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.connections-more summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ash);
+}
+.connections-more summary:hover {
+  color: var(--white);
+}
+.connections-more[open] summary {
+  margin-bottom: 8px;
+}
+.connections-more {
+  width: 100%;
+}
+.voice-more {
+  margin-top: 8px;
+  font-size: 13px;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.connections-list {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.connections-list li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--smoke);
+}
+.connections-key {
+  font-size: 13px;
+  color: var(--ash);
+}
+.connections .connections-note {
+  font-size: 12px;
+}
+.connections .connections-problem {
+  color: var(--white);
+  font-weight: 500;
+}
+.voice-select {
+  width: 100%;
+  padding: 6px 0;
+  border: 0;
+  border-bottom: 1px solid var(--smoke);
+  background: none;
+  font: 600 15px / 1.3 var(--sans);
+}
+.voice-select option {
+  background: #0e0b1a;
+}
+@media (max-width: 860px) {
+  .topbar-connections {
+    width: 40px;
+    justify-content: center;
+    margin-right: 0;
+  }
+  .topbar-connections span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .connections-body {
+    padding: 24px 20px 28px;
+  }
+  .connections-head {
+    top: -24px;
+    margin-top: -24px;
+    padding-top: 24px;
+  }
+  .copy-line code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
 }

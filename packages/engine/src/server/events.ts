@@ -1,5 +1,7 @@
 export type ServerEvent =
   | { type: "voicing"; job: string; done: number; total: number }
+  /** An assistant changed this reel from outside, through its one-time link. */
+  | { type: "assistant"; job: string; id: string; change: unknown }
   | {
       type: "recording";
       job: string;
@@ -59,6 +61,11 @@ export class EventHub {
       this.lastProgress.set(event.id, now);
     }
     for (const send of this.sessions.get(session) ?? []) send(event);
+  }
+
+  /** Whether anyone in this session has U-Cut open to hear an event. */
+  listening(session: string): boolean {
+    return (this.sessions.get(session)?.size ?? 0) > 0;
   }
 
   get connections(): number {

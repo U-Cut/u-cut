@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type Catalog } from "./api";
+import { Connections } from "./components/Connections";
 import { Splash } from "./components/Splash";
 import { Start } from "./components/Start";
 import { Studio } from "./components/Studio";
@@ -9,6 +10,7 @@ export function App() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [dropping, setDropping] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const reel = useReel(catalog);
   const { state, actions } = reel;
 
@@ -83,7 +85,7 @@ export function App() {
           </section>
         </main>
       ) : !catalog ? null : state.now ? (
-        <Studio catalog={catalog} reel={reel} />
+        <Studio catalog={catalog} reel={reel} onConnections={() => setConnecting(true)} />
       ) : (
         <Start
           catalog={catalog}
@@ -95,12 +97,22 @@ export function App() {
           reading={state.reading}
           onRecording={(file) => void actions.addRecording(file)}
           onPrompt={(prompt) => void actions.writeReel(prompt)}
+          onConnections={() => setConnecting(true)}
         />
       )}
       {dropping ? (
         <div className="drop-veil" aria-hidden="true">
           <p>Let go to add them</p>
         </div>
+      ) : null}
+      {connecting ? (
+        <Connections
+          jobId={state.now ? (state.job?.id ?? null) : null}
+          onClose={() => setConnecting(false)}
+          onChanged={() => {
+            void api.catalog().then(setCatalog, () => {});
+          }}
+        />
       ) : null}
       <Splash />
       <div className="notice" role="status" aria-live="polite">

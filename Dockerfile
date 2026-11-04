@@ -18,7 +18,9 @@ RUN corepack enable \
   && pnpm build \
   && node packages/engine/dist/bin.js setup
 
-ENV UCUT_HOME=/data UCUT_BIND_ALL=1
+# One person uses a container, and none of their requests come from its loopback. Publish the
+# port on 127.0.0.1 only, as the README shows, so nobody else can reach it.
+ENV UCUT_HOME=/data UCUT_BIND_ALL=1 UCUT_SINGLE_USER=1
 VOLUME /data
 EXPOSE 4173
 CMD ["node", "packages/engine/dist/bin.js", "serve", "--no-open"]

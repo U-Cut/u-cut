@@ -1,4 +1,5 @@
-import type { Catalog } from "../api";
+import { useEffect, useState } from "react";
+import { api, type Catalog, type VoiceList } from "../api";
 
 interface Props {
   catalog: Catalog;
@@ -8,9 +9,19 @@ interface Props {
   voicing: { done: number; total: number } | null;
   onVoice(voice: string | null): void;
   onInstall(): void;
+  /** Opens Connections, where other voices are. */
+  onMore(): void;
 }
 
 const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+/** Past this many voices, a list is easier to scan than a row of names. */
+const rowLimit = 6;
+
+const serviceNames: Record<string, string> = {
+  voicestudio: "Voice Studio",
+  elevenlabs: "ElevenLabs",
+  deepgram: "Deepgram",
+};
 
 export function VoiceChoice({
   catalog,
@@ -20,8 +31,28 @@ export function VoiceChoice({
   voicing,
   onVoice,
   onInstall,
+  onMore,
 }: Props) {
-  if (!ready) {
+  const service = catalog.uses.voice;
+  const [listed, setListed] = useState<VoiceList | null>(null);
+
+  useEffect(() => {
+    if (service === "kokoro") return;
+    let cancelled = false;
+    api.voices().then(
+      (list) => {
+        if (!cancelled) setListed(list);
+      },
+      (error: Error) => {
+        if (!cancelled) setListed({ service, ready: false, voices: [], error: error.message });
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [service]);
+
+  if (service === "kokoro" && !ready) {
     return (
       <div className="voice-offer">
         <p>
@@ -42,12 +73,60 @@ export function VoiceChoice({
       </div>
     );
   }
-  const options = [...catalog.voice.voices, { id: "", name: "None" }];
+
+  const options =
+    service === "kokoro" ? catalog.voice.voices : (listed?.voices ?? []).map((entry) => entry);
+  const progress = voicing ? (
+    <p className="voice-progress" aria-live="polite">
+      Reading line {Math.min(voicing.done + 1, voicing.total)} of {voicing.total}
+    </p>
+  ) : null;
+
+  if (service !== "kokoro" && listed && !listed.ready) {
+    return (
+      <div className="voice-offer">
+        <p>
+          {listed.error ?? `${serviceNames[service]} isn't answering.`} Check your connection, or
+          pick another voice in Connections.
+        </p>
+        <button type="button" className="button-outline" onClick={() => onVoice(null)}>
+          No voice
+        </button>
+      </div>
+    );
+  }
+
+  if (options.length > rowLimit) {
+    return (
+      <fieldset className="choice">
+        <legend>Voice, from {serviceNames[service]}</legend>
+        <select
+          className="voice-select"
+          value={voice ?? ""}
+          onChange={(event) => onVoice(event.target.value || null)}
+        >
+          {options.map((option) => (
+            <option key={option.id} value={option.id}>
+              {"detail" in option && option.detail
+                ? `${option.name}, ${option.detail}`
+                : option.name}
+            </option>
+          ))}
+          <option value="">No voice</option>
+        </select>
+        <button type="button" className="button-text voice-more" onClick={onMore}>
+          More voices
+        </button>
+        {progress}
+      </fieldset>
+    );
+  }
+
   return (
     <fieldset className="choice">
-      <legend>Voice</legend>
+      <legend>{service === "kokoro" ? "Voice" : `Voice, from ${serviceNames[service]}`}</legend>
       <div>
-        {options.map((option) => (
+        {[...options, { id: "", name: "No voice" }].map((option) => (
           <button
             type="button"
             key={option.id}
@@ -58,11 +137,10 @@ export function VoiceChoice({
           </button>
         ))}
       </div>
-      {voicing ? (
-        <p className="voice-progress" aria-live="polite">
-          Reading line {Math.min(voicing.done + 1, voicing.total)} of {voicing.total}
-        </p>
-      ) : null}
+      <button type="button" className="button-text voice-more" onClick={onMore}>
+        More voices
+      </button>
+      {progress}
     </fieldset>
   );
 }

@@ -50,6 +50,14 @@ export const MuteIcon = () => (
   </svg>
 );
 
+export const PlugIcon = () => (
+  <svg {...stroke}>
+    <path d="M7 2.5v4M13 2.5v4" />
+    <path d="M4.5 6.5h11v3a5.5 5.5 0 0 1-11 0v-3Z" />
+    <path d="M10 15v2.5" />
+  </svg>
+);
+
 export const PlusIcon = () => (
   <svg {...stroke} strokeWidth={2}>
     <path d="M10 4v12M4 10h12" />

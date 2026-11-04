@@ -203,4 +203,154 @@ describe("server", () => {
   it("refuses a malformed media hash", async () => {
     expect((await request("/media/not-a-hash/thumb")).status).toBe(404);
   });
+
+  // Anyone on the network can send "Host: localhost". Only the socket says where they are.
+  const fromNetwork = { incoming: { socket: { remoteAddress: "192.168.1.20" } } };
+  const fromHere = { incoming: { socket: { remoteAddress: "127.0.0.1" } } };
+
+  it("doesn't let a network guest pass for local by faking the Host", async () => {
+    const shared = createApp({ hosts: ["192.168.1.5:4173"], accessCode: "secret" }).app;
+    const headers = { host: "localhost:4173" };
+    expect((await shared.request(`${local}/api/catalog`, { headers }, fromNetwork)).status).toBe(
+      401,
+    );
+    expect((await shared.request(`${local}/api/catalog`, { headers }, fromHere)).status).toBe(200);
+    // A socket that has lost its address isn't trusted as this Mac.
+    const unknown = { incoming: { socket: {} } };
+    expect((await shared.request(`${local}/api/catalog`, { headers }, unknown)).status).toBe(401);
+  });
+
+  describe("connections", () => {
+    it("shows the person at this Mac what's set up, and nobody else", async () => {
+      const here = await request("/api/connections");
+      expect(await here.json()).toMatchObject({
+        local: true,
+        choices: { write: "rules", voice: "kokoro", listen: "whisper" },
+      });
+      const away = await app.request(
+        `${local}/api/connections`,
+        { headers: { host: "localhost:4173" } },
+        fromNetwork,
+      );
+      expect(await away.json()).toMatchObject({ local: false, services: [] });
+    });
+
+    it("only lets the person at this Mac add keys or choose services", async () => {
+      const init = {
+        method: "PUT",
+        headers: { host: "localhost:4173", "content-type": "application/json" },
+        body: JSON.stringify({ key: "sk_abcdefgh" }),
+      };
+      const key = await app.request(`${local}/api/connections/elevenlabs/key`, init, fromNetwork);
+      expect(key.status).toBe(403);
+      const choice = await app.request(
+        `${local}/api/connections/choices`,
+        { ...init, body: JSON.stringify({ voice: "elevenlabs" }) },
+        fromNetwork,
+      );
+      expect(choice.status).toBe(403);
+      const unconnected = await request("/api/connections/choices", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ write: "claude" }),
+      });
+      expect(unconnected.status).toBe(422);
+      expect(await unconnected.json()).toEqual({ error: "Connect Claude first." });
+    });
+
+    it("tells the catalog what each job uses", async () => {
+      const body = (await (await request("/api/catalog")).json()) as {
+        local: boolean;
+        uses: Record<string, string>;
+      };
+      expect(body).toMatchObject({ local: true, uses: { write: "rules", voice: "kokoro" } });
+    });
+
+    it("won't read with a service voice that isn't chosen here", async () => {
+      const cookie = await session();
+      const { id } = await createJob(cookie);
+      const response = await request(`/api/jobs/${id}/speak`, {
+        method: "POST",
+        headers: { cookie, "content-type": "application/json" },
+        body: JSON.stringify({ voice: "elevenlabs:abc", lines: [{ text: "Hi.", speed: 1 }] }),
+      });
+      expect(response.status).toBe(403);
+    });
+
+    it("won't ask Claude to write unless Claude is chosen", async () => {
+      const cookie = await session();
+      const { id } = await createJob(cookie);
+      const response = await request(`/api/jobs/${id}/write`, {
+        method: "POST",
+        headers: { cookie, "content-type": "application/json" },
+        body: JSON.stringify({
+          prompt: "a reel about Goa",
+          vibe: "chill",
+          duration: 15,
+          scenes: [],
+        }),
+      });
+      expect(response.status).toBe(409);
+    });
+  });
+
+  describe("handing a reel to an assistant", () => {
+    async function linkFor(cookie: string, id: string) {
+      const response = await request(`/api/jobs/${id}/assistant`, {
+        method: "POST",
+        headers: { cookie },
+      });
+      expect(response.status).toBe(200);
+      const { link } = (await response.json()) as { link: string };
+      return new URL(link).pathname.split("/").pop() ?? "";
+    }
+
+    it("makes a one-time link that reads that reel, from this Mac only", async () => {
+      const cookie = await session();
+      const { id } = await createJob(cookie);
+      const token = await linkFor(cookie, id);
+      expect(token).toMatch(/^[a-f0-9]{48}$/);
+      const read = await request(`/api/assistant/${token}`);
+      expect(await read.json()).toMatchObject({ kind: "photos", open: false, script: null });
+      const away = await app.request(
+        `${local}/api/assistant/${token}`,
+        { headers: { host: "localhost:4173" } },
+        fromNetwork,
+      );
+      expect(away.status).toBe(404);
+      expect((await request(`/api/assistant/${"0".repeat(48)}`)).status).toBe(404);
+    });
+
+    it("checks a change, and says so when the reel isn't open", async () => {
+      const cookie = await session();
+      const { id } = await createJob(cookie);
+      const token = await linkFor(cookie, id);
+      const send = (change: unknown) =>
+        request(`/api/assistant/${token}/change`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(change),
+        });
+      expect((await send({ vibe: "loud" })).status).toBe(422);
+      expect((await send({})).status).toBe(422);
+      expect((await send({ lines: ["A new first line."] })).status).toBe(422);
+      const closed = await send({ title: "Long way home" });
+      expect(closed.status).toBe(409);
+    });
+
+    it("won't make a link for someone else's reel, or from the network", async () => {
+      const { id } = await createJob(await session());
+      const other = await session();
+      expect(
+        (await request(`/api/jobs/${id}/assistant`, { method: "POST", headers: { cookie: other } }))
+          .status,
+      ).toBe(404);
+      const away = await app.request(
+        `${local}/api/jobs/${id}/assistant`,
+        { method: "POST", headers: { host: "localhost:4173" } },
+        fromNetwork,
+      );
+      expect(away.status).toBe(403);
+    });
+  });
 });

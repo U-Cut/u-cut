@@ -1,10 +1,25 @@
 import { readFileSync } from "node:fs";
 import type { Aspect, Vibe } from "@u-cut/schema";
 import { defineCommand, renderUsage, runCommand } from "citty";
+import {
+  allowVoiceStudio,
+  choose,
+  connect,
+  connectionsStatus,
+  currentChoices,
+  defaultVoiceFor,
+  disconnect,
+  type ServiceId,
+  serviceInfo,
+  services,
+  type Task,
+  voicesOf,
+} from "./connections/index.ts";
 import { makeDemo } from "./demo.ts";
 import { doctor } from "./doctor.ts";
 import { hf } from "./hf.ts";
 import { ingest } from "./ingest.ts";
+import { renderJob } from "./jobs.ts";
 import { make } from "./make.ts";
 import { installSpeech, speechReady } from "./recording.ts";
 import type { Quality } from "./render.ts";
@@ -12,7 +27,7 @@ import { serve } from "./server/serve.ts";
 import { sortMedia } from "./sort.ts";
 import { makeStory } from "./story.ts";
 import { studyReel } from "./study.ts";
-import { defaultVoice, installVoice, voiceReady, voiceSize } from "./voice.ts";
+import { installVoice, voices as kokoroVoices, voiceReady, voiceSize } from "./voice.ts";
 
 const { version } = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -96,11 +111,18 @@ const demoCommand = defineCommand({
     logo: { type: "string", description: "A picture for the cards" },
     aspect: { type: "string", description: "9:16, 1:1 or 16:9. The recording's shape if left out" },
     captions: { type: "boolean", default: true, description: "Show what's said as captions" },
+    listen: {
+      type: "string",
+      description:
+        "whisper (on this Mac), or a connected service: voicestudio, deepgram, elevenlabs, openai",
+    },
+    hint: { type: "string", description: "Words to listen for, separated by commas" },
     quality: { type: "string", default: "looks", description: "draft, looks or delivery" },
     json: { type: "boolean", default: false, description: "Print progress as JSON lines" },
   },
   async run({ args }) {
     let lastStage = "";
+    const { listen } = args.listen ? { listen: args.listen } : await currentChoices();
     await makeDemo(
       {
         recording: args.recording,
@@ -109,6 +131,11 @@ const demoCommand = defineCommand({
         colour: args.colour,
         captions: args.captions,
         quality: args.quality as Quality,
+        listen,
+        hints: (args.hint ?? "")
+          .split(",")
+          .map((hint) => hint.trim())
+          .filter(Boolean),
         ...(args.logo ? { logo: args.logo } : {}),
         ...(args.aspect ? { aspect: args.aspect as Aspect } : {}),
       },
@@ -140,8 +167,17 @@ const writeCommand = defineCommand({
       default: "reel.mp4",
       description: "Where to save the MP4",
     },
-    voice: { type: "string", default: defaultVoice, description: "Who reads it" },
+    voice: {
+      type: "string",
+      description:
+        "Who reads it. Run `ucut voices` to list them. Left out, the chosen service's voice",
+    },
     speak: { type: "boolean", default: true, description: "Read the script aloud" },
+    writer: {
+      type: "string",
+      description: "rules, or claude once it's connected. Left out, whatever Connections says",
+    },
+    lines: { type: "string", description: "A text file of your own lines, one per line" },
     vibe: { type: "string", description: "chill, hype, cinematic or nostalgic" },
     aspect: { type: "string", description: "9:16, 1:1 or 16:9" },
     duration: { type: "string", description: "Length to aim for, in seconds" },
@@ -151,12 +187,24 @@ const writeCommand = defineCommand({
   },
   async run({ args }) {
     let lastStage = "";
+    const choices = await currentChoices();
+    const writer = (args.writer ?? choices.write) as "rules" | "claude";
+    const voice = args.voice ?? (await defaultVoiceFor(choices));
+    const lines = args.lines
+      ? readFileSync(args.lines, "utf8")
+          .split("\n")
+          .map((text) => text.trim())
+          .filter(Boolean)
+          .map((text) => ({ text }))
+      : undefined;
     await makeStory(
       {
         prompt: args.prompt,
+        writer,
+        ...(lines ? { lines } : {}),
         inputs: args._.slice(1),
         output: args.output,
-        voice: args.speak ? args.voice : null,
+        voice: args.speak ? voice : null,
         quality: args.quality as Quality,
         seed: Number(args.seed),
         ...(args.vibe ? { vibe: args.vibe as Vibe } : {}),
@@ -303,6 +351,215 @@ const doctorCommand = defineCommand({
   },
 });
 
+const renderCommand = defineCommand({
+  meta: {
+    name: "render",
+    description: "Render a job folder again, after you or an assistant edited it.",
+  },
+  args: {
+    job: { type: "positional", description: 'The folder printed after "Project:"', required: true },
+    output: {
+      type: "string",
+      alias: "o",
+      default: "reel.mp4",
+      description: "Where to save the MP4",
+    },
+    quality: { type: "string", default: "looks", description: "draft, looks or delivery" },
+    project: {
+      type: "boolean",
+      default: false,
+      description: "Render the project/ folder as it is, keeping edits to the composition",
+    },
+    force: {
+      type: "boolean",
+      default: false,
+      description: "Compose again from plan.json even though project/ was edited",
+    },
+  },
+  async run({ args }) {
+    const output = await renderJob(args.job, {
+      output: args.output,
+      quality: args.quality as Quality,
+      project: args.project,
+      force: args.force,
+    });
+    console.log(`Saved ${output}`);
+  },
+});
+
+const mcpCommand = defineCommand({
+  meta: {
+    name: "mcp",
+    description: "Let an assistant such as Claude Code or Claude Desktop make reels with U-Cut.",
+  },
+  async run() {
+    const { runMcp } = await import("./mcp/index.ts");
+    await runMcp();
+    // The client has gone, so anything still running has nobody to report to.
+    process.exit(0);
+  },
+});
+
+/** Reads a pasted key without showing it, ending at Return. Piped input is read to its end. */
+function readKey(): Promise<string> {
+  return new Promise((resolve) => {
+    let text = "";
+    const stdin = process.stdin;
+    stdin.setEncoding("utf8");
+    if (!stdin.isTTY) {
+      stdin.on("data", (chunk) => {
+        text += chunk;
+      });
+      stdin.on("end", () => resolve(text.trim()));
+      return;
+    }
+    stdin.setRawMode(true);
+    stdin.resume();
+    const done = () => {
+      stdin.setRawMode(false);
+      stdin.pause();
+      stdin.removeListener("data", onData);
+      process.stdout.write("\n");
+      resolve(text.trim());
+    };
+    const onData = (chunk: string) => {
+      for (const character of chunk) {
+        if (character === "\r" || character === "\n" || character === "\u0004") return done();
+        if (character === "\u0003") process.exit(130);
+        if (character === "\u007f") text = text.slice(0, -1);
+        else text += character;
+      }
+    };
+    stdin.on("data", onData);
+  });
+}
+
+const connectCommand = defineCommand({
+  meta: {
+    name: "connect",
+    description: "Connect a service: claude, elevenlabs, deepgram, openai, or voicestudio.",
+  },
+  args: {
+    service: { type: "positional", description: "Which service", required: true },
+    key: { type: "string", description: "The API key. Left out, it's read from standard input" },
+    use: {
+      type: "string",
+      description: "Also choose it for a job now: write, voice or listen, separated by commas",
+    },
+  },
+  async run({ args }) {
+    const service = serviceInfo(args.service);
+    if (!service) {
+      throw new Error(`U-Cut can connect ${services.map((entry) => entry.id).join(", ")}.`);
+    }
+    const uses = (args.use ?? "")
+      .split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    for (const task of uses) {
+      if (!service.tasks.includes(task as Task)) {
+        throw new Error(`${service.name} can't ${task}. It can: ${service.tasks.join(", ")}.`);
+      }
+    }
+    if (service.id === "voicestudio") {
+      await allowVoiceStudio(true);
+      console.log("U-Cut can now use Voice Studio, which runs on this Mac.");
+    } else {
+      if (!args.key && process.stdin.isTTY) {
+        process.stdout.write(`Paste your ${service.name} key, then press Return. It won't show: `);
+      }
+      const key = args.key ?? (await readKey());
+      if (!key) throw new Error("Paste the key, or pass it with --key.");
+      await connect(service.id as ServiceId, key);
+      const where =
+        process.platform === "darwin" && process.env.UCUT_SECRETS !== "file"
+          ? "your Keychain"
+          : "a file in U-Cut's folder that only you can read";
+      console.log(`${service.name} is connected. Its key is in ${where}.`);
+    }
+    for (const task of uses) {
+      await choose(task as Task, service.id);
+      console.log(`${service.name} now does: ${task}. ${service.sends[task as Task] ?? ""}`);
+    }
+  },
+});
+
+const disconnectCommand = defineCommand({
+  meta: { name: "disconnect", description: "Forget a service's key, and stop using it." },
+  args: { service: { type: "positional", description: "Which service", required: true } },
+  async run({ args }) {
+    const service = serviceInfo(args.service);
+    if (!service) throw new Error("U-Cut doesn't know that service.");
+    await disconnect(service.id);
+    console.log(`${service.name} is disconnected.`);
+  },
+});
+
+const connectionsCommand = defineCommand({
+  meta: { name: "connections", description: "Show and choose what writes, voices and listens." },
+  args: {
+    write: { type: "string", description: "rules or claude" },
+    voice: { type: "string", description: "kokoro, voicestudio, elevenlabs or deepgram" },
+    listen: { type: "string", description: "whisper, voicestudio, deepgram, elevenlabs or openai" },
+    json: { type: "boolean", default: false, description: "Print it as JSON" },
+  },
+  async run({ args }) {
+    for (const task of ["write", "voice", "listen"] as Task[]) {
+      if (args[task]) await choose(task, args[task]);
+    }
+    const status = await connectionsStatus();
+    if (args.json) {
+      console.log(JSON.stringify(status, null, 2));
+      return;
+    }
+    const name = (id: string) => serviceInfo(id)?.name ?? "U-Cut, on this Mac";
+    console.log(`Writes scripts: ${name(status.choices.write)}`);
+    console.log(`Reads aloud:    ${name(status.choices.voice)}`);
+    console.log(`Listens:        ${name(status.choices.listen)}`);
+    console.log("");
+    for (const service of status.services) {
+      const state = service.connected
+        ? service.keyEnding
+          ? `connected (key ending ${service.keyEnding})`
+          : "allowed"
+        : service.id === "voicestudio"
+          ? status.voiceStudio.installed
+            ? "installed, not allowed yet"
+            : "not installed"
+          : "not connected";
+      console.log(`${service.name.padEnd(16)} ${state}`);
+    }
+  },
+});
+
+const voicesCommand = defineCommand({
+  meta: {
+    name: "voices",
+    description: "List the voices for written reels, from the chosen service.",
+  },
+  args: { json: { type: "boolean", default: false, description: "Print them as JSON" } },
+  async run({ args }) {
+    const { voice } = await currentChoices();
+    const listed =
+      voice === "kokoro"
+        ? kokoroVoices.map((entry) => ({ ...entry, detail: voiceReady() ? "" : "not installed" }))
+        : (await voicesOf(voice as ServiceId)).map((entry) => ({
+            ...entry,
+            id: `${voice}:${entry.id}`,
+          }));
+    if (args.json) {
+      console.log(JSON.stringify(listed, null, 2));
+      return;
+    }
+    console.log(`Voices from ${serviceInfo(voice)?.name ?? "this computer"}:`);
+    for (const entry of listed) {
+      const detail = "detail" in entry && entry.detail ? `  ${entry.detail}` : "";
+      console.log(`  ${entry.id.padEnd(28)} ${entry.name}${detail}`);
+    }
+    console.log('Use one with: ucut write "..." --voice <id>');
+  },
+});
+
 const main = defineCommand({
   meta: {
     name: "ucut",
@@ -318,10 +575,31 @@ const main = defineCommand({
     serve: serveCommand,
     setup: setupCommand,
     doctor: doctorCommand,
+    render: renderCommand,
+    mcp: mcpCommand,
+    connect: connectCommand,
+    disconnect: disconnectCommand,
+    connections: connectionsCommand,
+    voices: voicesCommand,
   },
 });
 
-const commands = ["make", "demo", "write", "sort", "study", "serve", "setup", "doctor"];
+const commands = [
+  "make",
+  "demo",
+  "write",
+  "sort",
+  "study",
+  "serve",
+  "setup",
+  "doctor",
+  "render",
+  "mcp",
+  "connect",
+  "disconnect",
+  "connections",
+  "voices",
+];
 
 export async function run(argv: string[]): Promise<RunResult> {
   const [first] = argv;
@@ -338,6 +616,12 @@ export async function run(argv: string[]): Promise<RunResult> {
       stdout: "",
       stderr: `U-Cut doesn't have a command called "${first}". Run \`ucut --help\` to see what it can do.\n`,
     };
+  }
+  // Help is answered before anything runs, so `ucut mcp --help` doesn't start a server.
+  if (argv.includes("--help") || argv.includes("-h")) {
+    const subCommands = main.subCommands as Record<string, Parameters<typeof renderUsage>[0]>;
+    const command = subCommands[first];
+    return { code: 0, stdout: `${command ? await renderUsage(command, main) : ""}\n`, stderr: "" };
   }
   try {
     await runCommand(main, { rawArgs: argv });

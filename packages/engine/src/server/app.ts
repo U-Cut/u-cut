@@ -19,6 +19,7 @@ import {
   readSignals,
   sceneModel,
 } from "../analyse.ts";
+import { splitVoice } from "../connections/index.ts";
 import {
   deriveMedia,
   deriveRecording,
@@ -63,6 +64,7 @@ import {
   minimumFreeDisk,
   workersFor,
 } from "./capacity.ts";
+import { addConnectionRoutes, choicesFor } from "./connections.ts";
 import { EventHub, type ServerEvent } from "./events.ts";
 import { contentTypes, sendFile } from "./files.ts";
 import { Scheduler } from "./scheduler.ts";
@@ -112,13 +114,39 @@ const defaultMaxUpload = 8 * 1024 ** 3;
 const qualities: Quality[] = ["draft", "looks", "delivery"];
 
 const loopback = (host: string) => /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(host);
+const loopbackAddress = (address: string) =>
+  /^(127\.\d+\.\d+\.\d+|::1|::ffff:127\.\d+\.\d+\.\d+)$/.test(address);
+
+/**
+ * Whether a request comes from this Mac. Anyone can write any Host header, so the socket's own
+ * address decides. Requests made inside this process, as tests make them, have no socket.
+ */
+export function fromThisMac(c: Context): boolean {
+  const decided = c.get("local") as boolean | undefined;
+  return decided ?? decide(c);
+}
+
+/**
+ * Decided once, as the request arrives, while the socket still has its address. A socket that
+ * has lost its address counts as away. In Docker, set UCUT_SINGLE_USER=1: the container has one
+ * person, and none of their requests come from loopback.
+ */
+function decide(c: Context): boolean {
+  if (process.env.UCUT_SINGLE_USER === "1") return true;
+  const host = c.req.header("host") ?? "";
+  const env = c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined;
+  // Requests made inside this process, as tests make them, have no socket at all.
+  if (!env?.incoming) return loopback(host);
+  const address = env.incoming.socket?.remoteAddress;
+  return loopback(host) && address !== undefined && loopbackAddress(address);
+}
 const safeName = (name: string) =>
   decodeURIComponent(name)
     .replace(/[/\\\0]/g, "_")
     .slice(0, 200);
 
 export function createApp(options: ServerOptions) {
-  const app = new Hono<{ Variables: { session: string } }>();
+  const app = new Hono<{ Variables: { session: string; local: boolean } }>();
   const capacity = options.capacity ?? measureCapacity();
   const hub = new EventHub();
   const jobs = new Map<string, Job>();
@@ -140,6 +168,7 @@ export function createApp(options: ServerOptions) {
   // A website open in the same browser can reach localhost. Checking Host stops DNS rebinding,
   // and checking Origin stops other sites from posting here.
   app.use("*", async (c, next) => {
+    c.set("local", decide(c));
     const host = c.req.header("host") ?? "";
     if (!options.hosts.includes(host) && !loopback(host)) {
       return c.json({ error: "This address isn't allowed." }, 403);
@@ -149,7 +178,7 @@ export function createApp(options: ServerOptions) {
       return c.json({ error: "Requests from other sites aren't allowed." }, 403);
     }
 
-    if (options.accessCode && !loopback(host)) {
+    if (options.accessCode && !fromThisMac(c)) {
       const code = c.req.query("code");
       if (code === options.accessCode) {
         setCookie(c, accessCookie, code, { httpOnly: true, sameSite: "Strict", path: "/" });
@@ -197,7 +226,7 @@ export function createApp(options: ServerOptions) {
     return job;
   }
 
-  async function ownedJob(c: Context<{ Variables: { session: string } }>) {
+  async function ownedJob(c: Context<{ Variables: { session: string; local: boolean } }>) {
     const job = await loadJob(c.req.param("id") ?? "");
     return job && job.owner === c.get("session") ? job : undefined;
   }
@@ -293,14 +322,14 @@ export function createApp(options: ServerOptions) {
   }
 
   /** Listens to and watches a recording, then tells the browser what it found. */
-  function readDemo(job: Job, item: MediaItem) {
+  function readDemo(job: Job, item: MediaItem, listen: string) {
     listening
       .submit({
         id: `recording-${item.id}`,
         owner: job.owner,
         run: async ({ signal }) => {
           await deriveRecording(item, signal);
-          const reading = await readRecording(item);
+          const reading = await readRecording(item, { listen, signal });
           job.demo = {
             media: item.id,
             ...reading,
@@ -366,7 +395,10 @@ export function createApp(options: ServerOptions) {
     }
   });
 
-  app.get("/api/catalog", (c) =>
+  const connectionDeps = { fromThisMac, ownedJob, loadJob, hub };
+  addConnectionRoutes(app, connectionDeps);
+
+  app.get("/api/catalog", async (c) =>
     c.json({
       templates: loadTemplates(),
       tracks: loadTracks().map((track) => ({ ...track, beats: trackBeats(track) })),
@@ -375,6 +407,8 @@ export function createApp(options: ServerOptions) {
       scenes: [...loadScenes(), { id: "other", label: "Other", group: "other" }],
       sorting: Boolean(vision() && sceneModel()),
       voice: { ready: voiceReady(), voices, defaultVoice, size: voiceSize },
+      local: fromThisMac(c),
+      uses: await choicesFor(c, connectionDeps),
     }),
   );
 
@@ -497,7 +531,7 @@ export function createApp(options: ServerOptions) {
       const item = await probe(stored.hash, stored.path, "video");
       addItem(job, item);
       await persist(job);
-      readDemo(job, item);
+      readDemo(job, item, (await choicesFor(c, connectionDeps)).listen);
       return c.json(publicItem(item), 201);
     } catch (error) {
       return c.json({ error: `${name}: ${(error as Error).message}` }, 422);
@@ -644,10 +678,24 @@ export function createApp(options: ServerOptions) {
       lines?: { text: string; speed: number }[];
       voice?: string;
     };
-    if (!voice || !voices.some((known) => known.id === voice) || !Array.isArray(lines)) {
+    if (!voice || !Array.isArray(lines)) {
       return c.json({ error: "That isn't a voice U-Cut has." }, 422);
     }
-    if (!voiceReady()) return c.json({ error: "The voice isn't installed yet." }, 409);
+    const { service } = splitVoice(voice);
+    if (service === "kokoro") {
+      if (!voices.some((known) => known.id === voice)) {
+        return c.json({ error: "That isn't a voice U-Cut has." }, 422);
+      }
+      if (!voiceReady()) return c.json({ error: "The voice isn't installed yet." }, 409);
+    } else if ((await choicesFor(c, connectionDeps)).voice !== service) {
+      return c.json(
+        {
+          error:
+            "That voice isn't set up here. Choose one in Connections, on the Mac running U-Cut.",
+        },
+        403,
+      );
+    }
     const spoken: Spoken[] = [];
     try {
       for (const [index, line] of lines.entries()) {
@@ -678,7 +726,7 @@ export function createApp(options: ServerOptions) {
 
   // Downloads about 500 MB, so it waits to be asked and only the person at this Mac can ask.
   app.post("/api/voice/install", async (c) => {
-    if (!loopback(c.req.header("host") ?? "")) {
+    if (!fromThisMac(c)) {
       return c.json({ error: "Only the person running U-Cut can add the voice." }, 403);
     }
     voiceInstall ??= installVoice().finally(() => {

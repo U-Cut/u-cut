@@ -6,5 +6,7 @@ export default defineConfig({
   test: {
     include: ["packages/*/src/**/*.test.ts", "apps/site/src/**/*.test.ts", "scripts/**/*.test.ts"],
     exclude: ["**/*.int.test.ts", "**/node_modules/**"],
+    // Tests keep keys in a file in their own folder, never in the Keychain.
+    env: { UCUT_SECRETS: "file" },
   },
 });

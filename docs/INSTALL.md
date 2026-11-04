@@ -44,7 +44,7 @@ export PATH="$HOME/.local/bin:$PATH"
 
 ```bash
 docker build -t u-cut https://github.com/mayank29deo/U-Cut.git
-docker run --rm -p 4173:4173 -v u-cut-data:/data u-cut
+docker run --rm -p 127.0.0.1:4173:4173 -v u-cut-data:/data u-cut
 ```
 
 Then open <http://localhost:4173>. Your reels stay in the `u-cut-data` volume. Docker has no access to Apple's video hardware, so exports use the CPU and take longer.
@@ -83,11 +83,19 @@ Run the install command again. It keeps your reels.
 
 ## Uninstall
 
+If you connected any services, forget their keys first:
+
+```bash
+for service in claude elevenlabs deepgram openai voicestudio; do ucut disconnect "$service"; done
+```
+
+Then remove U-Cut:
+
 ```bash
 rm -rf ~/.u-cut ~/.local/bin/ucut ~/Applications/U-Cut.app
 ```
 
-To delete your reels and media too, also remove `~/Movies/U-Cut`.
+To delete your reels and media too, also remove `~/Movies/U-Cut`, which also holds your connection choices. The installer added a line beginning "# Added by the U-Cut installer" to `~/.zprofile`, which you can delete.
 
 ## If something goes wrong
 

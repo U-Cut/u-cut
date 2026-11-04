@@ -14,6 +14,7 @@ interface Props {
   reading: boolean;
   onRecording(file: File): void;
   onPrompt(prompt: string): void;
+  onConnections(): void;
 }
 
 const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
@@ -28,6 +29,7 @@ export function Start({
   reading,
   onRecording,
   onPrompt,
+  onConnections,
 }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const recording = useRef<HTMLInputElement>(null);
@@ -146,6 +148,9 @@ export function Start({
               onClick={() => recording.current?.click()}
             >
               Turn a screen recording into a demo
+            </button>
+            <button type="button" className="button-text start-connections" onClick={onConnections}>
+              Connect your assistant, voices and more
             </button>
             <input
               ref={recording}

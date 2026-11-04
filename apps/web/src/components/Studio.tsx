@@ -6,7 +6,16 @@ import type { useReel } from "../reel";
 import { BrandForm } from "./BrandForm";
 import { ExportSheet } from "./ExportSheet";
 import { Filmstrip } from "./Filmstrip";
-import { MuteIcon, PauseIcon, PlayIcon, PlusIcon, RedoIcon, SoundIcon, UndoIcon } from "./icons";
+import {
+  MuteIcon,
+  PauseIcon,
+  PlayIcon,
+  PlugIcon,
+  PlusIcon,
+  RedoIcon,
+  SoundIcon,
+  UndoIcon,
+} from "./icons";
 import { Moments } from "./Moments";
 import { ScriptLines } from "./ScriptLines";
 import { Sort } from "./Sort";
@@ -18,6 +27,7 @@ type Reel = ReturnType<typeof useReel>;
 interface Props {
   catalog: Catalog;
   reel: Reel;
+  onConnections(): void;
 }
 
 const vibeNames = Object.keys(vibes) as Vibe[];
@@ -66,7 +76,7 @@ function Choice<T extends string | number>({
   );
 }
 
-export function Studio({ catalog, reel }: Props) {
+export function Studio({ catalog, reel, onConnections }: Props) {
   const { state, actions } = reel;
   const now = state.now;
   const stage = useRef<StageHandle>(null);
@@ -150,6 +160,15 @@ export function Studio({ catalog, reel }: Props) {
       <header className="topbar">
         <span className="wordmark">U-Cut</span>
         <div className="topbar-actions">
+          <button
+            type="button"
+            className="button-quiet topbar-connections"
+            onClick={onConnections}
+            title="Connect your assistant, voices and more"
+          >
+            <PlugIcon />
+            <span>Connections</span>
+          </button>
           <button
             type="button"
             className="icon-button"
@@ -316,7 +335,13 @@ export function Studio({ catalog, reel }: Props) {
               voicing={state.voicing}
               onVoice={actions.setVoice}
               onInstall={() => void actions.addVoice()}
+              onMore={onConnections}
             />
+            {state.writing ? (
+              <p className="voice-progress" aria-live="polite">
+                Claude is writing a better script
+              </p>
+            ) : null}
             <Choice
               label="Shape"
               options={shapes}

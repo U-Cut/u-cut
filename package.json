@@ -9,7 +9,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "tsc -p packages/schema && tsc -p packages/planner-rules && tsc -p packages/classify && tsc -p packages/compose && tsc -p packages/engine && vite build apps/web",
+    "build": "tsc -p packages/schema && tsc -p packages/planner-rules && tsc -p packages/planner-api && tsc -p packages/classify && tsc -p packages/compose && tsc -p packages/engine && vite build apps/web",
     "typecheck": "tsc -p tsconfig.check.json --noEmit && tsc -p apps/web && tsc -p apps/site",
     "lint": "biome check .",
     "format": "biome check --write .",

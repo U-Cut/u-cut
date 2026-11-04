@@ -99,6 +99,26 @@ The browser does nearly all of this. `readPrompt` reads the sentence, `writeScri
 
 Then each line goes to the server to be read aloud, one call at a time through a fair queue, and is cached by its words, voice and speed. As the real lengths come back, the plan is rebuilt around them. [ADR 0019](decisions/0019-written-reels-rules-first.md) has the reasoning.
 
+## How assistants and services connect
+
+Two kinds of outside help can join in, and both are off until someone turns them on.
+
+**Assistants** reach U-Cut through `ucut mcp`, a Model Context Protocol server on standard input and output ([`packages/engine/src/mcp`](../packages/engine/src/mcp)).
+
+- **Each tool is a thin wrapper over the same functions as the CLI:** `prepareReel`, `renderJob`, `studyReel`, `readRecording`, `makeDemo` and `makeStory`.
+- **The assistant changes what a reel says and does,** and the engine keeps timing, beat and output correct.
+- **Plans are validated** against the schema and the job's media before they're saved.
+- **For the reel open in the app,** the app makes a one-time link (`POST /api/jobs/:id/assistant`). The assistant reads the reel with `GET /api/assistant/:token`, and changes go in through `POST /api/assistant/:token/change`. The server checks each change and passes it to that person's event stream. The browser then applies it like any other edit, so it re-plans instantly and undo works.
+
+**Services** sit behind [`packages/engine/src/connections`](../packages/engine/src/connections).
+
+- **Each is a small HTTP client** with an injectable `fetch`.
+- **The choice per job** (write, voice, listen) is kept in `connections.json`. Keys are kept in the Keychain.
+- **Speech from a service goes into the same store as Kokoro's,** keyed by service, model, voice, speed and words, so the composer and renderer don't know where a line came from.
+- **A recording sent for listening is first cut to small mono AAC,** so it uploads quickly and fits every service's limit.
+
+**Being on this Mac** is decided by the socket's address, not the `Host` header, which anyone on the network can set. Connections, paid services and assistant links all need it.
+
 ## What happens when you export
 
 1. The browser saves the plan and calls `POST /api/jobs/:id/export`.

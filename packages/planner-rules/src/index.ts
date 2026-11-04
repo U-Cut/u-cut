@@ -19,6 +19,8 @@ export {
   type ReelRequest,
   readPrompt,
   type ScriptInput,
+  scriptFrom,
+  speedFor,
   splitIntoLines,
   writeScript,
 } from "./prompt.ts";
