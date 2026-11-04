@@ -31,7 +31,7 @@ No files to hand? Press **Try it with sample photos**.
 | Turn a screen recording into a product demo                                        | **Works today.** It finds the moments, pushes in on the action, and adds captions and title cards. Captions are in English for now                                                            |
 | Write a reel from a sentence                                                       | **Works today.** It writes a short script, reads it in a local voice, and builds the reel from your photos or from words and colour. Connect Claude for better scripts, or use your own words |
 | Make reels from your assistant: Claude Code, Claude Desktop, Cursor and others     | **Works today**, through `ucut mcp` and the Claude Code plugin. An assistant can also change the reel you have open                                                                           |
-| Use your own services for writing, voices and listening                            | **Built, not yet tried against the live services:** Claude, ElevenLabs, Deepgram, OpenAI and Voice Studio. Each is off until you choose it                                                    |
+| Use your own services for writing, voices and listening                            | **Works today with Deepgram,** tested live for reading aloud and listening. Claude, ElevenLabs, OpenAI and Voice Studio are built but not yet tried live. Each is off until you choose it     |
 
 The [plan](docs/PLAN.md) has the full roadmap.
 

@@ -59,6 +59,48 @@ async function listen(path: string, duration: number): Promise<DemoWord[]> {
   }
 }
 
+const letters = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+
+/**
+ * Spells names the way the person gave them. Listening hears "U-Cut" as "U Cut" or "u-cut", so
+ * any run of words whose letters match a hint becomes that hint, keeping the last word's
+ * punctuation and the run's timing.
+ */
+export function applyHints(words: DemoWord[], hints: string[]): DemoWord[] {
+  const wanted = hints
+    .map((hint) => ({ hint: hint.trim(), parts: hint.split(/[^\p{L}\p{N}]+/u).filter(Boolean) }))
+    .filter(({ parts }) => parts.length > 0)
+    .sort((a, b) => b.parts.length - a.parts.length);
+  const out: DemoWord[] = [];
+  for (let index = 0; index < words.length; ) {
+    // A name may be heard as one word or as several, so every width up to its parts is tried.
+    let found: { hint: string; width: number } | undefined;
+    for (const { hint, parts } of wanted) {
+      for (let width = parts.length; width >= 1 && !found; width -= 1) {
+        const run = words.slice(index, index + width);
+        if (
+          run.length === width &&
+          run.map((word) => letters(word.text)).join("") === letters(hint)
+        ) {
+          found = { hint, width };
+        }
+      }
+      if (found) break;
+    }
+    const first = words[index];
+    const last = words[index + (found?.width ?? 1) - 1];
+    if (!found || !first || !last) {
+      if (first) out.push(first);
+      index += 1;
+      continue;
+    }
+    const trailing = /[^\p{L}\p{N}]*$/u.exec(last.text)?.[0] ?? "";
+    out.push({ text: `${found.hint}${trailing}`, start: first.start, end: last.end });
+    index += found.width;
+  }
+  return out;
+}
+
 /** Small mono sound, so a recording uploads quickly and fits every service's size limit. */
 async function soundOf(path: string, folder: string): Promise<Uint8Array> {
   const target = join(folder, "sound.m4a");
@@ -179,8 +221,9 @@ export async function readRecording(
   const { sound, words, speech, windows, grid } = JSON.parse(
     await readFile(path, "utf8"),
   ) as Signals;
-  const moments = findMoments({ duration: item.duration ?? 0, words, windows, grid });
-  return { sound, words, moments, speech };
+  const spelled = applyHints(words, options.hints ?? []);
+  const moments = findMoments({ duration: item.duration ?? 0, words: spelled, windows, grid });
+  return { sound, words: spelled, moments, speech };
 }
 
 /** Fetches the speech model by asking for it on a moment of silence. */
