@@ -1,0 +1,33 @@
+name: Retry jobs GitHub couldn't start
+
+# GitHub sometimes has no Mac free, and cancels a job before it runs a single step. That isn't a
+# test failure, so this re-runs those jobs, twice at most. A job that ran and failed is left alone.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  actions: write
+
+jobs:
+  retry:
+    if: github.event.workflow_run.conclusion != 'success' && github.event.workflow_run.run_attempt < 3
+    runs-on: ubuntu-latest
+    steps:
+      - name: Re-run jobs that never got a machine
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+        run: |
+          never_started=$(gh api "repos/$REPO/actions/runs/$RUN/jobs" \
+            --jq '[.jobs[] | select(.conclusion == "cancelled" and ((.steps // []) | length) == 0)] | length')
+          ran_and_failed=$(gh api "repos/$REPO/actions/runs/$RUN/jobs" \
+            --jq '[.jobs[] | select(.conclusion == "failure")] | length')
+          if [ "$never_started" -gt 0 ] && [ "$ran_and_failed" -eq 0 ]; then
+            echo "$never_started job(s) never got a machine. Running them again."
+            gh run rerun "$RUN" --failed --repo "$REPO"
+          else
+            echo "Nothing to retry: every job that failed actually ran."
+          fi
