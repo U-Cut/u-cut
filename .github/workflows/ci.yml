@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version-file: .nvmrc
+          # v5 caches for the package manager by itself, before corepack has installed pnpm.
+          package-manager-cache: false
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
       # Lint, typecheck, unit tests, schema and Swift round-trip tests, licence scan.
@@ -37,6 +39,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 26
+          package-manager-cache: false
       - run: brew install ffmpeg
       - run: npm install --global pnpm@12.16.1
       - run: pnpm install --frozen-lockfile
