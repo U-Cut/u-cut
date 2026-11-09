@@ -15,7 +15,7 @@ The assistant uses its own plan, in its own app. U-Cut never logs in to it, star
 The plugin adds the tools, plus a skill and three commands: `/u-cut:reel`, `/u-cut:demo` and `/u-cut:write`.
 
 ```
-/plugin marketplace add mayank29deo/U-Cut
+/plugin marketplace add U-Cut/u-cut
 /plugin install u-cut@u-cut
 ```
 

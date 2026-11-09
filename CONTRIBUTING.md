@@ -2,6 +2,17 @@
 
 Thanks for helping. U-Cut is early, so read the [plan](docs/PLAN.md) first to see what's being built now.
 
+## Where the code lives
+
+U-Cut's home is [github.com/U-Cut/u-cut](https://github.com/U-Cut/u-cut). Open issues and pull requests there. [github.com/mayank29deo/U-Cut](https://github.com/mayank29deo/U-Cut) is a mirror that gets every change.
+
+Maintainers push to both at once. One remote with two push addresses does it:
+
+```bash
+git remote set-url --add --push origin git@github.com:U-Cut/u-cut.git
+git remote set-url --add --push origin git@github.com:mayank29deo/U-Cut.git
+```
+
 ## Set up
 
 Follow the steps in the [README](README.md#build-it-yourself). Then run the app with `pnpm start`. To work on the interface with live reload, run `pnpm start` in one terminal and `pnpm --filter @u-cut/web dev` in another.
@@ -65,7 +76,7 @@ scripts/check-package.sh --download   # and download the exporter as well, as a 
 
 1. Set the new version in every `package.json`, the same in each.
 2. Add its section to `CHANGELOG.md`, under `## [x.y.z]`.
-3. Commit, then tag and push: `git tag vx.y.z && git push origin vx.y.z`.
+3. Commit, then tag and push: `git tag vx.y.z && git push origin vx.y.z`. With both push addresses set, the tag reaches both repos, and only U-Cut/u-cut publishes.
 
 The [release workflow](.github/workflows/release.yml) builds and checks the app on a clean machine. It then publishes `U-Cut.dmg`, its checksum and FFmpeg's source, with the changelog as the notes. With the Apple Developer secrets it lists, it also signs and notarizes the app. A change to how the app is packaged runs the same build on `main`, without publishing.
 

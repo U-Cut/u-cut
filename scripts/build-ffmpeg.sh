@@ -99,7 +99,7 @@ under the GNU Lesser General Public License, version 2.1 or later, and zimg unde
 - FFmpeg source: https://ffmpeg.org/releases/ffmpeg-$ffmpeg_version.tar.xz (sha256 $ffmpeg_sha256).
   Each U-Cut release also attaches this exact file.
 - zimg source: https://github.com/sekrit-twc/zimg/archive/refs/tags/release-$zimg_version.tar.gz
-- How it was built: scripts/build-ffmpeg.sh in https://github.com/mayank29deo/U-Cut, with
+- How it was built: scripts/build-ffmpeg.sh in https://github.com/U-Cut/u-cut, with
 
 \`\`\`
 ./configure ${configure[*]}

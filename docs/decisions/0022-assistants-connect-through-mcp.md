@@ -30,7 +30,7 @@ It is written against the protocol directly, with no SDK. The part U-Cut needs i
 
 **Heavy work takes turns.** Plans, listening and renders from one `ucut mcp` run one at a time. A cancelled request stops what it started, and progress only ever goes up, as the protocol requires.
 
-**The plugin** in `plugin/` bundles the server, a skill that teaches the workflow, and three commands. The repo is also a plugin marketplace, so `/plugin marketplace add mayank29deo/U-Cut` then `/plugin install u-cut@u-cut` sets it up.
+**The plugin** in `plugin/` bundles the server, a skill that teaches the workflow, and three commands. The repo is also a plugin marketplace, so `/plugin marketplace add U-Cut/u-cut` then `/plugin install u-cut@u-cut` sets it up.
 
 **Handing an open reel to an assistant.** In the app, "Give this reel to your assistant" makes a one-time link for that reel and shows a prompt to paste. The assistant passes the link to `ucut mcp`, which talks to the running app over `localhost`:
 

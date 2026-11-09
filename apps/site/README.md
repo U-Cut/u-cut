@@ -12,7 +12,7 @@ pnpm --filter @u-cut/site dev
 
 ## Put it on Vercel
 
-1. In Vercel, choose **Add New**, then **Project**, and import `mayank29deo/U-Cut`.
+1. In Vercel, choose **Add New**, then **Project**, and import `U-Cut/u-cut`.
 2. Set **Root Directory** to `apps/site`. Leave everything else as it is, because `vercel.json` has the build settings.
 3. Press **Deploy**.
 

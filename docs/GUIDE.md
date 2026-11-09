@@ -6,7 +6,7 @@ U-Cut turns your photos, clips, screen recordings or a sentence into a finished 
 
 You need a Mac with Apple Silicon (M1 or newer) and macOS 15 or later.
 
-1. Download **U-Cut.dmg** from the [releases page](https://github.com/mayank29deo/U-Cut/releases/latest).
+1. Download **U-Cut.dmg** from the [releases page](https://github.com/U-Cut/u-cut/releases/latest).
 2. Open it and drag **U-Cut** into **Applications**.
 3. Open U-Cut. The first time, macOS asks you to approve it. [Opening it the first time](INSTALL.md#open-it-the-first-time) shows how.
 4. U-Cut sets itself up in a few seconds, then downloads the one piece it needs to export: the part that draws every frame of your reel (93 MB). Press **Look around first** if you'd rather not wait. If your connection drops, it retries for a couple of minutes, and **Try again** carries on from where it stopped. If you looked around and the download didn't finish, pressing **Export** starts it again.
@@ -56,7 +56,7 @@ Three more styles are made for you by the other ways in. **Product demo** is for
 
 Each vibe adds a few sound effects at the reel's turning points. Hype and Cinematic open on a hit and rise into the last shot, and Hype adds a whoosh now and then. Chill opens on a soft swell. Nostalgic uses a camera shutter. Café crawl adds a soft pop for each stop. The preview plays them exactly as the export will.
 
-Each vibe also has its own colour grade. To use the same look on other footage, take the matching `.cube` file from [library/luts](https://github.com/mayank29deo/U-Cut/tree/main/library/luts) into DaVinci Resolve, Premiere, Final Cut or FFmpeg. Every effect and look is CC0, so you can use them anywhere.
+Each vibe also has its own colour grade. To use the same look on other footage, take the matching `.cube` file from [library/luts](https://github.com/U-Cut/u-cut/tree/main/library/luts) into DaVinci Resolve, Premiere, Final Cut or FFmpeg. Every effect and look is CC0, so you can use them anywhere.
 
 ## Sort your photos
 
@@ -140,4 +140,4 @@ Every reel has an editable HyperFrames project in `~/Movies/U-Cut/jobs/<id>/proj
 
 ## If something goes wrong
 
-Start with `ucut doctor` ([from the command line](#from-the-command-line)), which checks every part U-Cut needs. The [install guide](INSTALL.md#if-something-goes-wrong) lists common problems and fixes. Still stuck? [Open an issue](https://github.com/mayank29deo/U-Cut/issues/new/choose) with what `ucut doctor` says.
+Start with `ucut doctor` ([from the command line](#from-the-command-line)), which checks every part U-Cut needs. The [install guide](INSTALL.md#if-something-goes-wrong) lists common problems and fixes. Still stuck? [Open an issue](https://github.com/U-Cut/u-cut/issues/new/choose) with what `ucut doctor` says.

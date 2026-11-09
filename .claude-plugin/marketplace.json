@@ -10,7 +10,7 @@
       "name": "u-cut",
       "source": "./plugin",
       "description": "Make finished vertical reels and product demos on your own Mac, rendered with HyperFrames. Needs U-Cut installed.",
-      "homepage": "https://github.com/mayank29deo/U-Cut",
+      "homepage": "https://github.com/U-Cut/u-cut",
       "license": "Apache-2.0"
     }
   ]

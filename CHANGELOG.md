@@ -10,7 +10,7 @@ The first release you can download. U-Cut turns photos, clips, screen recordings
 
 Download **U-Cut.dmg**, drag U-Cut into Applications and open it. The app carries everything it needs: Node, FFmpeg, the speech tool and the photo sorter. On first launch it downloads one more piece, the 93 MB exporter, with progress shown and resuming after a dropped connection. No Homebrew or Terminal needed.
 
-U-Cut isn't notarized yet, so macOS asks you to approve it once: **System Settings → Privacy & Security → Open Anyway**. [The install guide](https://github.com/mayank29deo/U-Cut/blob/main/docs/INSTALL.md#open-it-the-first-time) has the steps.
+U-Cut isn't notarized yet, so macOS asks you to approve it once: **System Settings → Privacy & Security → Open Anyway**. [The install guide](https://github.com/U-Cut/u-cut/blob/main/docs/INSTALL.md#open-it-the-first-time) has the steps.
 
 ### What it does
 

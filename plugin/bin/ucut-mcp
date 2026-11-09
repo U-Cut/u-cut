@@ -5,5 +5,5 @@ for candidate in "$(command -v ucut 2>/dev/null)" "$HOME/Library/Application Sup
   "$HOME/.local/bin/ucut" /opt/homebrew/bin/ucut /usr/local/bin/ucut; do
   if [ -n "$candidate" ] && [ -x "$candidate" ]; then exec "$candidate" mcp; fi
 done
-echo "U-Cut isn't installed. Download the app from https://github.com/mayank29deo/U-Cut/releases and open it once, or install it with: curl -fsSL https://raw.githubusercontent.com/mayank29deo/U-Cut/main/install.sh | bash" >&2
+echo "U-Cut isn't installed. Download the app from https://github.com/U-Cut/u-cut/releases and open it once, or install it with: curl -fsSL https://raw.githubusercontent.com/U-Cut/u-cut/main/install.sh | bash" >&2
 exit 1

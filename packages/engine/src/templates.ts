@@ -12,7 +12,7 @@ import { repoRoot } from "./paths.ts";
 
 export const registryUrl = () =>
   process.env.UCUT_REGISTRY_URL ??
-  "https://raw.githubusercontent.com/mayank29deo/U-Cut/main/registry/index.json";
+  "https://raw.githubusercontent.com/U-Cut/u-cut/main/registry/index.json";
 
 export interface RegistryTemplate {
   id: string;

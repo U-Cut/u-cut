@@ -79,7 +79,7 @@ export function buildRegistry() {
     );
   return {
     schemaVersion: 1,
-    repository: "https://github.com/mayank29deo/U-Cut",
+    repository: "https://github.com/U-Cut/u-cut",
     templates,
     library: {
       music: assets("music"),

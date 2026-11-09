@@ -2,7 +2,7 @@
 // Only this list is committed, never the photos. Run with: pnpm exec tsx scripts/eval-manifest.ts
 import { writeFileSync } from "node:fs";
 
-const agent = "U-Cut classifier eval (https://github.com/mayank29deo/U-Cut)";
+const agent = "U-Cut classifier eval (https://github.com/U-Cut/u-cut)";
 const allowed = /^(CC0|Public domain|PD|CC BY(-SA)? [234]\.0|CC BY(-SA)? 2\.5)/i;
 const corePhotos = 140;
 const otherPhotos = 50;

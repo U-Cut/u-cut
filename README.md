@@ -8,7 +8,7 @@
 
 You need a Mac with Apple Silicon and macOS 15 or later.
 
-1. Download **[U-Cut.dmg](https://github.com/mayank29deo/U-Cut/releases/latest/download/U-Cut.dmg)** and drag U-Cut into Applications.
+1. Download **[U-Cut.dmg](https://github.com/U-Cut/u-cut/releases/latest/download/U-Cut.dmg)** and drag U-Cut into Applications.
 2. Open it. It isn't notarized yet, so macOS asks you to approve it once in System Settings. [Here's how](docs/INSTALL.md#open-it-the-first-time).
 3. U-Cut downloads the one piece it needs to export (93 MB), then it's ready.
 
@@ -17,7 +17,7 @@ No files to hand? Press **Try it with sample photos**. The [user guide](docs/GUI
 Prefer Terminal? Install with one line, which sets up the `ucut` command too. On Linux, install Node 22 or newer, FFmpeg and Git first ([details](docs/INSTALL.md#on-linux-or-anywhere-else)):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mayank29deo/U-Cut/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/U-Cut/u-cut/main/install.sh | bash
 ```
 
 ## What it does today
@@ -65,14 +65,14 @@ Run `ucut make --help` for every option.
 **With Docker, on Linux or anywhere else.**
 
 ```bash
-docker build -t u-cut https://github.com/mayank29deo/U-Cut.git
+docker build -t u-cut https://github.com/U-Cut/u-cut.git
 docker run --rm -p 127.0.0.1:4173:4173 -v u-cut-data:/data u-cut
 ```
 
 **With your assistant.** In Claude Code:
 
 ```
-/plugin marketplace add mayank29deo/U-Cut
+/plugin marketplace add U-Cut/u-cut
 /plugin install u-cut@u-cut
 ```
 
@@ -134,7 +134,7 @@ The plan is a small JSON file. The same plan produces the preview and the final 
 ## Build it yourself
 
 ```bash
-git clone https://github.com/mayank29deo/U-Cut.git
+git clone https://github.com/U-Cut/u-cut.git
 cd U-Cut
 corepack enable
 pnpm install

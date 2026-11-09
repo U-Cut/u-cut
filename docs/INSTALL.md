@@ -4,7 +4,7 @@
 
 This is the way for most people. You need a Mac with Apple Silicon (M1 or newer) and macOS 15 or later.
 
-1. Download **U-Cut.dmg** from the [latest release](https://github.com/mayank29deo/U-Cut/releases/latest).
+1. Download **U-Cut.dmg** from the [latest release](https://github.com/U-Cut/u-cut/releases/latest).
 2. Open it, and drag **U-Cut** into **Applications**.
 3. Open U-Cut from Applications. The first time, macOS asks you to approve it (see below).
 4. U-Cut sets itself up in a few seconds, then downloads the one piece it needs to export (93 MB). Press **Look around first** if you'd rather not wait.
@@ -22,7 +22,7 @@ U-Cut isn't notarized by Apple yet, because that needs a paid Apple Developer ac
 
 From then on, that copy of U-Cut opens like any other app. Each new version is a new download, so macOS asks once more after you update. Right-clicking the app and choosing **Open** no longer skips this on macOS 15.
 
-Every release is built in public by [GitHub Actions](https://github.com/mayank29deo/U-Cut/actions/workflows/release.yml) from the code in this repository. Each one lists the disk image's SHA-256, which you can compare with yours:
+Every release is built in public by [GitHub Actions](https://github.com/U-Cut/u-cut/actions/workflows/release.yml) from the code in this repository. Each one lists the disk image's SHA-256, which you can compare with yours:
 
 ```bash
 shasum -a 256 ~/Downloads/U-Cut.dmg
@@ -33,7 +33,7 @@ shasum -a 256 ~/Downloads/U-Cut.dmg
 This way suits developers, Linux and Docker users, and anyone who wants the `ucut` command on their PATH. On a Mac with Apple Silicon, paste this into Terminal:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/mayank29deo/U-Cut/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/U-Cut/u-cut/main/install.sh | bash
 ```
 
 It takes a few minutes the first time and uses about 2 GB of disk. To skip the 465 MB speech model, which only captions need, put `UCUT_NO_SPEECH=1` before `bash`. It does the following:
@@ -71,7 +71,7 @@ export PATH="$HOME/.local/bin:$PATH"
 ### With Docker
 
 ```bash
-docker build -t u-cut https://github.com/mayank29deo/U-Cut.git
+docker build -t u-cut https://github.com/U-Cut/u-cut.git
 docker run --rm -p 127.0.0.1:4173:4173 -v u-cut-data:/data u-cut
 ```
 
@@ -152,4 +152,4 @@ Start with `ucut doctor`. With the downloaded app, the command is `"$HOME/Librar
 | A file was skipped                          | U-Cut lists why. Live Photo videos are skipped on purpose, so each moment appears once                                                                     |
 | Exports are slow                            | Close other apps. 4K video takes about twice the length of the reel on an 8 GB Mac                                                                         |
 
-Still stuck? [Open an issue](https://github.com/mayank29deo/U-Cut/issues/new/choose) with the output of `ucut doctor`.
+Still stuck? [Open an issue](https://github.com/U-Cut/u-cut/issues/new/choose) with the output of `ucut doctor`.

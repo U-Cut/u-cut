@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Installs U-Cut. Run it with:
-#   curl -fsSL https://raw.githubusercontent.com/mayank29deo/U-Cut/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/U-Cut/u-cut/main/install.sh | bash
 #
 # Change where it goes with UCUT_DIR (the code), UCUT_BIN (the `ucut` command) and UCUT_APPS
 # (the Mac app).
 set -euo pipefail
 
-repo="${UCUT_REPO:-https://github.com/mayank29deo/U-Cut.git}"
+repo="${UCUT_REPO:-https://github.com/U-Cut/u-cut.git}"
 dir="${UCUT_DIR:-$HOME/.u-cut}"
 bin="${UCUT_BIN:-$HOME/.local/bin}"
 apps="${UCUT_APPS:-$HOME/Applications}"

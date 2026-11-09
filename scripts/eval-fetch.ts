@@ -14,7 +14,7 @@ if (!folder) throw new Error("Say where to put the photos.");
 const entries = JSON.parse(
   readFileSync(new URL("../classifiers/eval/manifest.json", import.meta.url), "utf8"),
 ) as Entry[];
-const agent = "U-Cut classifier eval (https://github.com/mayank29deo/U-Cut)";
+const agent = "U-Cut classifier eval (https://github.com/U-Cut/u-cut)";
 
 function hashName(title: string) {
   let hash = 0;

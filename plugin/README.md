@@ -11,7 +11,7 @@ Lets Claude Code make reels and demos with U-Cut, using your own Claude plan in 
 Install U-Cut first, so the `ucut` command exists. Then, in Claude Code:
 
 ```
-/plugin marketplace add mayank29deo/U-Cut
+/plugin marketplace add U-Cut/u-cut
 /plugin install u-cut@u-cut
 ```
 

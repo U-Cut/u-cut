@@ -11,6 +11,10 @@ name: Release
 #   MACOS_SIGN_IDENTITY         its name, such as "Developer ID Application: Name (TEAMID)"
 #   APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD   for notarytool (an app-specific password)
 # Without them the app is signed ad hoc, and people approve it once in System Settings.
+#
+# U-Cut's home is github.com/U-Cut/u-cut, and github.com/mayank29deo/U-Cut is a mirror that gets
+# every push and tag. Only the home publishes a release; on the mirror a tag builds and checks the
+# same files and keeps them as an artifact.
 
 on:
   push:
@@ -106,7 +110,7 @@ jobs:
           (cd dist && shasum -a 256 "$(basename "$dmg")" > "$(basename "$dmg").sha256")
 
       - name: Publish the release
-        if: github.ref_type == 'tag'
+        if: github.ref_type == 'tag' && github.repository == 'U-Cut/u-cut'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
@@ -118,8 +122,8 @@ jobs:
             --title "U-Cut $VERSION" --notes-file "$RUNNER_TEMP/notes.md" \
             dist/U-Cut.dmg dist/U-Cut.dmg.sha256 dist/cache/ffmpeg-*.tar.xz
 
-      - name: Keep the files from a manual run
-        if: github.ref_type != 'tag'
+      - name: Keep the files from a run that doesn't publish
+        if: github.ref_type != 'tag' || github.repository != 'U-Cut/u-cut'
         uses: actions/upload-artifact@v6
         with:
           name: U-Cut-${{ steps.version.outputs.version }}

@@ -6,7 +6,7 @@ description: Make finished vertical reels and product demos with U-Cut on this c
 
 # Making reels with U-Cut
 
-U-Cut is installed on this computer as the `ucut` command, and this plugin connects its tools (`mcp__u-cut__*`). If the tools are missing, U-Cut isn't installed: point the person to https://github.com/mayank29deo/U-Cut. Renders use HyperFrames and take about as long as the reel.
+U-Cut is installed on this computer as the `ucut` command, and this plugin connects its tools (`mcp__u-cut__*`). If the tools are missing, U-Cut isn't installed: point the person to https://github.com/U-Cut/u-cut. Renders use HyperFrames and take about as long as the reel.
 
 U-Cut itself sends nothing anywhere unless the person chose a service in its Connections, such as a cloud voice; `status` shows what each job uses. What the tools return to you, such as file names, dates, transcripts and scripts, reaches your own model like anything else you read, so don't open or pass on their photos or recordings unless they ask.
 
