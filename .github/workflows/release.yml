@@ -116,9 +116,9 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           # The LGPL asks that FFmpeg's source travels with it, so the exact tarball is attached.
-          prerelease=""
-          case "$VERSION" in 0.*) prerelease="--prerelease" ;; esac
-          gh release create "$GITHUB_REF_NAME" $prerelease \
+          # Never a pre-release: GitHub leaves those out of "releases/latest", which every
+          # Download link uses.
+          gh release create "$GITHUB_REF_NAME" --latest \
             --title "U-Cut $VERSION" --notes-file "$RUNNER_TEMP/notes.md" \
             dist/U-Cut.dmg dist/U-Cut.dmg.sha256 dist/cache/ffmpeg-*.tar.xz
 
