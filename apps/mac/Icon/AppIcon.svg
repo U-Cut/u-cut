@@ -1,7 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <title>U-Cut</title>
   <defs>
-    <radialGradient id="glow" cx="50%" cy="38%" r="70%">
+    <!-- In page units, so the scissors' pivot shows the same purple as the square behind it. -->
+    <radialGradient id="glow" gradientUnits="userSpaceOnUse" cx="512" cy="413" r="577">
       <stop offset="0" stop-color="#2a1673"/>
       <stop offset="0.6" stop-color="#150a3c"/>
       <stop offset="1" stop-color="#0a0520"/>
@@ -12,7 +13,11 @@
   </defs>
   <!-- macOS icons sit on an 824-point square inside a 1024 canvas, leaving room for the shadow. -->
   <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#glow)" filter="url(#shadow)"/>
-  <g transform="translate(100 100) scale(25.75)">
-    <path d="M9 7v11a7 7 0 0 0 14 0V7" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+  <!-- The U, with a pair of scissors standing open in its gap. -->
+  <g transform="translate(100 100) scale(0.8046875)">
+    <path d="M288 224v352a224 224 0 0 0 448 0V224" fill="none" stroke="#fff" stroke-width="128" stroke-linecap="round"/>
+    <g fill="none" stroke="#fff" stroke-width="28" stroke-linecap="round"><circle cx="446" cy="600" r="41"/><circle cx="578" cy="600" r="41"/><path d="M512 492 477 556M512 492 547 556"/></g>
+    <path d="M496 517L574 214Q595 388 547 528ZM528 517L450 214Q429 388 477 528Z" fill="#fff"/>
   </g>
+  <circle cx="512.0" cy="495.9" r="8.9" fill="url(#glow)"/>
 </svg>
