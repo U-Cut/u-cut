@@ -2,12 +2,14 @@
 // vibe's reels, so the look can be carried into DaVinci Resolve, Premiere, Final Cut or FFmpeg.
 // Run with: pnpm exec tsx --conditions=source scripts/make-luts.ts
 // Everything here is generated from this file, so the looks are dedicated to CC0.
+
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { gradeFilter } from "../packages/compose/src/index.ts";
 import { vibes } from "../packages/planner-rules/src/vibes.ts";
 
-const folder = new URL("../library/luts/", import.meta.url).pathname;
+const folder = fileURLToPath(new URL("../library/luts/", import.meta.url));
 const size = 17;
 type Rgb = [number, number, number];
 type Matrix = [Rgb, Rgb, Rgb];

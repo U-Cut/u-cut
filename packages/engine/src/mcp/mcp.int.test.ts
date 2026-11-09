@@ -2,10 +2,11 @@ import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-const engine = new URL("../bin.ts", import.meta.url).pathname;
-const samples = new URL("../../../../library/samples", import.meta.url).pathname;
+const engine = fileURLToPath(new URL("../bin.ts", import.meta.url));
+const samples = fileURLToPath(new URL("../../../../library/samples", import.meta.url));
 
 /** A real `ucut mcp`, talked to the way Claude Code talks to it. */
 describe("ucut mcp", () => {

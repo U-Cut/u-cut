@@ -1,6 +1,6 @@
 {
   "name": "@u-cut/planner-rules",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "The free, deterministic planner. Runs anywhere, including the browser.",
   "license": "Apache-2.0",
   "type": "module",

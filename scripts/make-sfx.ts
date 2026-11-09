@@ -1,12 +1,14 @@
 // Synthesises the sound effects in library/sfx. Run with: pnpm exec tsx scripts/make-sfx.ts
 // Everything here is generated from this file, so the effects are dedicated to CC0.
+
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const rate = 48000;
-const folder = new URL("../library/sfx/", import.meta.url).pathname;
+const folder = fileURLToPath(new URL("../library/sfx/", import.meta.url));
 
 function rng(seed: number) {
   let state = seed >>> 0;

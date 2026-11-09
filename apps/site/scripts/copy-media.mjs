@@ -1,9 +1,10 @@
 import { cpSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 // The site plays reels from U-Cut's own free library, so nothing is stored twice.
-const root = new URL("../../..", import.meta.url).pathname;
-const media = new URL("../public/media", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../../..", import.meta.url));
+const media = fileURLToPath(new URL("../public/media", import.meta.url));
 
 rmSync(media, { recursive: true, force: true });
 mkdirSync(join(media, "samples"), { recursive: true });

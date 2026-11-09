@@ -1,7 +1,9 @@
 // Paints the sample photos in library/samples, so anyone can try U-Cut before adding their own.
 // Run with: pnpm exec tsx scripts/make-samples.ts. They're generated here, so they're CC0.
+
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const width = 1080;
 const height = 1440;
@@ -244,7 +246,7 @@ const scenes: Scene[] = [
   },
 ];
 
-const root = new URL("../library/samples/", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../library/samples/", import.meta.url));
 const entries = scenes.map((scene, index) => {
   const pixels = Buffer.alloc(width * height * 3);
   for (let y = 0; y < height; y += 1) {

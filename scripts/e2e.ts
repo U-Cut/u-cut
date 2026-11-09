@@ -1,10 +1,12 @@
 /// <reference lib="dom" />
 // Uses U-Cut the way a person does, in a real browser, and checks each step.
 // Run with: pnpm test:e2e [folder-for-screenshots]
+
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import puppeteer, { type Page } from "puppeteer-core";
 import { appChange, appReel } from "../packages/engine/src/mcp/app-link.ts";
 
@@ -17,7 +19,7 @@ const h264 =
 const port = 4198;
 const base = `http://localhost:${port}`;
 const shots = process.argv[2] ?? "";
-const engine = new URL("../packages/engine/src/bin.ts", import.meta.url).pathname;
+const engine = fileURLToPath(new URL("../packages/engine/src/bin.ts", import.meta.url));
 
 function chromePath(): string {
   if (process.env.CHROME_PATH) return process.env.CHROME_PATH;

@@ -1,13 +1,15 @@
 // Draws apps/mac/Icon/AppIcon.svg at every size macOS asks for and packs them into AppIcon.icns.
 // Run with: pnpm exec tsx scripts/make-icon.ts
+
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer-core";
 import { browserPath } from "../packages/engine/src/setup/parts.ts";
 
-const folder = new URL("../apps/mac/Icon/", import.meta.url).pathname;
+const folder = fileURLToPath(new URL("../apps/mac/Icon/", import.meta.url));
 const svg = readFileSync(join(folder, "AppIcon.svg"), "utf8");
 const executablePath = process.env.CHROME_PATH ?? browserPath();
 if (!executablePath) throw new Error("Run `ucut setup` first, or set CHROME_PATH.");

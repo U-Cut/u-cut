@@ -4,11 +4,13 @@
 //
 //   pnpm registry          writes registry/index.json
 //   pnpm registry --check  fails if it's out of date, which CI does
+
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = new URL("..", import.meta.url).pathname;
+const root = fileURLToPath(new URL("..", import.meta.url));
 export const registryPath = join(root, "registry/index.json");
 
 /** How each style is made. Most cut photos to music; three are made by their own flows. */

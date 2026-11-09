@@ -1,7 +1,9 @@
 // Synthesises the starter tracks in library/music. Run with: pnpm exec tsx scripts/make-music.ts
 // Everything here is generated from this file, so the tracks are dedicated to CC0.
+
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 const rate = 44100;
 const seconds = 60;
@@ -384,7 +386,7 @@ function render(song: Song) {
   return { pcm, length: Number((length / rate).toFixed(3)) };
 }
 
-const root = new URL("../library/music/", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../library/music/", import.meta.url));
 const entries = songs.map((song) => {
   const { pcm, length } = render(song);
   const file = `${song.vibe}.m4a`;

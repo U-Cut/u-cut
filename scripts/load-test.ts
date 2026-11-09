@@ -1,9 +1,11 @@
 // Simulates many people using one U-Cut server at the same moment, and reports what they'd feel.
 // Run with: pnpm load-test [--users 20] [--seconds 4] [--slots 2]
+
 import { type ChildProcess, spawn } from "node:child_process";
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { planRules } from "@u-cut/planner-rules";
 import type { BeatGrid, MediaItem, TemplateManifest } from "@u-cut/schema";
@@ -19,8 +21,8 @@ const { values } = parseArgs({
 const users = Number(values.users);
 const seconds = Number(values.seconds);
 const base = `http://localhost:${values.port}`;
-const samples = new URL("../library/samples/", import.meta.url).pathname;
-const engine = new URL("../packages/engine/src/bin.ts", import.meta.url).pathname;
+const samples = fileURLToPath(new URL("../library/samples/", import.meta.url));
+const engine = fileURLToPath(new URL("../packages/engine/src/bin.ts", import.meta.url));
 
 interface Catalog {
   templates: { manifest: TemplateManifest }[];

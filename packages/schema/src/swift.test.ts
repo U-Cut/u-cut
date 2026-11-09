@@ -1,14 +1,15 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { generateSwift, swiftOutputPath } from "../scripts/gen-swift.ts";
 import { EditPlan, MediaItem, StyleRecipe, TemplateManifest, validate } from "./index.ts";
 
-const repo = new URL("../../../", import.meta.url).pathname;
+const repo = fileURLToPath(new URL("../../../", import.meta.url));
 const hasSwift = process.platform === "darwin" && spawnSync("swift", ["--version"]).status === 0;
 
 function fixturePath(name: string): string {
-  return new URL(`../fixtures/${name}.json`, import.meta.url).pathname;
+  return fileURLToPath(new URL(`../fixtures/${name}.json`, import.meta.url));
 }
 
 describe("generated Swift types", () => {

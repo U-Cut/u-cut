@@ -2,6 +2,14 @@
 
 Every release of U-Cut, newest first. Each version's section becomes its release notes.
 
+## [0.1.1]
+
+A fix for the downloadable app. Use this version instead of 0.1.0.
+
+### Fixed
+
+- **The app couldn't find its styles, music or library.** It runs its engine from `~/Library/Application Support/U-Cut`, and the engine read the space in that folder's name as `%20`. 0.1.0 opened but couldn't make reels. The release check now runs the engine from that same folder, so this can't slip through again.
+
 ## [0.1.0]
 
 The first release you can download. U-Cut turns photos, clips, screen recordings or a sentence into a finished vertical reel, cut to music, on your own Mac.

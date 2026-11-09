@@ -1,6 +1,6 @@
 {
   "name": "@u-cut/compose",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Turns an EditPlan into the composition that both the preview and the render use.",
   "license": "Apache-2.0",
   "type": "module",

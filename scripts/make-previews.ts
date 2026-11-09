@@ -2,12 +2,14 @@
 // gallery shows each style moving. Run with:
 //   pnpm exec tsx --conditions=source scripts/make-previews.ts [template ids...]
 // It renders through the real engine, so `ucut setup` must have run. Each GIF is kept under 2 MB.
+
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readdirSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = new URL("..", import.meta.url).pathname;
+const root = fileURLToPath(new URL("..", import.meta.url));
 const work = mkdtempSync(join(tmpdir(), "ucut-previews-"));
 // Everything the engine makes goes into a throwaway folder, not your reels.
 process.env.UCUT_HOME = join(work, "home");

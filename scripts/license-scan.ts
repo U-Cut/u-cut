@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, relative } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { unsafeCss } from "../packages/engine/src/css-safety.ts";
 
 /** Non-permissive packages we accept. See docs/decisions/0009-licence-exceptions.md. */
@@ -178,7 +178,7 @@ export function scanDependencies(root: string): ScanResult {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const root = new URL("..", import.meta.url).pathname;
+  const root = fileURLToPath(new URL("..", import.meta.url));
   const assets = scanAssets(root);
   const dependencies = scanDependencies(root);
   const findings = [...assets.findings, ...dependencies.findings];
