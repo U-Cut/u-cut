@@ -33,10 +33,12 @@ import {
   fontCss,
   fontsDir,
   loadScenes,
+  loadSounds,
   loadTemplates,
   loadTracks,
   musicDir,
   samplesDir,
+  sfxDir,
   trackBeats,
 } from "../library.ts";
 import { defaultExcludedScenes } from "../make.ts";
@@ -44,12 +46,13 @@ import { homeDir, jobsDir, repoRoot } from "../paths.ts";
 import { mediaKind, probe } from "../probe.ts";
 import { readRecording } from "../recording.ts";
 import { type Quality, renderKey, renderPlan } from "../render.ts";
+import { isPart, setup } from "../setup/index.ts";
 import { isHash, storedFolder, storeStream } from "../store.ts";
 import { type Study, studyReel } from "../study.ts";
+import { bundledRegistry, summaryOf, updateTemplates } from "../templates.ts";
 import { vision } from "../vision.ts";
 import {
   defaultVoice,
-  installVoice,
   type Spoken,
   speak,
   voiceFile,
@@ -145,6 +148,19 @@ const safeName = (name: string) =>
     .replace(/[/\\\0]/g, "_")
     .slice(0, 200);
 
+/** Each style with what the gallery shows. Folders stay private, since guests can see this. */
+function galleryTemplates() {
+  const listed = new Map((bundledRegistry()?.templates ?? []).map((entry) => [entry.id, entry]));
+  return loadTemplates().map(({ manifest, css, folder, added }) => ({
+    manifest,
+    css,
+    summary: summaryOf(folder),
+    preview: `/templates/${manifest.id}/preview.gif?v=${manifest.version}`,
+    madeBy: added ? "photos" : (listed.get(manifest.id)?.madeBy ?? "photos"),
+    ...(added ? { added: true } : {}),
+  }));
+}
+
 export function createApp(options: ServerOptions) {
   const app = new Hono<{ Variables: { session: string; local: boolean } }>();
   const capacity = options.capacity ?? measureCapacity();
@@ -157,7 +173,6 @@ export function createApp(options: ServerOptions) {
   // Listening uses every core, so recordings take turns.
   const listening = new Scheduler<void>({ slots: () => 1 });
   const speaking = new Scheduler<Spoken[]>({ slots: () => 1 });
-  let voiceInstall: Promise<void> | null = null;
   const webRoot = options.webRoot ?? join(repoRoot, "apps/web/dist");
   const maxUpload = options.maxUploadBytes ?? defaultMaxUpload;
   /** Seconds of work per second of finished reel, learned from real renders on this machine. */
@@ -400,13 +415,14 @@ export function createApp(options: ServerOptions) {
 
   app.get("/api/catalog", async (c) =>
     c.json({
-      templates: loadTemplates(),
+      templates: galleryTemplates(),
       tracks: loadTracks().map((track) => ({ ...track, beats: trackBeats(track) })),
       fontCss: fontCss((file) => `/fonts/${file}`),
       samples: samples.map(publicItem),
       scenes: [...loadScenes(), { id: "other", label: "Other", group: "other" }],
       sorting: Boolean(vision() && sceneModel()),
       voice: { ready: voiceReady(), voices, defaultVoice, size: voiceSize },
+      setup: setup.status(),
       local: fromThisMac(c),
       uses: await choicesFor(c, connectionDeps),
     }),
@@ -724,16 +740,55 @@ export function createApp(options: ServerOptions) {
     return c.json({ lines: spoken });
   });
 
-  // Downloads about 500 MB, so it waits to be asked and only the person at this Mac can ask.
+  // Adds styles from the registry on GitHub. Only the person at this Mac can ask, since it goes online.
+  app.post("/api/templates/update", async (c) => {
+    if (!fromThisMac(c)) {
+      return c.json({ error: "Only the person running U-Cut can look for new styles." }, 403);
+    }
+    try {
+      return c.json(await updateTemplates());
+    } catch (error) {
+      return c.json({ error: (error as Error).message }, 502);
+    }
+  });
+
+  app.get("/templates/:id/preview.gif", async (c) => {
+    const template = loadTemplates().find((entry) => entry.manifest.id === c.req.param("id"));
+    if (!template) return notFound(c);
+    return sendFile(c, join(template.folder, "preview.gif"), { type: "image/gif" });
+  });
+
+  // What U-Cut downloads once. Only the person at this Mac can start or stop it.
+  app.get("/api/setup", (c) => c.json({ parts: setup.status(), local: fromThisMac(c) }));
+
+  app.post("/api/setup/:part", (c) => {
+    if (!fromThisMac(c)) {
+      return c.json({ error: "Only the person running U-Cut can add this." }, 403);
+    }
+    const id = c.req.param("part");
+    if (!isPart(id)) return c.json({ error: "U-Cut has nothing to add by that name." }, 404);
+    // The status reports how it ends, so a failure here is already shown to whoever is waiting.
+    setup.start(id).catch(() => {});
+    return c.json(setup.statusOf(id));
+  });
+
+  app.post("/api/setup/:part/stop", (c) => {
+    if (!fromThisMac(c)) {
+      return c.json({ error: "Only the person running U-Cut can stop this." }, 403);
+    }
+    const id = c.req.param("part");
+    if (!isPart(id)) return c.json({ error: "U-Cut has nothing to add by that name." }, 404);
+    setup.stop(id);
+    return c.json(setup.statusOf(id));
+  });
+
+  // Kept for assistants and scripts written before /api/setup. It waits until the voice is ready.
   app.post("/api/voice/install", async (c) => {
     if (!fromThisMac(c)) {
       return c.json({ error: "Only the person running U-Cut can add the voice." }, 403);
     }
-    voiceInstall ??= installVoice().finally(() => {
-      voiceInstall = null;
-    });
     try {
-      await voiceInstall;
+      await setup.start("voice");
       return c.json({ ok: true });
     } catch (error) {
       return c.json({ error: (error as Error).message }, 500);
@@ -747,6 +802,10 @@ export function createApp(options: ServerOptions) {
     if (!result.ok) return c.json({ error: result.errors.join(" ") }, 422);
     if (!loadTracks().some((track) => track.file === result.value.music.src)) {
       return c.json({ error: "That music isn't in U-Cut's library." }, 422);
+    }
+    const sounds = new Set(loadSounds().map((sound) => sound.file));
+    if (result.value.sfx.some((sound) => !sounds.has(sound.src))) {
+      return c.json({ error: "That sound effect isn't in U-Cut's library." }, 422);
     }
     job.plan = result.value;
     await persist(job);
@@ -762,6 +821,28 @@ export function createApp(options: ServerOptions) {
     ) as Quality;
     const plan = job.plan;
     if (!plan) return c.json({ error: "There's no reel to export yet." }, 409);
+    const exporter = setup.statusOf("browser");
+    if (!exporter.ready) {
+      if (!fromThisMac(c)) {
+        return c.json(
+          { error: "The Mac running U-Cut is still getting the exporter. Try again soon." },
+          409,
+        );
+      }
+      // A download that stopped or failed starts again here, carrying on from what arrived.
+      const retrying = exporter.state === "idle" || exporter.state === "failed";
+      if (retrying) setup.start("browser").catch(() => {});
+      const megabytes = (bytes: number) => Math.round(bytes / 1024 ** 2);
+      const sofar = `${megabytes(exporter.done)} of ${megabytes(exporter.bytes)} MB`;
+      return c.json(
+        {
+          error: retrying
+            ? `U-Cut is getting the exporter again (${sofar}). Export once it's ready.`
+            : `U-Cut is still getting the exporter (${sofar}). Export once it's ready.`,
+        },
+        409,
+      );
+    }
     if ((await freeDisk(homeDir())) < minimumFreeDisk) {
       return c.json(
         { error: "This Mac is almost out of disk space. Free some up and try again." },
@@ -879,6 +960,12 @@ export function createApp(options: ServerOptions) {
     const file = loadTracks().find((track) => track.file === c.req.param("file"));
     if (!file) return notFound(c);
     return sendFile(c, join(musicDir, file.file), { type: "audio/mp4" });
+  });
+
+  app.get("/sfx/:file", async (c) => {
+    const file = loadSounds().find((sound) => sound.file === c.req.param("file"));
+    if (!file) return notFound(c);
+    return sendFile(c, join(sfxDir, file.file), { type: "audio/mp4", cacheForever: true });
   });
 
   app.get("/fonts/:file", async (c) => {

@@ -35,6 +35,7 @@ export class ReelPlayer {
   private frame = 0;
   private muted = false;
   private readonly voices = new Map<string, HTMLAudioElement>();
+  private effects: { sound: EditPlan["sfx"][number]; audio: HTMLAudioElement }[] = [];
 
   constructor(host: HTMLElement) {
     this.shadow = host.shadowRoot ?? host.attachShadow({ mode: "open" });
@@ -46,7 +47,7 @@ export class ReelPlayer {
     composition: Composition,
     plan: EditPlan,
     musicUrl: string,
-    options: { keepTime?: boolean } = {},
+    options: { keepTime?: boolean; soundUrl?: (src: string) => string } = {},
   ) {
     const trackChanged = !this.audio.src.endsWith(musicUrl);
     this.plan = plan;
@@ -70,6 +71,7 @@ export class ReelPlayer {
       this.audio.load();
     }
     this.loadVoices(plan);
+    this.loadEffects(plan, options.soundUrl ?? ((src) => `/sfx/${src}`));
     if (!options.keepTime) this.time = 0;
     this.time = Math.min(this.time, Math.max(0, plan.duration - 0.01));
     this.syncAudio(true);
@@ -91,6 +93,18 @@ export class ReelPlayer {
       audio.muted = this.muted;
       this.voices.set(src, audio);
     }
+  }
+
+  /** One player per sound effect. The browser caches the files, so reloading them is cheap. */
+  private loadEffects(plan: EditPlan, soundUrl: (src: string) => string) {
+    for (const effect of this.effects) effect.audio.pause();
+    this.effects = plan.sfx.map((sound) => {
+      const audio = new Audio(soundUrl(sound.src));
+      audio.preload = "auto";
+      audio.muted = this.muted;
+      audio.volume = Math.min(1, sound.vol);
+      return { sound, audio };
+    });
   }
 
   /** Changes the words on screen without touching anything else. */
@@ -116,6 +130,7 @@ export class ReelPlayer {
     cancelAnimationFrame(this.frame);
     this.audio.pause();
     for (const voice of this.voices.values()) voice.pause();
+    for (const effect of this.effects) effect.audio.pause();
     for (const video of this.videos) video.element.pause();
     this.onPlayingChange(false);
   }
@@ -135,6 +150,7 @@ export class ReelPlayer {
     this.muted = muted;
     this.audio.muted = muted;
     for (const voice of this.voices.values()) voice.muted = muted;
+    for (const effect of this.effects) effect.audio.muted = muted;
     for (const { element } of this.videos) {
       element.muted = muted || element.dataset.hasAudio !== "true";
     }
@@ -152,6 +168,8 @@ export class ReelPlayer {
     this.pause();
     for (const voice of this.voices.values()) voice.pause();
     this.voices.clear();
+    for (const effect of this.effects) effect.audio.pause();
+    this.effects = [];
     this.audio.removeAttribute("src");
     this.audio.load();
     this.shadow.innerHTML = "";
@@ -186,10 +204,24 @@ export class ReelPlayer {
     }
   }
 
+  /** Each effect plays while the playhead is inside it, the way the render mixes it. */
+  private syncEffects(force: boolean) {
+    for (const { sound, audio } of this.effects) {
+      const target = this.time - sound.at;
+      const sounding = target >= 0 && target < sound.length;
+      if (sounding && (force || Math.abs(audio.currentTime - target) > driftLimit)) {
+        if (audio.readyState > 0) audio.currentTime = target;
+      }
+      if (sounding && this.playing && audio.paused) void audio.play().catch(() => {});
+      if ((!sounding || !this.playing) && !audio.paused) audio.pause();
+    }
+  }
+
   private syncAudio(force: boolean) {
     const plan = this.plan;
     if (!plan) return;
     this.syncVoices(force);
+    this.syncEffects(force);
     const segment = musicSegments(plan).find(
       (candidate) => this.time >= candidate.at && this.time < candidate.at + candidate.length,
     );

@@ -1,8 +1,9 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { type BeatGrid, TemplateManifest, type Vibe, validate } from "@u-cut/schema";
 import { parse } from "yaml";
-import { repoRoot } from "./paths.ts";
+import { unsafeCss } from "./css-safety.ts";
+import { homeDir, repoRoot } from "./paths.ts";
 
 export interface Track {
   file: string;
@@ -21,18 +22,73 @@ export interface FontFile {
 export interface Template {
   manifest: TemplateManifest;
   css: string;
+  /** Its folder, where its README and preview live. */
+  folder: string;
+  /** Added after U-Cut was installed, with `ucut templates update`. */
+  added?: boolean;
 }
 
 const libraryDir = join(repoRoot, "library");
 export const musicDir = join(libraryDir, "music");
 export const fontsDir = join(libraryDir, "fonts");
+export const sfxDir = join(libraryDir, "sfx");
 export const samplesDir = join(libraryDir, "samples");
 const templatesDir = join(repoRoot, "templates");
+/** Styles added after installing, which take over from a built-in one with an older version. */
+export const addedTemplatesDir = () => join(homeDir(), "templates");
+
+/** "1.10.0" is newer than "1.9.2". */
+export function newerVersion(a: string, b: string): boolean {
+  const [x, y] = [a, b].map((version) => version.split(".").map(Number));
+  for (let index = 0; index < 3; index += 1) {
+    const difference = (x?.[index] ?? 0) - (y?.[index] ?? 0);
+    if (difference !== 0) return difference > 0;
+  }
+  return false;
+}
+
+export { unsafeCss } from "./css-safety.ts";
+
+function readTemplates(folder: string, label: string, added: boolean): Template[] {
+  if (!existsSync(folder)) return [];
+  return readdirSync(folder, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
+    .filter((entry) => !entry.name.endsWith(".partial") && !entry.name.endsWith(".old"))
+    .flatMap((entry) => {
+      const dir = join(folder, entry.name);
+      try {
+        const where = `${label}/${entry.name}/template.json`;
+        const result = validate(TemplateManifest, readJson(join(dir, "template.json")), where);
+        if (!result.ok) throw new Error(result.errors.join(" "));
+        const css = readFileSync(join(dir, "style.css"), "utf8");
+        const problem = unsafeCss(css);
+        if (problem) throw new Error(`${label}/${entry.name}: ${problem}.`);
+        return [{ manifest: result.value, css, folder: dir, ...(added ? { added: true } : {}) }];
+      } catch (error) {
+        // A broken added style is left out, so one bad download never stops the rest. A broken
+        // built-in style is a bug in U-Cut, so it stops here.
+        if (added) return [];
+        throw error;
+      }
+    });
+}
 
 const readJson = <T>(path: string) => JSON.parse(readFileSync(path, "utf8")) as T;
 
 export function loadTracks(): Track[] {
   return readJson<Track[]>(join(musicDir, "assets.json"));
+}
+
+export interface SoundFile {
+  file: string;
+  licence: string;
+  use: string;
+  length: number;
+}
+
+/** U-Cut's own sound effects, from library/sfx/assets.json. */
+export function loadSounds(): SoundFile[] {
+  return readJson<SoundFile[]>(join(sfxDir, "assets.json"));
 }
 
 export function loadFonts(): FontFile[] {
@@ -60,16 +116,17 @@ export function fontCss(url: (file: string) => string): string {
 }
 
 export function loadTemplates(): Template[] {
-  return readdirSync(templatesDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => {
-      const folder = join(templatesDir, entry.name);
-      const label = `templates/${entry.name}/template.json`;
-      const result = validate(TemplateManifest, readJson(join(folder, "template.json")), label);
-      if (!result.ok) throw new Error(result.errors.join(" "));
-      return { manifest: result.value, css: readFileSync(join(folder, "style.css"), "utf8") };
-    })
-    .sort((a, b) => a.manifest.name.localeCompare(b.manifest.name));
+  const byId = new Map<string, Template>();
+  for (const template of readTemplates(templatesDir, "templates", false)) {
+    byId.set(template.manifest.id, template);
+  }
+  for (const template of readTemplates(addedTemplatesDir(), "added templates", true)) {
+    const builtIn = byId.get(template.manifest.id);
+    if (!builtIn || newerVersion(template.manifest.version, builtIn.manifest.version)) {
+      byId.set(template.manifest.id, template);
+    }
+  }
+  return [...byId.values()].sort((a, b) => a.manifest.name.localeCompare(b.manifest.name));
 }
 
 export interface Scene {

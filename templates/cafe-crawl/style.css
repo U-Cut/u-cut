@@ -1,0 +1,64 @@
+/* The title sits low, like a menu board. Each new stop gets a paper tag in the top corner. */
+.text-title {
+  left: 10%;
+  right: 10%;
+  bottom: calc(380 * var(--unit));
+  color: #fff;
+  font-size: calc(104 * var(--unit));
+  line-height: 0.98;
+  text-shadow: 0 calc(2 * var(--unit)) calc(26 * var(--unit)) rgba(0, 0, 0, 0.6);
+}
+.text-stop {
+  left: 10%;
+  top: 11%;
+  padding: calc(12 * var(--unit)) calc(24 * var(--unit));
+  border-radius: calc(6 * var(--unit));
+  background: #f3e7d3;
+  color: #2a170b;
+  font-family: "Inter", "Noto Sans Devanagari", sans-serif;
+  font-size: calc(44 * var(--unit));
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 calc(6 * var(--unit)) calc(24 * var(--unit)) rgba(0, 0, 0, 0.35);
+}
+.vibe-chill .text-title {
+  font-family: "Inter", "Noto Sans Devanagari", sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.vibe-hype .text-title {
+  font-family: "Archivo Black", "Noto Sans Devanagari", sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+}
+.vibe-hype .text-stop {
+  background: #fff;
+  color: #000;
+  font-family: "Archivo Black", "Noto Sans Devanagari", sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+.vibe-cinematic .text-title {
+  font-family: "Playfair Display", "Noto Sans Devanagari", serif;
+  font-style: italic;
+  font-weight: 500;
+}
+.vibe-cinematic .text-stop {
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  color: #fff;
+  font-family: "Playfair Display", "Noto Sans Devanagari", serif;
+  font-style: italic;
+  font-weight: 500;
+  text-shadow: 0 0 calc(24 * var(--unit)) rgba(0, 0, 0, 0.6);
+}
+.vibe-nostalgic .text-title,
+.vibe-nostalgic .text-stop {
+  font-family: "Caveat", "Noto Sans Devanagari", cursive;
+  font-weight: 700;
+}
+.vibe-nostalgic .text-stop {
+  font-size: calc(58 * var(--unit));
+}

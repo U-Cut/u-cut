@@ -1,9 +1,12 @@
 {
   "name": "@u-cut/schema",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Shared data shapes for U-Cut, as zod schemas.",
   "license": "Apache-2.0",
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "source": "./src/index.ts",

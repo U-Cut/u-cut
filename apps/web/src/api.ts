@@ -18,7 +18,18 @@ export interface Track {
 }
 
 export interface Catalog {
-  templates: { manifest: TemplateManifest; css: string }[];
+  templates: {
+    manifest: TemplateManifest;
+    css: string;
+    /** One line on what it's for, from its README. */
+    summary: string;
+    /** Its moving preview. */
+    preview: string;
+    /** How it's made. Only photo styles appear in the gallery. */
+    madeBy: "photos" | "recording" | "words" | "reference";
+    /** Added after installing, from U-Cut's library on GitHub. */
+    added?: boolean;
+  }[];
   tracks: Track[];
   fontCss: string;
   samples: MediaItem[];
@@ -33,8 +44,25 @@ export interface Catalog {
   };
   /** Whether this browser is on the Mac running U-Cut, which is the only place connections change. */
   local: boolean;
+  /** What U-Cut downloads once: the exporter, and captions and the voice when asked. */
+  setup: SetupPart[];
   /** What writes, reads aloud and listens for this person. */
   uses: Uses;
+}
+
+export type SetupId = "browser" | "speech" | "voice";
+
+export interface SetupPart {
+  id: SetupId;
+  name: string;
+  purpose: string;
+  bytes: number;
+  required: boolean;
+  ready: boolean;
+  state: "idle" | "working" | "waiting" | "failed";
+  done: number;
+  step?: string;
+  error?: string;
 }
 
 export interface Uses {
@@ -183,7 +211,14 @@ export const api = {
       method: "POST",
       ...json({ lines, voice }),
     }),
-  installVoice: () => request("/api/voice/install", { method: "POST" }),
+  setup: () => request<{ parts: SetupPart[]; local: boolean }>("/api/setup"),
+  updateTemplates: () =>
+    request<{ added: string[]; updated: string[]; skipped: { id: string; reason: string }[] }>(
+      "/api/templates/update",
+      { method: "POST" },
+    ),
+  startSetup: (id: SetupId) => request<SetupPart>(`/api/setup/${id}`, { method: "POST" }),
+  stopSetup: (id: SetupId) => request<SetupPart>(`/api/setup/${id}/stop`, { method: "POST" }),
   saveDemo: (id: string, demo: Demo) =>
     request(`/api/jobs/${id}/demo`, { method: "PUT", ...json(demo) }),
   savePlan: (id: string, plan: EditPlan) =>

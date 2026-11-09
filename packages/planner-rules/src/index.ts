@@ -11,6 +11,7 @@ export {
   spreadWords,
 } from "./demo.ts";
 export { replaceShot, setTitle, swapShots } from "./edit.ts";
+export { clockTime, shotLabels } from "./labels.ts";
 export { PlanError, planRules, usableItems } from "./plan.ts";
 export {
   defaultReelLength,
@@ -33,6 +34,7 @@ export {
 } from "./recipe.ts";
 export { seededRng } from "./rng.ts";
 export { lineLength, planScript, type ScriptPlanInput } from "./script.ts";
+export { soundEffects, soundsFor } from "./sfx.ts";
 export { type VibeProfile, vibes } from "./vibes.ts";
 
 export const rulesPlanner: Planner = {

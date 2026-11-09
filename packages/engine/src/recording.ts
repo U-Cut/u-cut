@@ -225,30 +225,3 @@ export async function readRecording(
   const moments = findMoments({ duration: item.duration ?? 0, words: spelled, windows, grid });
   return { sound, words: spelled, moments, speech };
 }
-
-/** Fetches the speech model by asking for it on a moment of silence. */
-export async function installSpeech(): Promise<void> {
-  const folder = await mkdtemp(join(tmpdir(), "ucut-speech-"));
-  try {
-    const silence = join(folder, "silence.wav");
-    await run("ffmpeg", [
-      "-hide_banner",
-      "-loglevel",
-      "error",
-      "-f",
-      "lavfi",
-      "-i",
-      "anullsrc=r=16000:cl=mono",
-      "-t",
-      "1",
-      silence,
-    ]);
-    await hf(["transcribe", silence, "--model", speechModel, "--json"], {
-      cwd: folder,
-      timeoutMs: 1_800_000,
-      env: { HYPERFRAMES_NO_AUTO_INSTALL: "", HYPERFRAMES_NO_OPTIONAL_INSTALL: "" },
-    });
-  } finally {
-    await rm(folder, { recursive: true, force: true });
-  }
-}

@@ -12,7 +12,7 @@
 
 ## Status
 
-Updated 2026-11-01.
+Updated 2026-11-09.
 
 | Phase                                  | State                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -23,7 +23,7 @@ Updated 2026-11-01.
 | 4. Reference reels                     | Done, on generated reels ([ADR 0017](decisions/0017-reference-reels-keep-structure-only.md)). Still to do: test on real saved reels, and detect transitions beyond cuts and end fades                                                                                                                                                                                                                                                                                                                                                                                                             |
 | 5. Screen recordings and plain English | Done, with gaps. Demos ([ADR 0018](decisions/0018-demos-from-speech-and-screen-changes.md)) are tested on generated and narrated recordings, and cursor and click bursts and speech emphasis aren't done. Written reels ([ADR 0019](decisions/0019-written-reels-rules-first.md)) use a fixed-pattern writer until Phase 6                                                                                                                                                                                                                                                                        |
 | 6. Planner lanes                       | Done, with gaps. Assistants connect through `ucut mcp` and the Claude Code plugin ([ADR 0022](decisions/0022-assistants-connect-through-mcp.md)), and can change the reel open in the app. Claude writes scripts with the person's own key, and ElevenLabs, Deepgram, OpenAI and Voice Studio can voice or listen ([ADR 0021](decisions/0021-connections-are-opt-in-and-stay-on-this-mac.md), [ADR 0023](decisions/0023-voice-studio-is-used-only-where-installed.md)). Deepgram is tested live for reading aloud and listening. Claude, ElevenLabs, OpenAI and a running Voice Studio aren't yet |
-| 7. Ship                                | Partly done: three of eight templates, and an install script. No `.dmg` yet                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 7. Ship                                | Done, with gaps. A downloadable app that carries its own tools ([ADR 0024](decisions/0024-the-app-carries-its-own-tools.md)), a tag-triggered release, eight templates with previews, sound effects, looks and a registry ([ADR 0025](decisions/0025-styles-sound-and-looks.md)), and the guides. Not notarized, and the first public release waits for a tag. [The review against §10](#review-against-the-brief-10) lists what's short                                                                                                                                                          |
 
 **Added since the brief:** `ucut serve` with a fair export queue, `--lan` sharing, Docker, a 20-person load test ([ADR 0013](decisions/0013-browser-plans-server-exports.md)), and a website with a live reel ([ADR 0020](decisions/0020-the-website-is-static.md)).
 
@@ -80,9 +80,8 @@ All run on the owner's Mac (A18 Pro, 8 GB, macOS 26.5) with throwaway projects.
 
 ## Questions for the owner
 
-Nothing blocks Phase 2.
-
-1. By Phase 7: will there be a paid Apple Developer account for signed releases?
+1. Will there be a paid Apple Developer account for signed releases? Phase 7 ships unsigned and notarizes as soon as its secrets are added ([ADR 0024](decisions/0024-the-app-carries-its-own-tools.md)).
+2. When should `v0.1.0` be tagged? Tagging publishes the first public download.
 
 ---
 
@@ -241,7 +240,41 @@ Worker count derives from free memory. Tests: `hf.ts` rejects `publish` and `--q
 
 ## Phase 7: Ship
 
-- **7.1** `.dmg` build and tag-triggered release with changelog.
-- **7.2** 8 starter templates with preview GIFs. A CC0 pack in `library/sfx` and `library/luts`, and vibe-driven grades and sound effects. CI builds `registry/index.json`, and the app reads it.
-- **7.3** User guide, contributor guide, and how to open an unsigned app.
-- **7.4** Full review against §10. Record any gap.
+- [x] **7.1** `.dmg` build and tag-triggered release with changelog.
+  - `scripts/package-mac.sh` builds `dist/U-Cut.app` with Node 24, the engine, an LGPL FFmpeg 9.0.2 with zimg, whisper-cli and `ucut-vision` inside, and `dist/U-Cut.dmg`.
+  - On first launch, the app copies them into `~/Library/Application Support/U-Cut` and downloads only the rendering browser. That download is resumable and checksummed, with a progress screen. Captions and the voice download the same way, when asked.
+  - `scripts/check-package.sh` proves the app works with an empty home folder and no Homebrew.
+  - `.github/workflows/release.yml` builds, checks, optionally signs and notarizes, and publishes on a `v*` tag. Its notes come from `CHANGELOG.md`.
+  - [ADR 0024](decisions/0024-the-app-carries-its-own-tools.md).
+- [x] **7.2** Eight starter templates with preview GIFs.
+  - Café crawl and day in my life are new, with stop tags and time stamps.
+  - Six CC0 sound effects in `library/sfx`, placed by each vibe and played in the preview.
+  - Four CC0 looks in `library/luts`, made from the same CSS grades the render uses.
+  - `registry/index.json`, which `pnpm check` keeps current. The app's style gallery reads it, and `ucut templates update` adds new styles from it without a new app.
+  - [ADR 0025](decisions/0025-styles-sound-and-looks.md).
+- [x] **7.3** [User guide](GUIDE.md), the contributor guide in [CONTRIBUTING.md](../CONTRIBUTING.md), and [how to open the app the first time](INSTALL.md#open-it-the-first-time) on macOS 15 and later.
+- [x] **7.4** Full review against §10, below.
+
+### Review against the brief (§10)
+
+Measured on 2026-11-09 on the owner's Mac (A18 Pro, 8 GB, macOS 26.5), using the packaged app's own tools, with an empty home folder and nothing from Homebrew on the PATH.
+
+| Area        | Target                                                                               | Result                                                                                                                                                                                        | Met?          |
+| ----------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| Classifier  | ≥ 85% top-1 on the 10 core scenes, 300+ labelled items                               | 65% on unseen places ([ADR 0016](decisions/0016-scenes-from-apple-vision.md)). Not re-measured this phase                                                                                     | **No**        |
+| Speed       | Classify 500 photos ≤ 2 min                                                          | 21 s for 500 photos. They were variations of the samples, so treat it as a speed test only                                                                                                    | Yes           |
+| Speed       | A 30 s draft ≤ 60 s, final ≤ 3 min (M1, 16 GB)                                       | A 28 s reel from 30 photos and 2 clips: draft 56 s, final 56 s, including reading the media for the first time. On an 8 GB Mac                                                                | Yes           |
+| First run   | Setup on a clean Mac with only the app; resumes after a drop                         | One 93 MB download. Stopped at 20 MB and resumed from there. The first launch copies the tools in 9 s. Tested with an empty home folder, not yet on a second Mac                              | Yes, see gaps |
+| Output      | 1080×1920, 30 fps, H.264 + AAC, −14 LUFS, ≤ −1 dBTP, captions in the title-safe area | 1080×1920, 30 fps, H.264 + AAC 48 kHz, −14.2 LUFS, −1.5 dBTP, with sound effects. Labels and captions sit inside the 80% area                                                                 | Yes           |
+| Reliability | Byte-identical plan, visually identical render                                       | `pnpm test:int` checks both. All its tests also pass with the app's own FFmpeg                                                                                                                | Yes           |
+| Privacy     | No network in default lanes, enforced by a test                                      | `pnpm test:privacy` makes every kind of reel under `sandbox-exec` with the network denied. The app goes online only for the downloads in the [user guide](GUIDE.md#what-goes-online-and-when) | Yes           |
+
+**Gaps recorded:**
+
+- **Notarization** needs a paid Apple Developer account. Until then, people approve the app once in System Settings. The release workflow notarizes as soon as the account's secrets are added.
+- **A real first run on a second Mac** hasn't happened. Gatekeeper's approval screen, followed by the app running its copied tools, was only simulated. The first published release should be opened on a Mac that has never had U-Cut.
+- **Sorting accuracy** is 65% against 85%. Next: SigLIP on the same held-out set.
+- **Previews** are rendered by a script and committed, not by CI on each push ([ADR 0025](decisions/0025-styles-sound-and-looks.md)).
+- **Sound effects and music** are synthesised. Recorded CC0 sounds would be better.
+- **The previews in the gallery always move,** even for people who ask their Mac to reduce motion.
+- **Live tests** of Claude, ElevenLabs, OpenAI and Voice Studio still need the owner's go-ahead, since they spend credits.

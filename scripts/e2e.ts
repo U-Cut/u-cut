@@ -8,6 +8,12 @@ import { join } from "node:path";
 import puppeteer, { type Page } from "puppeteer-core";
 import { appChange, appReel } from "../packages/engine/src/mcp/app-link.ts";
 
+// The Mac app's FFmpeg has no libx264, so test clips use Apple's encoder on a Mac.
+const h264 =
+  process.platform === "darwin"
+    ? ["-c:v", "h264_videotoolbox", "-allow_sw", "1", "-b:v", "6M"]
+    : ["-c:v", "libx264"];
+
 const port = 4198;
 const base = `http://localhost:${port}`;
 const shots = process.argv[2] ?? "";
@@ -54,7 +60,7 @@ function makeTestReel(path: string) {
     "-hide_banner", "-loglevel", "error", "-y", ...inputs,
     "-f", "lavfi", "-i", "aevalsrc=0.8*sin(2*PI*60*t)*exp(-30*mod(t\\,0.5)):d=8:s=48000",
     "-filter_complex", joined, "-map", "[v]", "-map", "16:a",
-    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", path,
+    ...h264, "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", path,
   ]); // biome-ignore format: flags read better in pairs
 }
 
@@ -67,7 +73,7 @@ function makeTestRecording(path: string) {
   execFileSync("ffmpeg", [
     "-hide_banner", "-loglevel", "error", "-y",
     "-f", "lavfi", "-i", `color=c=0x101018:s=1280x720:r=30:d=12,${panels}`,
-    "-c:v", "libx264", "-pix_fmt", "yuv420p", path,
+    ...h264, "-pix_fmt", "yuv420p", path,
   ]); // biome-ignore format: flags read better in pairs
 }
 
@@ -239,6 +245,40 @@ async function main() {
     if (shown !== title) throw new Error(`The title on the reel says "${shown}".`);
     pass("the title appears on the reel as you type");
 
+    await page.click(".style-current");
+    await page.waitForSelector(".gallery[open] .gallery-card img");
+    await page.waitForFunction(
+      () =>
+        [...document.querySelectorAll<HTMLImageElement>(".gallery-card img")].every(
+          (image) => image.complete && image.naturalWidth > 0,
+        ),
+      { timeout: 15_000 },
+    );
+    const styles = await page.$$eval(".gallery-name", (names) =>
+      names.map((name) => name.textContent),
+    );
+    for (const wanted of ["Café crawl", "Day in my life", "Travel montage"]) {
+      if (!styles.includes(wanted)) throw new Error(`The style gallery has no ${wanted}.`);
+    }
+    await snap(page, "3b-styles");
+    await page.$$eval(".gallery-card", (cards) =>
+      (cards.find((card) => card.textContent?.includes("Café crawl")) as HTMLElement).click(),
+    );
+    await page.waitForSelector(".gallery", { hidden: true });
+    const picked = await page.$eval("#style-name", (name) => name.textContent);
+    if (picked !== "Café crawl")
+      throw new Error(`The style says ${picked} after picking Café crawl.`);
+    pass("the style gallery plays each preview and switches the style", `${styles.length} styles`);
+
+    const legends = await page.$$eval(".controls legend", (all) =>
+      all.map((legend) => legend.textContent),
+    );
+    if (!legends.includes("Sound effects")) throw new Error("There's no Sound effects switch.");
+    await clickButton(page, "Off");
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await clickButton(page, "On");
+    pass("sound effects can be switched off and on");
+
     await page.$eval(".title-field input", (input) => (input as HTMLInputElement).blur());
     await clickButton(page, "Connections");
     await page.waitForSelector(".connections .connections-row");
@@ -352,7 +392,12 @@ async function main() {
 
     const reel = join(home, "reel-to-match.mp4");
     makeTestReel(reel);
-    const shotsBefore = await page.$$eval(".shot-tile", (tiles) => tiles.length);
+    // Matching changes the pacing, so the shots' lengths change even when their number doesn't.
+    const pacing = () =>
+      page.$$eval(".shot-tile", (tiles) =>
+        tiles.map((tile) => (tile as HTMLElement).style.flexGrow).join(),
+      );
+    const shotsBefore = await pacing();
     const reelInput = await page.$('input[aria-label="Choose a reel to match"]');
     await reelInput?.uploadFile(reel);
     // Notices fade after seven seconds, so this watches for one instead of reading it at the end.
@@ -369,7 +414,7 @@ async function main() {
     await snap(page, "5d-matched-reel");
     const card = await page.$eval(".recipe-card p", (paragraph) => paragraph.textContent ?? "");
     if (!card.startsWith("Fast, about 0.5 s a shot")) throw new Error(`The card says: ${card}`);
-    const shotsAfter = await page.$$eval(".shot-tile", (tiles) => tiles.length);
+    const shotsAfter = await pacing();
     if (shotsAfter === shotsBefore) throw new Error("Matching a reel didn't change the cut.");
     pass("a reel you love is studied and your reel takes on its rhythm", card);
 

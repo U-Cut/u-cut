@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api, type Catalog } from "./api";
 import { Connections } from "./components/Connections";
+import { GettingReady } from "./components/GettingReady";
 import { Splash } from "./components/Splash";
 import { Start } from "./components/Start";
 import { Studio } from "./components/Studio";
@@ -11,6 +12,8 @@ export function App() {
   const [failure, setFailure] = useState<string | null>(null);
   const [dropping, setDropping] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  // Someone can look around while the exporter downloads. Exporting says when it's ready.
+  const [later, setLater] = useState(false);
   const reel = useReel(catalog);
   const { state, actions } = reel;
 
@@ -57,6 +60,13 @@ export function App() {
   }, [state.notice, actions.dismiss]);
 
   const isFiles = (event: React.DragEvent) => event.dataTransfer.types.includes("Files");
+  const exporter = catalog?.setup.find((part) => part.id === "browser");
+  // Only the person at this Mac can download it, so guests on the network never see this.
+  const gettingReady = Boolean(catalog?.local && exporter && !exporter.ready && !later);
+  const reloadCatalog = useCallback(() => {
+    void api.catalog().then(setCatalog, () => {});
+  }, []);
+  const lookAround = useCallback(() => setLater(true), []);
 
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: the whole window accepts dropped files.
@@ -84,8 +94,15 @@ export function App() {
             <p className="lede">{failure}</p>
           </section>
         </main>
-      ) : !catalog ? null : state.now ? (
-        <Studio catalog={catalog} reel={reel} onConnections={() => setConnecting(true)} />
+      ) : !catalog ? null : gettingReady && exporter ? (
+        <GettingReady exporter={exporter} onReady={reloadCatalog} onLater={lookAround} />
+      ) : state.now ? (
+        <Studio
+          catalog={catalog}
+          reel={reel}
+          onConnections={() => setConnecting(true)}
+          onCatalogChanged={reloadCatalog}
+        />
       ) : (
         <Start
           catalog={catalog}

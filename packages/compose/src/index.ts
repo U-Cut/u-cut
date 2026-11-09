@@ -10,6 +10,7 @@ export interface ComposeInput {
     media(item: MediaItem): string;
     music(src: string): string;
     voice?(src: string): string;
+    sfx?(src: string): string;
   };
   /** The live preview plays the music itself, so it leaves the audio tags out. */
   omitAudio?: boolean;
@@ -185,6 +186,17 @@ function voiceHtml(input: ComposeInput): string {
     .join("\n");
 }
 
+function sfxHtml(input: ComposeInput): string {
+  const sfxUrl = input.assets.sfx;
+  if (!sfxUrl) return "";
+  return input.plan.sfx
+    .map(
+      (sound, index) =>
+        `<audio id="sfx${index}" src="${escapeHtml(sfxUrl(sound.src))}" data-start="${sound.at}" data-duration="${sound.length}" data-media-start="0" data-volume="${sound.vol}" data-timeline-role="sfx" data-track-index="7"></audio>`,
+    )
+    .join("\n");
+}
+
 function cardHtml(input: ComposeInput): string {
   return (input.plan.cards ?? [])
     .map((card, index) => {
@@ -256,6 +268,7 @@ export function composeParts(input: ComposeInput): Composition {
     fadeHtml(plan),
     input.omitAudio ? "" : musicHtml(input),
     input.omitAudio ? "" : voiceHtml(input),
+    input.omitAudio ? "" : sfxHtml(input),
   ]
     .filter(Boolean)
     .join("\n");

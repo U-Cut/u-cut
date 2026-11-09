@@ -6,15 +6,19 @@
 
 ## Get started
 
-You need a Mac with Apple Silicon. Paste this into Terminal:
+You need a Mac with Apple Silicon and macOS 15 or later.
+
+1. Download **[U-Cut.dmg](https://github.com/mayank29deo/U-Cut/releases/latest/download/U-Cut.dmg)** and drag U-Cut into Applications.
+2. Open it. It isn't notarized yet, so macOS asks you to approve it once in System Settings. [Here's how](docs/INSTALL.md#open-it-the-first-time).
+3. U-Cut downloads the one piece it needs to export (93 MB), then it's ready.
+
+No files to hand? Press **Try it with sample photos**. The [user guide](docs/GUIDE.md) covers everything else.
+
+Prefer Terminal? Install with one line, which sets up the `ucut` command too. On Linux, install Node 22 or newer, FFmpeg and Git first ([details](docs/INSTALL.md#on-linux-or-anywhere-else)):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/mayank29deo/U-Cut/main/install.sh | bash
 ```
-
-The installer sets everything up, and uses Homebrew to add FFmpeg and Node if they're missing. Then open **U-Cut** from your Applications folder, or type `ucut`.
-
-No files to hand? Press **Try it with sample photos**.
 
 ## What it does today
 
@@ -23,7 +27,9 @@ No files to hand? Press **Try it with sample photos**.
 | Turn photos and clips into a reel cut to music                                     | **Works today**                                                                                                                                                                               |
 | Remix, switch vibe, change the shape, edit the title, swap a shot, undo anything   | **Works today**                                                                                                                                                                               |
 | Export an MP4 balanced for phones                                                  | **Works today**                                                                                                                                                                               |
-| Use it as a Mac app, in a browser, or from the command line                        | **Works today**                                                                                                                                                                               |
+| Use it as a Mac app, in a browser, or from the command line                        | **Works today.** The Mac app carries everything it needs except a 93 MB exporter it fetches on first launch, and needs no Terminal                                                            |
+| Choose from five photo styles, with moving previews                                | **Works today:** travel montage, weekend recap, city walk, café crawl with stop tags, and day in my life with time stamps. New styles can be added without a new app                          |
+| Sound effects and colour looks that follow the vibe                                | **Works today.** All synthesised here, so they're CC0. Each look is also a `.cube` LUT for other editors                                                                                      |
 | Share one computer between up to 20 people on your network                         | **Works today**                                                                                                                                                                               |
 | Use your own music                                                                 | Command line only for now                                                                                                                                                                     |
 | Sort photos into scenes, skip screenshots and near-copies, and pick the best shots | **Works today** on a Mac. It's right about two times in three on photos from new places, and a wrong one takes a click to fix                                                                 |
@@ -84,11 +90,11 @@ Stuck? [The install guide](docs/INSTALL.md) covers updating, uninstalling and co
 
 ## Good to know
 
-- **Your files stay with you.** Nothing leaves your computer unless you choose a service, and U-Cut says what goes. A test blocks the network and makes every kind of reel to prove it.
+- **Your files stay with you.** None of your photos, clips or words leave your computer unless you choose a service for a job, and U-Cut says what goes. Connecting a service checks your key with it. A test blocks the network and makes every kind of reel to prove it. The app downloads the exporter once, and captions, the voice or new styles only when you ask. [The user guide](docs/GUIDE.md#what-goes-online-and-when) lists every time it goes online.
 - **It's free.** There are no accounts and no per-render fees. Claude is optional: use it through your own Claude Code with the plugin, or with your own API key.
-- **Services are yours to choose.** Connect ElevenLabs, Deepgram, OpenAI or Voice Studio if you like. Nothing is sent until you choose a service, and the app says what goes to it.
+- **Services are yours to choose.** Connect ElevenLabs, Deepgram, OpenAI or Voice Studio if you like. Connecting one checks your key with it. Nothing else is sent until you choose it for a job, and the app says what goes to it.
 - **It's fast on ordinary Macs.** On an 8 GB MacBook, a 27-second reel took 27 seconds to export.
-- **Reels are yours.** The bundled music and sample photos are CC0, so you can post your reels anywhere.
+- **Reels are yours.** The bundled music, sound effects, looks and sample photos are CC0, so you can post your reels anywhere.
 
 ## How it works
 
@@ -109,20 +115,21 @@ The plan is a small JSON file. The same plan produces the preview and the final 
 
 ## Find your way around
 
-| Folder                                             | What's inside                                                             |
-| -------------------------------------------------- | ------------------------------------------------------------------------- |
-| [`apps/web`](apps/web)                             | The interface, built with React. The Mac app and browsers both show this. |
-| [`apps/site`](apps/site)                           | The website. It plays a real reel in the page, with no server.            |
-| [`apps/mac`](apps/mac)                             | The native Mac app that hosts the interface.                              |
-| [`packages/engine`](packages/engine)               | The `ucut` command, the media pipeline and the server.                    |
-| [`packages/planner-rules`](packages/planner-rules) | Decides what goes where. Runs in the browser.                             |
-| [`packages/planner-api`](packages/planner-api)     | Writes scripts with Claude, using your own API key.                       |
-| [`plugin`](plugin)                                 | The Claude Code plugin: U-Cut's MCP server, a skill and commands.         |
-| [`packages/compose`](packages/compose)             | Turns a plan into the composition that gets previewed and rendered.       |
-| [`packages/schema`](packages/schema)               | The shape of every data file, for TypeScript and Swift.                   |
-| [`templates`](templates)                           | Styles of reel. [Adding one](templates/README.md) takes five minutes.     |
-| [`library`](library)                               | Music, fonts and sample photos, each with its licence.                    |
-| [`docs/decisions`](docs/decisions)                 | Why things are the way they are.                                          |
+| Folder                                             | What's inside                                                                |
+| -------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [`apps/web`](apps/web)                             | The interface, built with React. The Mac app and browsers both show this.    |
+| [`apps/site`](apps/site)                           | The website. It plays a real reel in the page, with no server.               |
+| [`apps/mac`](apps/mac)                             | The native Mac app that hosts the interface.                                 |
+| [`packages/engine`](packages/engine)               | The `ucut` command, the media pipeline and the server.                       |
+| [`packages/planner-rules`](packages/planner-rules) | Decides what goes where. Runs in the browser.                                |
+| [`packages/planner-api`](packages/planner-api)     | Writes scripts with Claude, using your own API key.                          |
+| [`plugin`](plugin)                                 | The Claude Code plugin: U-Cut's MCP server, a skill and commands.            |
+| [`packages/compose`](packages/compose)             | Turns a plan into the composition that gets previewed and rendered.          |
+| [`packages/schema`](packages/schema)               | The shape of every data file, for TypeScript and Swift.                      |
+| [`templates`](templates)                           | Styles of reel. [Adding one](templates/README.md) takes five minutes.        |
+| [`library`](library)                               | Music, sound effects, looks, fonts and sample photos, each with its licence. |
+| [`registry`](registry)                             | The generated list of styles and assets that the app's gallery reads.        |
+| [`docs/decisions`](docs/decisions)                 | Why things are the way they are.                                             |
 
 ## Build it yourself
 
@@ -136,13 +143,15 @@ node packages/engine/dist/bin.js setup
 pnpm start
 ```
 
-| Command             | What it does                                             |
-| ------------------- | -------------------------------------------------------- |
-| `pnpm check`        | Lint, types, unit tests and the licence scan             |
-| `pnpm test:int`     | Real reels with real FFmpeg and Chrome                   |
-| `pnpm test:e2e`     | Clicks through the whole app in a real browser           |
-| `pnpm test:privacy` | Makes a reel with the network blocked                    |
-| `pnpm load-test`    | Simulates 20 people at once and reports what they'd feel |
+| Command                  | What it does                                                             |
+| ------------------------ | ------------------------------------------------------------------------ |
+| `pnpm check`             | Lint, types, unit tests and the licence scan                             |
+| `pnpm test:int`          | Real reels with real FFmpeg and Chrome                                   |
+| `pnpm test:e2e`          | Clicks through the whole app in a real browser                           |
+| `pnpm test:privacy`      | Makes a reel with the network blocked                                    |
+| `pnpm load-test`         | Simulates 20 people at once and reports what they'd feel                 |
+| `pnpm registry`          | Rebuilds `registry/index.json` after changing templates or the library   |
+| `scripts/package-mac.sh` | Builds the downloadable app and `dist/U-Cut.dmg`, with everything inside |
 
 ## Contribute
 

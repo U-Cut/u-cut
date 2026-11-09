@@ -4,7 +4,9 @@ import { run } from "./exec.ts";
 import { hf } from "./hf.ts";
 import { homeDir } from "./paths.ts";
 import { speechReady } from "./recording.ts";
+import { bundledRuntime } from "./runtime.ts";
 import { freeDisk, minimumFreeDisk } from "./server/capacity.ts";
+import { browserPath, onPath } from "./setup/index.ts";
 import { voiceReady } from "./voice.ts";
 
 export interface Check {
@@ -35,7 +37,11 @@ export async function doctor(): Promise<Check[]> {
   const ffprobe = await version("ffprobe");
   await mkdir(homeDir(), { recursive: true });
   const disk = await freeDisk(homeDir());
-  const hasChrome = await chrome();
+  // Looking for the file is instant. Asking HyperFrames also finds a Chrome installed elsewhere.
+  const ownBrowser = Boolean(browserPath());
+  const hasChrome = ownBrowser || (await chrome());
+  const app = bundledRuntime();
+  const whisper = process.env.HYPERFRAMES_WHISPER_PATH ?? onPath("whisper-cli");
   return [
     {
       name: "Node",
@@ -45,7 +51,9 @@ export async function doctor(): Promise<Check[]> {
     {
       name: "FFmpeg",
       ok: Boolean(ffmpeg),
-      detail: ffmpeg ?? "Not found. Install it with: brew install ffmpeg",
+      detail: ffmpeg
+        ? `${ffmpeg}${app ? " (inside the app)" : ""}`
+        : "Not found. Install it with: brew install ffmpeg",
     },
     {
       name: "ffprobe",
@@ -55,14 +63,20 @@ export async function doctor(): Promise<Check[]> {
     {
       name: "Rendering browser",
       ok: hasChrome,
-      detail: hasChrome ? "Ready" : "Not installed. Run: ucut setup",
+      detail: ownBrowser
+        ? "Ready"
+        : hasChrome
+          ? "Using the Chrome on this computer, which exports more slowly. Run: ucut setup"
+          : "Not installed. Run: ucut setup",
     },
     {
       name: "Speech",
       ok: true,
-      detail: speechReady()
-        ? "Ready"
-        : "Optional, for captions on screen recordings. Run: ucut setup --speech",
+      detail: !whisper
+        ? "Optional, for captions. It needs whisper-cli: brew install whisper-cpp"
+        : speechReady()
+          ? "Ready"
+          : "Optional, for captions on screen recordings. Run: ucut setup --speech",
     },
     {
       name: "Voice",

@@ -1,9 +1,12 @@
 {
   "name": "@u-cut/planner-api",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The optional planner that writes scripts with Claude, using the person's own API key.",
   "license": "Apache-2.0",
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "source": "./src/index.ts",

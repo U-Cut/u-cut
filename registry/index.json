@@ -1,0 +1,392 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/mayank29deo/U-Cut",
+  "templates": [
+    {
+      "id": "cafe-crawl",
+      "name": "Café crawl",
+      "version": "1.0.0",
+      "author": "U-Cut contributors",
+      "licence": "Apache-2.0",
+      "summary": "Each place in the order you went, with every stop numbered.",
+      "madeBy": "photos",
+      "aspects": [
+        "9:16",
+        "1:1",
+        "16:9"
+      ],
+      "vibes": [
+        "chill",
+        "hype",
+        "cinematic",
+        "nostalgic"
+      ],
+      "labels": "stops",
+      "preview": "templates/cafe-crawl/preview.gif",
+      "files": {
+        "template.json": "a187092d112a97484d306c1898d36c03b903211ca54f2258bf36296043510855",
+        "style.css": "d127eb2361255e806579f2dc15804afbe735771d3fa59623f2429a34e38a836c",
+        "README.md": "24d5bbffcc9101153240445562ad9d6ba5cc399321f434106d6947a93315f137",
+        "preview.gif": "e54afd7daa3bb84052ee7c6c127e02464aabf49f069b5486f16786354300a05a"
+      }
+    },
+    {
+      "id": "city-walk",
+      "name": "City walk",
+      "version": "1.0.0",
+      "author": "U-Cut contributors",
+      "licence": "Apache-2.0",
+      "summary": "Quick street rhythm with a big, loud title.",
+      "madeBy": "photos",
+      "aspects": [
+        "9:16",
+        "1:1",
+        "16:9"
+      ],
+      "vibes": [
+        "chill",
+        "hype",
+        "cinematic",
+        "nostalgic"
+      ],
+      "preview": "templates/city-walk/preview.gif",
+      "files": {
+        "template.json": "d5d6bcbdfd828dce0f57a1dbc095d8a8cbf7376e80c394546bc983bb7e2df8dc",
+        "style.css": "9027d1622058334c11213d6a59bd4a77b36fb7841b38e708888d8fa31881184a",
+        "README.md": "7644318aa34443ca7782a7e28a5f839d7a62be534c664480e13a7c5657f4c0ba",
+        "preview.gif": "b0ff14502bce9f5f449773b2514bbc5d735a9d931a6d1fe7d6ff6a171358d9e1"
+      }
+    },
+    {
+      "id": "day-in-my-life",
+      "name": "Day in my life",
+      "version": "1.0.0",
+      "author": "U-Cut contributors",
+      "licence": "Apache-2.0",
+      "summary": "Your day in order, with the time each shot was taken.",
+      "madeBy": "photos",
+      "aspects": [
+        "9:16",
+        "1:1",
+        "16:9"
+      ],
+      "vibes": [
+        "chill",
+        "hype",
+        "cinematic",
+        "nostalgic"
+      ],
+      "labels": "time",
+      "preview": "templates/day-in-my-life/preview.gif",
+      "files": {
+        "template.json": "4a25265a1a714a40c37f44cea416ac61236db6f6e6b3595d97b9cf2c1969c129",
+        "style.css": "abe5a2e4c7c48484a08faa825b47799f758d63902741e04b6096e24d91ac66ce",
+        "README.md": "3086197a369e21dd1d6c1125473f6a8f150ca3df74dcef90ffa862d2bc04cc13",
+        "preview.gif": "e410075d20e62f3d493f6924541deb040b7dd227851de0ecb2f75a7a85c16605"
+      }
+    },
+    {
+      "id": "demo",
+      "name": "Product demo",
+      "version": "1.0.0",
+      "author": "U-Cut contributors",
+      "licence": "Apache-2.0",
+      "summary": "Turns a screen recording into a demo: the moments you keep, a push-in on each action, captions from what you said, and a title and end card from your name and colour.",
+      "madeBy": "recording",
+      "aspects": [
+        "16:9",
+        "9:16",
+        "1:1"
+      ],
+      "vibes": [
+        "chill"
+      ],
+      "preview": "templates/demo/preview.gif",
+      "files": {
+        "template.json": "357fa99d81af80af74bb0b287cb31dd5bea26ffe4313ce8a25669d591f8c1555",
+        "style.css": "3f2488afcb0d2cfd1edd1263d30ce0dc3ef6da1148204bd3974ada448bf14337",
+        "README.md": "9a096ccc53c041a602f4a4652ca6c2ae464301112bfaafbaf479dfff19aca070",
+        "preview.gif": "e6a4e75ab86a9c411d30c55aea2f92a503598b0947b24e7c9e645ac2c2f29b75"
+      }
+    },
+    {
+      "id": "explainer",
+      "name": "Your words",
+      "version": "1.0.0",
+      "author": "U-Cut contributors",
+      "licence": "Apache-2.0",
+      "summary": "Builds a reel around a short script. Words land one at a time over the voice. With photos or clips, the pictures follow the words. Without them, each line gets its own moving colour.",
+      "madeBy": "words",
+      "aspects": [
+        "9:16",
+        "1:1",
+        "16:9"
+      ],
+      "vibes": [
+        "chill",
+        "hype",
+        "cinematic",
+        "nostalgic"
+      ],
+      "preview": "templates/explainer/preview.gif",
+      "files": {
+        "template.json": "473ca557c6aec917bd06b7189f95860425831dacebe6280046f988169a598ae5",
+        "style.css": "f679b775620e82b399dcb084558d8797dbd75e284fdd08a0acea6b89fc76d7d1",
+        "README.md": "25761c54a82be47f0519c3c94bb1fc9fbc238113ea3f6e3393ddaa190544960d",
+        "preview.gif": "7954fe7466bfb7980d91d8e969d0ca3e70dd8e54ec6b7bf52d29a0e32acff81f"
+      }
+    },
+    {
+      "id": "recipe",
+      "name": "Your reel's style",
+      "version": "1.0.0",
+      "author": "U-Cut contributors",
+      "licence": "Apache-2.0",
+      "summary": "Driven entirely by a style recipe studied from a reel you admire: its cut rhythm, how its words look, and its colour. Nothing from that reel appears in yours.",
+      "madeBy": "reference",
+      "aspects": [
+        "9:16",
+        "1:1",
+        "16:9"
+      ],
+      "vibes": [
+        "chill",
+        "hype",
+        "cinematic",
+        "nostalgic"
+      ],
+      "preview": "templates/recipe/preview.gif",
+      "files": {
+        "template.json": "92da435ae660d73b72e47869e00a0106fa8f6689a0d225d67e5243b3845138f9",
+        "style.css": "27ec16133fefcb6b830f90f1b4d14cfdb0d8cfa4164fe0cde11ada0766f666f7",
+        "README.md": "aa136493f2b859838805c17deadf0ff9206e6c97f2a4c8b1db3a105c11026768",
+        "preview.gif": "195e4097f48cb0cc0f9c8d5e051459bb5f7cea4ec27dbd846a0522ad7701139a"
+      }
+    },
+    {
+      "id": "travel-montage",
+      "name": "Travel montage",
+      "version": "1.0.0",
+      "author": "U-Cut contributors",
+      "licence": "Apache-2.0",
+      "summary": "Fast opener, then the journey in order, ending on one long look.",
+      "madeBy": "photos",
+      "aspects": [
+        "9:16",
+        "1:1",
+        "16:9"
+      ],
+      "vibes": [
+        "chill",
+        "hype",
+        "cinematic",
+        "nostalgic"
+      ],
+      "preview": "templates/travel-montage/preview.gif",
+      "files": {
+        "template.json": "0c885cce1a1482f9b401701d9ac44f8ca5c31b2e23c140bbab55057f7223ac17",
+        "style.css": "27ec16133fefcb6b830f90f1b4d14cfdb0d8cfa4164fe0cde11ada0766f666f7",
+        "README.md": "25adb0bdd756a5b2d758279efffa12dbd0a295422d20d2f990c7d296463de748",
+        "preview.gif": "701c99bf36d2688191556dcceafe90b997c1584b4874edc2b68e8ec2e68572e7"
+      }
+    },
+    {
+      "id": "weekend-recap",
+      "name": "Weekend recap",
+      "version": "1.0.0",
+      "author": "U-Cut contributors",
+      "licence": "Apache-2.0",
+      "summary": "Even, easy pacing with a clean centred title.",
+      "madeBy": "photos",
+      "aspects": [
+        "9:16",
+        "1:1",
+        "16:9"
+      ],
+      "vibes": [
+        "chill",
+        "hype",
+        "cinematic",
+        "nostalgic"
+      ],
+      "preview": "templates/weekend-recap/preview.gif",
+      "files": {
+        "template.json": "d5bf68a1ac582b318814fe6c52bcb3dacc55c3a82afdd92125b1dc63a32c95a6",
+        "style.css": "c04b961b0438ff7da8008f78d1367ccb38a4fb0c788fdc428597f0a546bdeaca",
+        "README.md": "975368849133bdc0558a3146dba0a2be684a3b77df28eace9a6698f8e48d9f96",
+        "preview.gif": "b52f429ea68d9224c51f280e191057c31020739c7233045930f16de196158b8c"
+      }
+    }
+  ],
+  "library": {
+    "music": [
+      {
+        "file": "chill.m4a",
+        "licence": "CC0-1.0",
+        "source": "scripts/make-music.ts",
+        "vibe": "chill",
+        "bpm": 84,
+        "length": 61,
+        "sha256": "aba4e5c5896c5c5ff6aa12f683f5278fe2cf209d9d367d439ad605e8126e7a55"
+      },
+      {
+        "file": "hype.m4a",
+        "licence": "CC0-1.0",
+        "source": "scripts/make-music.ts",
+        "vibe": "hype",
+        "bpm": 128,
+        "length": 61,
+        "sha256": "c740cc43a1a0234b5b0a3a8f95b8e58efc7bd87ce5560c5e4956661afe50cfd4"
+      },
+      {
+        "file": "cinematic.m4a",
+        "licence": "CC0-1.0",
+        "source": "scripts/make-music.ts",
+        "vibe": "cinematic",
+        "bpm": 72,
+        "length": 61,
+        "sha256": "f7b8c86757f9d664cdf8e83217ddc58b6c4dd6f206fcfc11168e62f54fe7e0dc"
+      },
+      {
+        "file": "nostalgic.m4a",
+        "licence": "CC0-1.0",
+        "source": "scripts/make-music.ts",
+        "vibe": "nostalgic",
+        "bpm": 96,
+        "length": 61,
+        "sha256": "132ac2eee20e0e5979574e4aec693973aaf9e93fa1e5c4e839895998f0f3e2da"
+      }
+    ],
+    "sfx": [
+      {
+        "file": "whoosh.m4a",
+        "licence": "CC0-1.0",
+        "source": "scripts/make-sfx.ts",
+        "use": "A cut between sections",
+        "length": 0.7,
+        "sha256": "c9e4ac443d7b5b5efe20d64a4e37680389108dbbf8f080fe231221a39f36fa84"
+      },
+      {
+        "file": "hit.m4a",
+        "licence": "CC0-1.0",
+        "source": "scripts/make-sfx.ts",
+        "use": "The first beat, or the closing shot landing",
+        "length": 1.2,
+        "sha256": "5ffbc5d152caefaf7b4b8dd148352569e68f84b9c1f4af60c44a3c5dd008bfa2"
+      },
+      {
+        "file": "riser.m4a",
+        "licence": "CC0-1.0",
+        "source": "scripts/make-sfx.ts",
+        "use": "Building into the closing shot",
+        "length": 2.4,
+        "sha256": "41c58b70e6c8385286a411aee5a4beb28387fe2f5d02dfe0e6e743f1eefec8d4"
+      },
+      {
+        "file": "swell.m4a",
+        "licence": "CC0-1.0",
+        "source": "scripts/make-sfx.ts",
+        "use": "A soft opening",
+        "length": 2,
+        "sha256": "dbb6cf4e74e6645cfab1810e4d7babdc287217a7279a7f0ec88efe52b231429c"
+      },
+      {
+        "file": "shutter.m4a",
+        "licence": "CC0-1.0",
+        "source": "scripts/make-sfx.ts",
+        "use": "A photo appearing, for nostalgic reels",
+        "length": 0.35,
+        "sha256": "b1a3031c669017cc78f69976d5828bacf7dd044bf71c775d752e7c2111205c96"
+      },
+      {
+        "file": "pop.m4a",
+        "licence": "CC0-1.0",
+        "source": "scripts/make-sfx.ts",
+        "use": "A label appearing",
+        "length": 0.18,
+        "sha256": "1646fd759293975e12b5ac39b815c635b425d9565413a793b166879e9ea76c34"
+      }
+    ],
+    "luts": [
+      {
+        "file": "chill.cube",
+        "licence": "CC0-1.0",
+        "source": "scripts/make-luts.ts",
+        "vibe": "chill",
+        "css": "contrast(0.96) saturate(0.94) sepia(0.072)",
+        "sha256": "65c8304a4bd77302cee69c97fafb55ca968fde06851c3e308bd3fc83849d99b6"
+      },
+      {
+        "file": "hype.cube",
+        "licence": "CC0-1.0",
+        "source": "scripts/make-luts.ts",
+        "vibe": "hype",
+        "css": "contrast(1.14) saturate(1.14)",
+        "sha256": "f23ca41b40aaac65b700dad16d63f0ff7af6bd1f80410ab43d1c72bde5b5d0c9"
+      },
+      {
+        "file": "cinematic.cube",
+        "licence": "CC0-1.0",
+        "source": "scripts/make-luts.ts",
+        "vibe": "cinematic",
+        "css": "contrast(1.16) saturate(0.86) hue-rotate(-1.6deg)",
+        "sha256": "2270b5ebf6d97f1bb435308ece60b1d7fd431e5c55d4a8ef6bad7f5d7d542113"
+      },
+      {
+        "file": "nostalgic.cube",
+        "licence": "CC0-1.0",
+        "source": "scripts/make-luts.ts",
+        "vibe": "nostalgic",
+        "css": "contrast(0.9) saturate(0.8) sepia(0.156)",
+        "sha256": "b9f06fec1ed0c1bdf07170a27b7aeedfc4ab39e75199788b6991d20ba10e3bb8"
+      }
+    ],
+    "fonts": [
+      {
+        "file": "inter-latin-600-normal.woff2",
+        "licence": "OFL-1.1",
+        "source": "https://www.npmjs.com/package/@fontsource/inter",
+        "family": "Inter",
+        "weight": 600,
+        "style": "normal",
+        "sha256": "f9a06e79cd3a2a20951c0f0e28f66dd0e6d3fda73911d640a2125c8fcb78f21a"
+      },
+      {
+        "file": "archivo-black-latin-400-normal.woff2",
+        "licence": "OFL-1.1",
+        "source": "https://www.npmjs.com/package/@fontsource/archivo-black",
+        "family": "Archivo Black",
+        "weight": 400,
+        "style": "normal",
+        "sha256": "25f33e61cf995abd6be62931cf03bf427286259177b43618cc410ee0157cfd30"
+      },
+      {
+        "file": "playfair-display-latin-500-italic.woff2",
+        "licence": "OFL-1.1",
+        "source": "https://www.npmjs.com/package/@fontsource/playfair-display",
+        "family": "Playfair Display",
+        "weight": 500,
+        "style": "italic",
+        "sha256": "8f074624e50ab805878b26ab5f3e0fa360043d546c35b043947e96a5c7071970"
+      },
+      {
+        "file": "caveat-latin-700-normal.woff2",
+        "licence": "OFL-1.1",
+        "source": "https://www.npmjs.com/package/@fontsource/caveat",
+        "family": "Caveat",
+        "weight": 700,
+        "style": "normal",
+        "sha256": "15f9638095ad5ec9816f93d66805ca1a87e71dc5a76b596bfce1c78d4704c405"
+      },
+      {
+        "file": "noto-sans-devanagari-devanagari-600-normal.woff2",
+        "licence": "OFL-1.1",
+        "source": "https://www.npmjs.com/package/@fontsource/noto-sans-devanagari",
+        "family": "Noto Sans Devanagari",
+        "weight": 600,
+        "style": "normal",
+        "sha256": "fcfcaacda204a9fc447b54adfef68815558c34ddf2975dd82662870a20df07dc"
+      }
+    ]
+  }
+}

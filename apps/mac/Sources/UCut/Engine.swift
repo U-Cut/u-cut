@@ -5,6 +5,8 @@ import Foundation
 final class Engine: ObservableObject {
     enum State {
         case starting
+        /// The first launch after installing or updating, while the engine is copied into place.
+        case preparing
         case running(URL)
         case failed(String)
     }
@@ -14,6 +16,8 @@ final class Engine: ObservableObject {
     /// Held open for the life of the app. If the app dies, the engine sees this close and stops.
     private let lifeline = Pipe()
     private var started = false
+    /// UCUT_PORT changes it, for tests that run beside a U-Cut already open.
+    private let port = Int(ProcessInfo.processInfo.environment["UCUT_PORT"] ?? "") ?? 4173
 
     /// Safe to call more than once: macOS can restore several windows, and each one asks.
     func start() {
@@ -21,7 +25,7 @@ final class Engine: ObservableObject {
         started = true
         Task {
             // U-Cut may already be running in the browser. Share it instead of starting another.
-            if let url = URL(string: "http://localhost:4173"),
+            if let url = URL(string: "http://localhost:\(port)"),
                 let status = url.appending(path: "api/status") as URL?,
                 let (_, response) = try? await URLSession.shared.data(from: status),
                 (response as? HTTPURLResponse)?.statusCode == 200
@@ -34,21 +38,28 @@ final class Engine: ObservableObject {
     }
 
     private func launch() {
-        guard let root = Self.engineRoot() else {
-            state = .failed("U-Cut's engine isn't installed. Run the installer from the U-Cut README, then open this app again.")
-            return
+        if Runtime.needsCopy { state = .preparing }
+        let port = port
+        Task.detached {
+            let prepared = Result { try Runtime.prepare(port: port) }
+            await MainActor.run { [weak self] in
+                switch prepared {
+                case .success(let command): self?.run(command)
+                case .failure(let error): self?.state = .failed(error.localizedDescription)
+                }
+            }
         }
+    }
+
+    private func run(_ command: EngineCommand) {
         let process = Process()
         let output = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = [
-            "node", "packages/engine/dist/bin.js", "serve", "--no-open", "--json", "--port", "4173",
-            "--exit-with-parent",
-        ]
-        process.currentDirectoryURL = root
+        process.executableURL = command.executable
+        process.arguments = command.arguments
+        process.currentDirectoryURL = command.directory
         process.standardOutput = output
         process.standardInput = lifeline
-        process.environment = Self.environment()
+        process.environment = ProcessInfo.processInfo.environment.merging(command.environment) { $1 }
         if let log = Self.openLog() { process.standardError = log }
         output.fileHandleForReading.readabilityHandler = { [weak self] handle in
             guard let line = String(data: handle.availableData, encoding: .utf8),
@@ -89,27 +100,5 @@ final class Engine: ObservableObject {
 
     private struct Reply: Decodable {
         let url: String
-    }
-
-    /// Homebrew isn't on the PATH of apps opened from Finder.
-    private static func environment() -> [String: String] {
-        var environment = ProcessInfo.processInfo.environment
-        let path = environment["PATH"] ?? "/usr/bin:/bin"
-        environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:\(path)"
-        return environment
-    }
-
-    private static func engineRoot() -> URL? {
-        let manager = FileManager.default
-        let candidates: [String?] = [
-            ProcessInfo.processInfo.environment["UCUT_ROOT"],
-            Bundle.main.object(forInfoDictionaryKey: "UCutRoot") as? String,
-            manager.homeDirectoryForCurrentUser.appendingPathComponent(".u-cut").path,
-        ]
-        for case let path? in candidates
-        where manager.fileExists(atPath: "\(path)/packages/engine/dist/bin.js") {
-            return URL(fileURLWithPath: path)
-        }
-        return nil
     }
 }

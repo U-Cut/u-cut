@@ -3,7 +3,7 @@ import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { EditPlan, MediaItem, validate } from "@u-cut/schema";
 import { z } from "zod";
-import { loadTracks } from "./library.ts";
+import { loadSounds, loadTracks } from "./library.ts";
 import { jobsDir, storeDir } from "./paths.ts";
 import { projectEdited, type Quality, renderPlan, renderProject, writeProject } from "./render.ts";
 
@@ -51,6 +51,13 @@ export async function saveJobPlan(job: string, plan: unknown): Promise<EditPlan>
   if (!libraryTrack && !stored) {
     throw new Error(
       "The plan's music has to be one of U-Cut's tracks, or music the job already has.",
+    );
+  }
+  const sounds = new Set(loadSounds().map((sound) => sound.file));
+  const strange = checked.value.sfx.find((sound) => !sounds.has(sound.src));
+  if (strange) {
+    throw new Error(
+      `"${strange.src}" isn't one of U-Cut's sound effects: ${[...sounds].join(", ")}.`,
     );
   }
   const known = new Set(items.map((item) => item.id));

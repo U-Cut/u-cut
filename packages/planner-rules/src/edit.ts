@@ -1,4 +1,5 @@
 import type { EditPlan, MediaItem } from "@u-cut/schema";
+import { clockTime, shortestLabelled } from "./labels.ts";
 import { PlanError } from "./plan.ts";
 
 const titleStart = 0.12;
@@ -31,11 +32,25 @@ function cutFrom(shot: EditPlan["shots"][number], item: MediaItem): EditPlan["sh
   return { ...shot, media: item.id, in: clipIn, out: round(clipIn + length), focus };
 }
 
+/** A shot's time stamp follows its photo, so a swapped or replaced shot shows its own time. */
+function restamp(plan: EditPlan, index: number, item: MediaItem): EditPlan {
+  const shot = plan.shots[index];
+  if (!shot || !plan.texts.some((text) => text.style === "stamp")) return plan;
+  const others = plan.texts.filter(
+    (text) => !(text.style === "stamp" && text.start === shot.start),
+  );
+  const stamp =
+    item.takenAt && shot.end - shot.start >= shortestLabelled
+      ? [{ text: clockTime(item.takenAt), start: shot.start, end: shot.end, style: "stamp" }]
+      : [];
+  return { ...plan, texts: [...others, ...stamp] };
+}
+
 export function replaceShot(plan: EditPlan, index: number, item: MediaItem): EditPlan {
   const shots = plan.shots.map((shot, position) =>
     position === index ? cutFrom(shot, item) : shot,
   );
-  return { ...plan, shots };
+  return restamp({ ...plan, shots }, index, item);
 }
 
 export function swapShots(
@@ -55,5 +70,5 @@ export function swapShots(
     if (position === second) return cutFrom(shot, itemA);
     return shot;
   });
-  return { ...plan, shots };
+  return restamp(restamp({ ...plan, shots }, first, itemB), second, itemA);
 }

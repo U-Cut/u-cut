@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { api, type Catalog, type VoiceList } from "../api";
+import { megabytes } from "../setup";
 
 interface Props {
   catalog: Catalog;
   voice: string | null;
   ready: boolean;
-  installing: boolean;
+  /** What the download is doing, while the voice is being added. */
+  installing: string | null;
   voicing: { done: number; total: number } | null;
   onVoice(voice: string | null): void;
   onInstall(): void;
@@ -13,7 +15,6 @@ interface Props {
   onMore(): void;
 }
 
-const isLocal = ["localhost", "127.0.0.1"].includes(window.location.hostname);
 /** Past this many voices, a list is easier to scan than a row of names. */
 const rowLimit = 6;
 
@@ -34,6 +35,8 @@ export function VoiceChoice({
   onMore,
 }: Props) {
   const service = catalog.uses.voice;
+  const voicePart = catalog.setup.find((part) => part.id === "voice");
+  const voiceSize = voicePart ? `about ${megabytes(voicePart.bytes)}` : catalog.voice.size;
   const [listed, setListed] = useState<VoiceList | null>(null);
 
   useEffect(() => {
@@ -56,18 +59,18 @@ export function VoiceChoice({
     return (
       <div className="voice-offer">
         <p>
-          {isLocal
-            ? `Add a voice to read this aloud. It's a one-time ${catalog.voice.size} download, and it stays on this computer.`
+          {catalog.local
+            ? `Add a voice to read this aloud. It's a one-time download of ${voiceSize}, and it stays on this computer.`
             : "The person running U-Cut can add a voice from their computer."}
         </p>
-        {isLocal ? (
+        {catalog.local ? (
           <button
             type="button"
             className="button-outline"
-            disabled={installing}
+            disabled={installing !== null}
             onClick={onInstall}
           >
-            {installing ? "Getting the voice" : "Add a voice"}
+            {installing ?? "Add a voice"}
           </button>
         ) : null}
       </div>

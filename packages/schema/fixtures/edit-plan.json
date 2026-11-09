@@ -40,5 +40,5 @@
   ],
   "texts": [{ "text": "Goa, day one", "start": 0.2, "end": 1.9, "style": "title" }],
   "transitions": [{ "type": "cut", "at": 2, "duration": 0 }],
-  "sfx": [{ "src": "library/sfx/whoosh.m4a", "at": 2, "vol": 0.3 }]
+  "sfx": [{ "src": "whoosh.m4a", "at": 2, "length": 0.7, "vol": 0.3 }]
 }

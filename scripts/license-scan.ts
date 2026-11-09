@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, relative } from "node:path";
 import { pathToFileURL } from "node:url";
+import { unsafeCss } from "../packages/engine/src/css-safety.ts";
 
 /** Non-permissive packages we accept. See docs/decisions/0009-licence-exceptions.md. */
 const dependencyExceptions = ["@img/sharp-libvips-"];
@@ -71,6 +72,15 @@ export function scanAssets(root: string): ScanResult {
     if (inTemplate && textExtensions.has(extension) && /gsap/i.test(readFileSync(file, "utf8"))) {
       findings.push(
         `${path} mentions GSAP. Templates must be GSAP-free (see docs/decisions/0002-no-gsap-in-templates.md).`,
+      );
+    }
+    if (
+      path.startsWith("templates/") &&
+      extension === ".css" &&
+      unsafeCss(readFileSync(file, "utf8"))
+    ) {
+      findings.push(
+        `${path} loads something or runs code. Template CSS may only style words (see docs/decisions/0025-styles-sound-and-looks.md).`,
       );
     }
     if (!assetExtensions.has(extension)) continue;

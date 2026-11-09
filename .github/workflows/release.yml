@@ -1,0 +1,129 @@
+name: Release
+
+# Pushing a tag such as v0.1.0 builds the Mac app and publishes it on the Releases page, with that
+# version's notes from CHANGELOG.md. A change to how the app is packaged, pushed to main, or a run
+# started by hand, builds and checks the same files and keeps them as a workflow artifact, without
+# publishing anything.
+#
+# Signing and notarizing happen only when these repository secrets exist:
+#   MACOS_CERTIFICATE           a "Developer ID Application" certificate, as base64 of its .p12
+#   MACOS_CERTIFICATE_PASSWORD  the .p12's password
+#   MACOS_SIGN_IDENTITY         its name, such as "Developer ID Application: Name (TEAMID)"
+#   APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD   for notarytool (an app-specific password)
+# Without them the app is signed ad hoc, and people approve it once in System Settings.
+
+on:
+  push:
+    tags: ["v*"]
+    branches: [main]
+    # GitHub ignores these for tags, so every tag still releases.
+    paths:
+      - scripts/package-mac.sh
+      - scripts/build-ffmpeg.sh
+      - scripts/build-whisper.sh
+      - scripts/check-package.sh
+      - apps/mac/**
+      - .github/workflows/release.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  mac:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      HAS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE != '' }}
+      HAS_NOTARY: ${{ secrets.APPLE_APP_PASSWORD != '' }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+
+      - name: The tag matches the version
+        id: version
+        run: |
+          version="$(node -p "require('./packages/engine/package.json').version")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::The tag is $GITHUB_REF_NAME, but packages/engine/package.json says $version."
+            exit 1
+          fi
+          scripts/release-notes.sh "$version" > "$RUNNER_TEMP/notes.md"
+
+      # FFmpeg and whisper-cli are built from source once, then reused until their scripts change.
+      - uses: actions/cache@v5
+        id: tools
+        with:
+          path: |
+            dist/tools
+            dist/cache
+          key: mac-tools-${{ hashFiles('scripts/build-ffmpeg.sh', 'scripts/build-whisper.sh') }}
+      - if: steps.tools.outputs.cache-hit != 'true'
+        run: brew install cmake autoconf automake libtool pkg-config
+
+      - name: Get the signing certificate
+        if: env.HAS_CERTIFICATE == 'true'
+        env:
+          CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+        run: |
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password="$(openssl rand -hex 16)"
+          echo "$CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$RUNNER_TEMP/certificate.p12" -P "$PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -k "$keychain_password" "$keychain" >/dev/null
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/certificate.p12"
+          echo "UCUT_SIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+
+      - name: Build the app and the disk image
+        run: scripts/package-mac.sh
+
+      - name: Check it works on a Mac with nothing installed
+        run: scripts/check-package.sh --download
+
+      - name: Notarize
+        if: env.HAS_NOTARY == 'true' && env.HAS_CERTIFICATE == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          dmg="dist/U-Cut.dmg"
+          xcrun notarytool submit "$dmg" --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" --wait
+          xcrun stapler staple "$dmg"
+          (cd dist && shasum -a 256 "$(basename "$dmg")" > "$(basename "$dmg").sha256")
+
+      - name: Publish the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # The LGPL asks that FFmpeg's source travels with it, so the exact tarball is attached.
+          prerelease=""
+          case "$VERSION" in 0.*) prerelease="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" $prerelease \
+            --title "U-Cut $VERSION" --notes-file "$RUNNER_TEMP/notes.md" \
+            dist/U-Cut.dmg dist/U-Cut.dmg.sha256 dist/cache/ffmpeg-*.tar.xz
+
+      - name: Keep the files from a manual run
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v6
+        with:
+          name: U-Cut-${{ steps.version.outputs.version }}
+          path: |
+            dist/U-Cut.dmg
+            dist/U-Cut.dmg.sha256
+          retention-days: 7

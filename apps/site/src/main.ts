@@ -63,7 +63,15 @@ function show() {
   host.style.width = `${size.width}px`;
   host.style.height = `${size.height}px`;
   fit();
-  player.load(composition, plan, sound ? `/media/music/${track}` : "");
+  // Music and effects are only fetched once someone asks for sound.
+  player.load(
+    composition,
+    sound ? plan : { ...plan, sfx: [] },
+    sound ? `/media/music/${track}` : "",
+    {
+      soundUrl: (src) => `/media/sfx/${src}`,
+    },
+  );
   const took = Math.max(1, Math.round(performance.now() - started));
   note.textContent = `${about}. Cut in ${took} ms, in this page.`;
   for (const button of vibeButtons) {

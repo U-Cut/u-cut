@@ -4,7 +4,7 @@ name: Retry jobs GitHub couldn't start
 # test failure, so this re-runs those jobs, twice at most. A job that ran and failed is left alone.
 on:
   workflow_run:
-    workflows: [CI]
+    workflows: [CI, Release]
     types: [completed]
 
 permissions:

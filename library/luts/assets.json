@@ -1,0 +1,30 @@
+[
+  {
+    "file": "chill.cube",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-luts.ts",
+    "vibe": "chill",
+    "css": "contrast(0.96) saturate(0.94) sepia(0.072)"
+  },
+  {
+    "file": "hype.cube",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-luts.ts",
+    "vibe": "hype",
+    "css": "contrast(1.14) saturate(1.14)"
+  },
+  {
+    "file": "cinematic.cube",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-luts.ts",
+    "vibe": "cinematic",
+    "css": "contrast(1.16) saturate(0.86) hue-rotate(-1.6deg)"
+  },
+  {
+    "file": "nostalgic.cube",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-luts.ts",
+    "vibe": "nostalgic",
+    "css": "contrast(0.9) saturate(0.8) sepia(0.156)"
+  }
+]

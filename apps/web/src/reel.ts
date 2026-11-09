@@ -38,6 +38,7 @@ import {
   type ServerEvent,
   screenUrl,
 } from "./api";
+import { installPart, progressText } from "./setup";
 
 export interface Settings {
   vibe: Vibe;
@@ -53,6 +54,8 @@ export interface Settings {
   demo: Demo | null;
   /** Set for a written reel, which is timed by its words. */
   script: Script | null;
+  /** Sound effects at the reel's turning points. Off leaves them out. */
+  sounds?: boolean;
 }
 
 interface Snapshot {
@@ -77,7 +80,8 @@ interface State {
   /** How far through the script the voice is. */
   voicing: { done: number; total: number } | null;
   /** The voice has been asked for and is downloading. */
-  installingVoice: boolean;
+  /** What the voice download is doing, while it's getting it. */
+  installingVoice: string | null;
   voiceReady: boolean | null;
   /** Claude is writing a better script for the reel that's already playing. */
   writing: boolean;
@@ -99,7 +103,7 @@ type Action =
   | { type: "studying"; studying: boolean }
   | { type: "reading"; reading: boolean }
   | { type: "voicing"; voicing: State["voicing"] }
-  | { type: "installingVoice"; installing: boolean }
+  | { type: "installingVoice"; installing: string | null }
   | { type: "voiceReady" }
   | { type: "writing"; writing: boolean }
   | { type: "reset" };
@@ -118,7 +122,7 @@ const empty: State = {
   studying: false,
   reading: false,
   voicing: null,
-  installingVoice: false,
+  installingVoice: null,
   voiceReady: null,
   writing: false,
 };
@@ -260,6 +264,7 @@ export function planWith(catalog: Catalog, items: MediaItem[], settings: Setting
     excludedScenes: settings.excludedScenes,
     recipe,
     seed: settings.seed,
+    sounds: settings.sounds !== false,
   });
 }
 
@@ -777,14 +782,19 @@ export function useReel(catalog: Catalog | null) {
   );
 
   const addVoice = useCallback(async () => {
-    dispatch({ type: "installingVoice", installing: true });
+    dispatch({ type: "installingVoice", installing: "Getting the voice" });
     try {
-      await api.installVoice();
+      await installPart("voice", (part) =>
+        dispatch({
+          type: "installingVoice",
+          installing: `Getting the voice: ${progressText(part)}`,
+        }),
+      );
       dispatch({ type: "voiceReady" });
     } catch (error) {
       dispatch({ type: "notice", notice: (error as Error).message });
     }
-    dispatch({ type: "installingVoice", installing: false });
+    dispatch({ type: "installingVoice", installing: null });
   }, []);
 
   const remix = useCallback(() => {

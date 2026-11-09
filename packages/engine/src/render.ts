@@ -8,7 +8,7 @@ import { composeHtml, composeParts, sizes } from "@u-cut/compose";
 import type { EditPlan, MediaItem } from "@u-cut/schema";
 import { renderPhoto } from "./derive.ts";
 import { hf } from "./hf.ts";
-import { findTemplate, fontsDir, loadFonts, musicDir } from "./library.ts";
+import { findTemplate, fontsDir, loadFonts, loadSounds, musicDir, sfxDir } from "./library.ts";
 import { master, verifyOutput } from "./master.ts";
 import { rendersDir, repoRoot } from "./paths.ts";
 import { isHash, storedFolder } from "./store.ts";
@@ -85,6 +85,7 @@ export async function writeProject(plan: EditPlan, items: MediaItem[], projectDi
   const assets = join(projectDir, "assets");
   await rm(projectDir, { recursive: true, force: true });
   await mkdir(join(assets, "fonts"), { recursive: true });
+  await mkdir(join(assets, "sfx"), { recursive: true });
 
   const byId = Object.fromEntries(items.map((item) => [item.id, item]));
   const names = new Map<string, string>();
@@ -102,6 +103,11 @@ export async function writeProject(plan: EditPlan, items: MediaItem[], projectDi
   await link(musicSource(plan.music.src), join(assets, musicName));
   for (const font of loadFonts()) {
     await link(join(fontsDir, font.file), join(assets, "fonts", font.file));
+  }
+  const sounds = new Set(loadSounds().map((sound) => sound.file));
+  for (const src of new Set(plan.sfx.map((sound) => sound.src))) {
+    if (!sounds.has(src)) throw new Error(`"${src}" isn't one of U-Cut's sound effects.`);
+    await link(join(sfxDir, src), join(assets, "sfx", src));
   }
   for (const src of new Set((plan.voice ?? []).map((line) => line.src))) {
     if (!isHash(src)) throw new Error("That reel's voice isn't one U-Cut made.");
@@ -123,6 +129,7 @@ export async function writeProject(plan: EditPlan, items: MediaItem[], projectDi
       media: (item: MediaItem) => `assets/${names.get(item.id)}`,
       music: () => `assets/${musicName}`,
       voice: (src: string) => `assets/${src}.wav`,
+      sfx: (src: string) => `assets/sfx/${src}`,
     },
   };
   const html = composeHtml(input);

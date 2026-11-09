@@ -17,17 +17,18 @@ import {
 } from "./connections/index.ts";
 import { makeDemo } from "./demo.ts";
 import { doctor } from "./doctor.ts";
-import { hf } from "./hf.ts";
 import { ingest } from "./ingest.ts";
 import { renderJob } from "./jobs.ts";
+import { loadTemplates } from "./library.ts";
 import { make } from "./make.ts";
-import { installSpeech, speechReady } from "./recording.ts";
 import type { Quality } from "./render.ts";
 import { serve } from "./server/serve.ts";
+import { type PartId, setup } from "./setup/index.ts";
 import { sortMedia } from "./sort.ts";
 import { makeStory } from "./story.ts";
 import { studyReel } from "./study.ts";
-import { installVoice, voices as kokoroVoices, voiceReady, voiceSize } from "./voice.ts";
+import { updateTemplates } from "./templates.ts";
+import { voices as kokoroVoices, voiceReady, voiceSize } from "./voice.ts";
 
 const { version } = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -58,6 +59,11 @@ const makeCommand = defineCommand({
     quality: { type: "string", default: "looks", description: "draft, looks or delivery" },
     music: { type: "string", description: "Your own music file" },
     like: { type: "string", description: "A reel whose style to copy" },
+    sfx: {
+      type: "boolean",
+      default: true,
+      description: "Sound effects at the turning points. --no-sfx leaves them out",
+    },
     json: { type: "boolean", default: false, description: "Print progress as JSON lines" },
   },
   async run({ args }) {
@@ -73,6 +79,7 @@ const makeCommand = defineCommand({
         seed: Number(args.seed),
         title: args.title,
         quality: args.quality as Quality,
+        sounds: args.sfx,
         ...(args.music ? { music: args.music } : {}),
         ...(args.like ? { like: args.like } : {}),
       },
@@ -311,32 +318,104 @@ const studyCommand = defineCommand({
   },
 });
 
+const megabytes = (bytes: number) => `${Math.round(bytes / 1024 ** 2)} MB`;
+
 const setupCommand = defineCommand({
-  meta: { name: "setup", description: "Download what U-Cut needs to render and listen." },
+  meta: {
+    name: "setup",
+    description: "Download what U-Cut needs to export, and captions or the voice.",
+  },
   args: {
     speech: {
       type: "boolean",
       default: false,
-      description: "Also get the speech model for captions (465 MB)",
+      description: `Also get the speech model for captions (${megabytes(setup.statusOf("speech").bytes)})`,
     },
     voice: {
       type: "boolean",
       default: false,
       description: `Also get the voice for written reels (${voiceSize})`,
     },
+    json: { type: "boolean", default: false, description: "Print progress as JSON lines" },
   },
   async run({ args }) {
-    console.log("Getting the rendering browser ready. This only happens once.");
-    await hf(["browser", "ensure"], { timeoutMs: 600_000 });
-    if (args.speech && !speechReady()) {
-      console.log("Getting the speech model. It's 465 MB, and stays on this computer.");
-      await installSpeech();
+    const wanted: PartId[] = [
+      "browser",
+      ...(args.speech ? (["speech"] as const) : []),
+      ...(args.voice ? (["voice"] as const) : []),
+    ];
+    for (const id of wanted) {
+      const before = setup.statusOf(id);
+      if (before.ready) {
+        if (!args.json) console.log(`${before.name}: ready.`);
+        continue;
+      }
+      if (!args.json) {
+        console.log(
+          `Getting ${before.name.toLowerCase()} (${megabytes(before.bytes)}). It stays on this computer.`,
+        );
+      }
+      let shown = "";
+      const show = () => {
+        const now = setup.statusOf(id);
+        if (args.json) {
+          console.log(JSON.stringify(now));
+          return;
+        }
+        const line = now.ready
+          ? "  Ready."
+          : now.state === "waiting"
+            ? "  Waiting for the connection to come back..."
+            : now.step
+              ? `  ${now.step}...`
+              : `  ${megabytes(now.done)} of ${megabytes(now.bytes)}`;
+        // A line every 10% keeps logs short without leaving anyone wondering.
+        const key = now.step ?? `${now.state}${Math.floor((now.done / now.bytes) * 10)}`;
+        if (key !== shown) console.log(line);
+        shown = key;
+      };
+      const timer = setInterval(show, 500);
+      try {
+        await setup.start(id);
+      } finally {
+        clearInterval(timer);
+      }
+      show();
     }
-    if (args.voice && !voiceReady()) {
-      console.log(`Getting the voice. It's ${voiceSize}, and stays on this computer.`);
-      await installVoice();
+    if (!args.json) console.log("Done.");
+  },
+});
+
+const templatesCommand = defineCommand({
+  meta: {
+    name: "templates",
+    description: "List reel styles, or add new and newer ones from U-Cut's library on GitHub.",
+  },
+  args: {
+    action: {
+      type: "positional",
+      required: false,
+      description: "update: add styles that are new or newer than yours",
+    },
+  },
+  async run({ args }) {
+    if (args.action === "update") {
+      console.log("Looking for new styles on GitHub…");
+      const { added, updated, skipped } = await updateTemplates();
+      for (const name of added) console.log(`Added ${name}`);
+      for (const name of updated) console.log(`Updated ${name}`);
+      for (const { id, reason } of skipped) console.log(`Skipped ${id}: ${reason}.`);
+      if (added.length + updated.length === 0) console.log("You have every style already.");
+      return;
     }
-    console.log("Done.");
+    if (args.action) {
+      throw new Error(`Templates can't "${args.action}". Try: ucut templates update`);
+    }
+    for (const { manifest, added } of loadTemplates()) {
+      console.log(
+        `${manifest.id.padEnd(16)} ${manifest.name} ${manifest.version}${added ? "  (added)" : ""}`,
+      );
+    }
   },
 });
 
@@ -574,6 +653,7 @@ const main = defineCommand({
     study: studyCommand,
     serve: serveCommand,
     setup: setupCommand,
+    templates: templatesCommand,
     doctor: doctorCommand,
     render: renderCommand,
     mcp: mcpCommand,
@@ -592,6 +672,7 @@ const commands = [
   "study",
   "serve",
   "setup",
+  "templates",
   "doctor",
   "render",
   "mcp",

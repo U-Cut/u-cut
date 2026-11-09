@@ -1,8 +1,14 @@
 import type { Brand, Demo } from "@u-cut/schema";
 import { useEffect, useRef, useState } from "react";
+import type { SetupPart } from "../api";
+import { megabytes, progressText, useSetupPart } from "../setup";
 
 interface Props {
   demo: Demo;
+  /** The speech model's status, for offering captions when it's missing. */
+  speech: SetupPart | undefined;
+  /** Whether this is the Mac running U-Cut, the only place that can download it. */
+  local: boolean;
   onBrand(brand: Brand): void;
   onCaptions(on: boolean): void;
   onLogo(file: File): void;
@@ -10,7 +16,7 @@ interface Props {
 
 const settleMs = 250;
 
-export function BrandForm({ demo, onBrand, onCaptions, onLogo }: Props) {
+export function BrandForm({ demo, speech, local, onBrand, onCaptions, onLogo }: Props) {
   const { brand } = demo;
   const picker = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(brand.name);
@@ -76,12 +82,40 @@ export function BrandForm({ demo, onBrand, onCaptions, onLogo }: Props) {
           <span>Show captions</span>
         </label>
       ) : null}
-      {demo.speech === "no-model" ? (
-        <p className="brand-note">
-          Captions need the speech model. Run <code>ucut setup --speech</code>, then add the
-          recording again.
-        </p>
-      ) : null}
+      {demo.speech === "no-model" ? <CaptionsOffer speech={speech} local={local} /> : null}
     </>
+  );
+}
+
+/** Captions need a one-time download, which this offers right where they're missing. */
+function CaptionsOffer({ speech, local }: { speech: SetupPart | undefined; local: boolean }) {
+  const { part = speech, problem, start } = useSetupPart(speech);
+  if (!part) return null;
+  if (part.ready) {
+    return (
+      <p className="brand-note">
+        Captions are ready. Press New reel and add the recording again to caption it.
+      </p>
+    );
+  }
+  if (!local) {
+    return (
+      <p className="brand-note">
+        Captions need a download that only the person running U-Cut can add.
+      </p>
+    );
+  }
+  const busy = part.state === "working" || part.state === "waiting";
+  return (
+    <div className="brand-note">
+      <p>
+        Captions need the speech model, a one-time {megabytes(part.bytes)} download that stays on
+        this Mac.
+      </p>
+      <button type="button" className="button-outline" disabled={busy} onClick={() => void start()}>
+        {busy ? progressText(part) : "Add captions"}
+      </button>
+      {problem ? <p role="alert">{problem}</p> : null}
+    </div>
   );
 }

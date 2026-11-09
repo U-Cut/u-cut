@@ -35,7 +35,11 @@ const rows: { task: Task; legend: string; builtIn: string; stays: string }[] = [
 
 const builtInIds: Record<Task, string> = { write: "rules", voice: "kokoro", listen: "whisper" };
 
-const claudeCode = (launcher: string) => `claude mcp add --scope user u-cut -- ${launcher} mcp`;
+/** The Mac app's command lives in "Application Support", so a shell needs it quoted. */
+const shellPath = (path: string) =>
+  /[\s"'$`\\]/.test(path) ? `'${path.replaceAll("'", "'\\''")}'` : path;
+const claudeCode = (launcher: string) =>
+  `claude mcp add --scope user u-cut -- ${shellPath(launcher)} mcp`;
 const anyAssistant = (launcher: string) =>
   `{ "mcpServers": { "u-cut": { "command": "${launcher}", "args": ["mcp"] } } }`;
 

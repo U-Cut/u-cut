@@ -11,6 +11,10 @@ cpSync(join(root, "library/music"), join(media, "music"), {
   recursive: true,
   filter: (path) => !path.endsWith(".json"),
 });
+cpSync(join(root, "library/sfx"), join(media, "sfx"), {
+  recursive: true,
+  filter: (path) => !path.endsWith(".json"),
+});
 cpSync(join(root, "library/fonts"), join(media, "fonts"), {
   recursive: true,
   filter: (path) => !path.endsWith(".json") && !path.includes("licenses"),

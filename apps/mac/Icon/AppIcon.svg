@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <title>U-Cut</title>
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="38%" r="70%">
+      <stop offset="0" stop-color="#2a1673"/>
+      <stop offset="0.6" stop-color="#150a3c"/>
+      <stop offset="1" stop-color="#0a0520"/>
+    </radialGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000" flood-opacity="0.32"/>
+    </filter>
+  </defs>
+  <!-- macOS icons sit on an 824-point square inside a 1024 canvas, leaving room for the shadow. -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#glow)" filter="url(#shadow)"/>
+  <g transform="translate(100 100) scale(25.75)">
+    <path d="M9 7v11a7 7 0 0 0 14 0V7" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

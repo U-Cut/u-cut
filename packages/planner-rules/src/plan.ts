@@ -6,7 +6,9 @@ import type {
   StyleRecipe,
   TemplateManifest,
 } from "@u-cut/schema";
+import { shotLabels } from "./labels.ts";
 import { seededRng } from "./rng.ts";
+import { soundsFor } from "./sfx.ts";
 import { type VibeProfile, vibes } from "./vibes.ts";
 
 export class PlanError extends Error {}
@@ -272,6 +274,11 @@ export function planRules(input: PlannerInput): EditPlan {
   const reelFades = recipe?.transitions.some((transition) => transition.type === "fade");
   const fadeOut = Math.min(recipe ? (reelFades ? 0.6 : 0) : profile.fadeOut, duration / 3);
   const words = recipe?.text;
+  const texts = [
+    ...(title ? [{ text: title, start: 0.12, end: titleEnd, style: "title" }] : []),
+    ...shotLabels(template.labels, shots, items, title ? titleEnd : 0),
+  ];
+  const photos = new Set(items.filter((item) => item.kind === "photo").map((item) => item.id));
 
   return {
     schemaVersion: 1,
@@ -289,7 +296,7 @@ export function planRules(input: PlannerInput): EditPlan {
     },
     grade: recipe?.grade ?? profile.grade,
     shots,
-    texts: title ? [{ text: title, start: 0.12, end: titleEnd, style: "title" }] : [],
+    texts,
     ...(words
       ? { textStyle: { position: words.position, case: words.case, sizePx: words.sizePx } }
       : {}),
@@ -297,6 +304,6 @@ export function planRules(input: PlannerInput): EditPlan {
       fadeOut > 0
         ? [{ type: "fade", at: round(duration - fadeOut), duration: round(fadeOut) }]
         : [],
-    sfx: [],
+    sfx: input.sounds === false ? [] : soundsFor(vibe, shots, texts, hookCount, photos),
   };
 }

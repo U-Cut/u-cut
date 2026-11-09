@@ -34,6 +34,8 @@ export const TemplateManifest = z.strictObject({
     }),
   ),
   vibes: z.array(Vibe).min(1),
+  /** Words on the shots themselves: when each photo was taken, or which stop of the day it's from. */
+  labels: z.enum(["time", "stops"]).optional(),
   preview: z.string().regex(/\.gif$/),
   requires: z.array(z.string().min(1)),
 });

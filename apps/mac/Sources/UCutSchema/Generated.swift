@@ -372,16 +372,16 @@ public struct EditPlan: Codable, Sendable, Equatable {
     public struct Voice: Codable, Sendable, Equatable {
         public var src: String
         public var at: Double
+        public var length: Double
         public var vol: Double
         public var text: String
-        public var length: Double
 
-        public init(src: String, at: Double, vol: Double, text: String, length: Double) {
+        public init(src: String, at: Double, length: Double, vol: Double, text: String) {
             self.src = src
             self.at = at
+            self.length = length
             self.vol = vol
             self.text = text
-            self.length = length
         }
     }
 
@@ -578,11 +578,13 @@ public struct EditPlan: Codable, Sendable, Equatable {
     public struct Sfx: Codable, Sendable, Equatable {
         public var src: String
         public var at: Double
+        public var length: Double
         public var vol: Double
 
-        public init(src: String, at: Double, vol: Double) {
+        public init(src: String, at: Double, length: Double, vol: Double) {
             self.src = src
             self.at = at
+            self.length = length
             self.vol = vol
         }
     }
@@ -704,6 +706,11 @@ public struct TemplateManifest: Codable, Sendable, Equatable {
         case nostalgic = "nostalgic"
     }
 
+    public enum Label: String, Codable, Sendable, Equatable {
+        case time = "time"
+        case stops = "stops"
+    }
+
     public var id: String
     public var name: String
     public var version: String
@@ -714,10 +721,11 @@ public struct TemplateManifest: Codable, Sendable, Equatable {
     public var sections: [Section]
     public var variables: [Variable]
     public var vibes: [Vibe]
+    public var labels: Label?
     public var preview: String
     public var requires: [String]
 
-    public init(id: String, name: String, version: String, author: String, licence: Licence, aspects: [Aspect], durationRange: DurationRange, sections: [Section], variables: [Variable], vibes: [Vibe], preview: String, requires: [String]) {
+    public init(id: String, name: String, version: String, author: String, licence: Licence, aspects: [Aspect], durationRange: DurationRange, sections: [Section], variables: [Variable], vibes: [Vibe], labels: Label? = nil, preview: String, requires: [String]) {
         self.id = id
         self.name = name
         self.version = version
@@ -728,6 +736,7 @@ public struct TemplateManifest: Codable, Sendable, Equatable {
         self.sections = sections
         self.variables = variables
         self.vibes = vibes
+        self.labels = labels
         self.preview = preview
         self.requires = requires
     }

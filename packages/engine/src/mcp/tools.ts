@@ -15,7 +15,7 @@ import { doctor } from "../doctor.ts";
 import { run } from "../exec.ts";
 import { ingest } from "../ingest.ts";
 import { loadJob, renderJob, saveJobPlan } from "../jobs.ts";
-import { loadScenes, loadTemplates, loadTracks } from "../library.ts";
+import { loadScenes, loadSounds, loadTemplates, loadTracks } from "../library.ts";
 import { type MakeEvent, prepareReel } from "../make.ts";
 import { homeDir } from "../paths.ts";
 import { readRecording, speechReady } from "../recording.ts";
@@ -153,7 +153,7 @@ export const tools: Tool[] = [
     name: "catalog",
     title: "List styles, vibes, scenes and voices",
     description:
-      "Lists U-Cut's reel styles (templates), vibes, shapes, scene names used by sorting, music tracks, and the voices available for written reels. Voice ids are Kokoro ids, or `service:id` for a connected service.",
+      "Lists U-Cut's reel styles (templates), vibes, shapes, scene names used by sorting, music tracks, sound effects, and the voices available for written reels. Voice ids are Kokoro ids, or `service:id` for a connected service. A plan's `sfx` entries must use these sound files, each with its `length`.",
     input: z.object({}),
     readOnly: true,
     async run() {
@@ -180,6 +180,11 @@ export const tools: Tool[] = [
           file: track.file,
           vibe: track.vibe,
           bpm: track.bpm,
+        })),
+        soundEffects: loadSounds().map((sound) => ({
+          file: sound.file,
+          use: sound.use,
+          length: sound.length,
         })),
         voices: [...voices, ...fromService],
         voiceUsedForWrittenReels: choices.voice,

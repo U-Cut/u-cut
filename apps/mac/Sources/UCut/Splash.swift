@@ -26,6 +26,8 @@ private struct ScissorsHalf: View {
 
 /// Shown from the moment the app opens, so it never sits on an empty window while the engine starts.
 struct SplashView: View {
+    /// A line under the wordmark, for a launch that takes longer than usual.
+    var note: String?
     @State private var angle = 0.0
     @State private var cutShown = false
     private let pivot = UnitPoint(x: 60.0 / 128.0, y: 0.5)
@@ -58,6 +60,15 @@ struct SplashView: View {
             .minimumScaleFactor(0.4)
             .foregroundStyle(.white)
             .padding(40)
+            if let note {
+                VStack {
+                    Spacer()
+                    Text(note)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.72))
+                        .padding(.bottom, 48)
+                }
+            }
         }
         .ignoresSafeArea()
         .onAppear {

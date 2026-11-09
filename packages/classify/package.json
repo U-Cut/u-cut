@@ -1,9 +1,12 @@
 {
   "name": "@u-cut/classify",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Sorts photos into scenes from on-device signals, and groups them into moments.",
   "license": "Apache-2.0",
   "type": "module",
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "source": "./src/index.ts",

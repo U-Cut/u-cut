@@ -220,6 +220,34 @@ describe("server", () => {
     expect((await shared.request(`${local}/api/catalog`, { headers }, unknown)).status).toBe(401);
   });
 
+  describe("setup", () => {
+    it("lists what U-Cut downloads once, with sizes, in the catalog too", async () => {
+      const response = await request("/api/setup");
+      const { parts } = (await response.json()) as {
+        parts: { id: string; bytes: number; required: boolean }[];
+      };
+      expect(parts.map((part) => part.id)).toEqual(["browser", "speech", "voice"]);
+      expect(parts.find((part) => part.id === "browser")).toMatchObject({ required: true });
+      expect(parts.every((part) => part.bytes > 0)).toBe(true);
+      const catalog = (await (await request("/api/catalog")).json()) as { setup: unknown[] };
+      expect(catalog.setup).toHaveLength(3);
+    });
+
+    it("only lets the person at this Mac start or stop a download", async () => {
+      const init = { method: "POST", headers: { host: "localhost:4173" } };
+      for (const path of ["/api/setup/speech", "/api/setup/speech/stop", "/api/voice/install"]) {
+        expect((await app.request(`${local}${path}`, init, fromNetwork)).status).toBe(403);
+      }
+      const unknown = await request("/api/setup/everything", { method: "POST" });
+      expect(unknown.status).toBe(404);
+      expect(await unknown.json()).toEqual({ error: "U-Cut has nothing to add by that name." });
+      // Names every object has, such as "constructor", aren't parts either.
+      expect((await request("/api/setup/constructor", { method: "POST" })).status).toBe(404);
+      // Stopping something that isn't downloading is harmless.
+      expect((await request("/api/setup/speech/stop", { method: "POST" })).status).toBe(200);
+    });
+  });
+
   describe("connections", () => {
     it("shows the person at this Mac what's set up, and nobody else", async () => {
       const here = await request("/api/connections");

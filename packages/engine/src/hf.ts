@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { type ExecOptions, run } from "./exec.ts";
+import { browserPath } from "./setup/parts.ts";
 
 // Every HyperFrames call goes through here. See docs/decisions/0001-hyperframes-pinned-and-offline.md.
 
@@ -47,9 +48,16 @@ function hfBinary(): string {
   return join(dirname(require.resolve("hyperframes/package.json")), "bin", "hyperframes.mjs");
 }
 
+/** Points HyperFrames at the browser U-Cut downloaded, wherever it went. */
+function browserEnv(): Record<string, string> {
+  if (process.env.HYPERFRAMES_BROWSER_PATH) return {};
+  const path = browserPath();
+  return path ? { HYPERFRAMES_BROWSER_PATH: path } : {};
+}
+
 export function hf(args: string[], options: ExecOptions = {}): Promise<string> {
   return run(process.execPath, [hfBinary(), ...hfArguments(args)], {
     ...options,
-    env: { ...process.env, ...offlineEnv, ...options.env },
+    env: { ...process.env, ...offlineEnv, ...browserEnv(), ...options.env },
   });
 }

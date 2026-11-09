@@ -33,6 +33,17 @@ describe("license-scan", () => {
       expect(scanAssets(root).findings).toEqual([]);
     });
 
+    it("reports template CSS that loads from the network", () => {
+      write(
+        "templates/x/style.css",
+        '.text-title { background: url("https://example.com/p.gif"); }',
+      );
+      write("templates/y/style.css", ".text-title { color: #fff; }");
+      expect(scanAssets(root).findings).toEqual([
+        "templates/x/style.css loads something or runs code. Template CSS may only style words (see docs/decisions/0025-styles-sound-and-looks.md).",
+      ]);
+    });
+
     it("reports an unlisted asset, a video and GSAP in a template", () => {
       write("library/music/song.wav");
       write("demo.mp4");

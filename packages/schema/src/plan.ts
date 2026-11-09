@@ -34,7 +34,13 @@ const Overlay = z.strictObject({
   style: z.string().min(1),
 });
 
-const Sound = z.strictObject({ src: z.string().min(1), at: seconds, vol: z.number().min(0) });
+/** A sound effect from U-Cut's library, placed at `at` for `length` seconds. */
+const Sound = z.strictObject({
+  src: z.string().min(1),
+  at: seconds,
+  length: positive,
+  vol: z.number().min(0),
+});
 
 export const EditPlan = z
   .strictObject({

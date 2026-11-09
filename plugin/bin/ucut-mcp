@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Starts U-Cut's tools for Claude Code, finding U-Cut even when Claude Code didn't get your shell's PATH.
-for candidate in "$(command -v ucut 2>/dev/null)" "$HOME/.local/bin/ucut" /opt/homebrew/bin/ucut /usr/local/bin/ucut; do
+# The Mac app keeps its own `ucut` in Application Support. The installer puts one in ~/.local/bin.
+for candidate in "$(command -v ucut 2>/dev/null)" "$HOME/Library/Application Support/U-Cut/bin/ucut" \
+  "$HOME/.local/bin/ucut" /opt/homebrew/bin/ucut /usr/local/bin/ucut; do
   if [ -n "$candidate" ] && [ -x "$candidate" ]; then exec "$candidate" mcp; fi
 done
-echo "U-Cut isn't installed. Install it with: curl -fsSL https://raw.githubusercontent.com/mayank29deo/U-Cut/main/install.sh | bash" >&2
+echo "U-Cut isn't installed. Download the app from https://github.com/mayank29deo/U-Cut/releases and open it once, or install it with: curl -fsSL https://raw.githubusercontent.com/mayank29deo/U-Cut/main/install.sh | bash" >&2
 exit 1

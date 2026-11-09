@@ -11,8 +11,9 @@ swift build --package-path "$package" -c release --product UCut
 bin_dir="$(swift build --package-path "$package" -c release --show-bin-path)"
 
 rm -rf "$app"
-mkdir -p "$app/Contents/MacOS"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin_dir/UCut" "$app/Contents/MacOS/UCut"
+cp "$root/apps/mac/Icon/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
 
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -23,6 +24,7 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>CFBundleDisplayName</key><string>U-Cut</string>
   <key>CFBundleIdentifier</key><string>io.github.mayank29deo.ucut</string>
   <key>CFBundleExecutable</key><string>UCut</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>$version</string>
   <key>CFBundleVersion</key><string>$version</string>

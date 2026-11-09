@@ -7,6 +7,12 @@ import { makeDemo } from "./demo.ts";
 import { ingest } from "./ingest.ts";
 import { readRecording } from "./recording.ts";
 
+// The Mac app's FFmpeg has no libx264, so test clips use Apple's encoder on a Mac.
+const h264 =
+  process.platform === "darwin"
+    ? ["-c:v", "h264_videotoolbox", "-allow_sw", "1", "-b:v", "6M"]
+    : ["-c:v", "libx264"];
+
 let home: string;
 let recording: string;
 
@@ -19,7 +25,7 @@ function makeRecording(path: string) {
   execFileSync("ffmpeg", [
     "-hide_banner", "-loglevel", "error", "-y",
     "-f", "lavfi", "-i", `color=c=0x101018:s=1280x720:r=30:d=12,${panels}`,
-    "-c:v", "libx264", "-pix_fmt", "yuv420p", path,
+    ...h264, "-pix_fmt", "yuv420p", path,
   ]); // biome-ignore format: flags read better in pairs
 }
 

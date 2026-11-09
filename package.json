@@ -1,6 +1,6 @@
 {
   "name": "u-cut",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
@@ -16,13 +16,14 @@
     "test": "vitest run",
     "license-scan": "tsx scripts/license-scan.ts",
     "gen:swift": "tsx packages/schema/scripts/gen-swift.ts",
-    "check": "biome check . && tsc -p tsconfig.check.json --noEmit && tsc -p apps/web && tsc -p apps/site && vitest run && tsx scripts/license-scan.ts",
+    "check": "biome check . && tsc -p tsconfig.check.json --noEmit && tsc -p apps/web && tsc -p apps/site && vitest run && tsx scripts/license-scan.ts && tsx scripts/build-registry.ts --check",
     "test:int": "vitest run --config vitest.int.config.ts",
     "load-test": "tsx --conditions=source scripts/load-test.ts",
     "start": "node --conditions=source --import tsx packages/engine/src/bin.ts",
     "test:e2e": "tsx --conditions=source scripts/e2e.ts",
     "test:privacy": "scripts/privacy-test.sh",
-    "train:scenes": "tsx --conditions=source scripts/train-scenes.ts"
+    "train:scenes": "tsx --conditions=source scripts/train-scenes.ts",
+    "registry": "tsx scripts/build-registry.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",

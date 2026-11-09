@@ -35,6 +35,8 @@ export interface MakeOptions {
   like?: string;
   workers?: number;
   excludedScenes?: string[];
+  /** Sound effects at the reel's turning points. On unless this is false. */
+  sounds?: boolean;
   /** Stops the work between stages, and stops a render that's running. */
   signal?: AbortSignal;
 }
@@ -51,7 +53,10 @@ export type MakeEvent =
 
 export function planFor(
   items: MediaItem[],
-  options: Pick<MakeOptions, "template" | "vibe" | "aspect" | "duration" | "seed" | "title"> & {
+  options: Pick<
+    MakeOptions,
+    "template" | "vibe" | "aspect" | "duration" | "seed" | "title" | "sounds"
+  > & {
     excludedScenes?: string[];
     recipe?: StyleRecipe;
   },
@@ -68,6 +73,7 @@ export function planFor(
     excludedScenes: options.excludedScenes ?? defaultExcludedScenes,
     recipe: options.recipe ?? null,
     seed: options.seed,
+    sounds: options.sounds !== false,
   });
   const checked = validate(EditPlan, plan, "plan.json");
   if (!checked.ok) throw new Error(checked.errors.join(" "));

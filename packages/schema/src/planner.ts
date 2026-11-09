@@ -25,6 +25,8 @@ export interface PlannerInput {
   excludedScenes: string[];
   recipe: StyleRecipe | null;
   seed: number;
+  /** Sound effects at the reel's turning points. On unless this is false. */
+  sounds?: boolean;
 }
 
 export interface Planner {

@@ -5,6 +5,12 @@ import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { master, verifyOutput } from "./master.ts";
 
+// The Mac app's FFmpeg has no libx264, so test clips use Apple's encoder on a Mac.
+const h264 =
+  process.platform === "darwin"
+    ? ["-c:v", "h264_videotoolbox", "-allow_sw", "1", "-b:v", "6M"]
+    : ["-c:v", "libx264"];
+
 describe("master", () => {
   let folder: string;
   beforeAll(() => {
@@ -19,7 +25,7 @@ describe("master", () => {
       "-hide_banner", "-loglevel", "error", "-y",
       "-f", "lavfi", "-i", "color=black:s=320x568:r=30:d=2",
       "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
-      "-t", "2", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", input,
+      "-t", "2", ...h264, "-pix_fmt", "yuv420p", "-c:a", "aac", input,
     ]); // biome-ignore format: flags read better in pairs
     await master(input, output);
     const report = await verifyOutput(output, { width: 320, height: 568, duration: 2, fps: 30 });

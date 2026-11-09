@@ -122,21 +122,22 @@ export async function speak(
 }
 
 /**
- * Sets up the voice in its own Python, separate from U-Cut. This is the one thing that downloads
- * outside of `ucut setup`, and it only happens when someone asks for it.
+ * Sets up the voice's own Python, separate from U-Cut, with the uv it's given. The model files
+ * are already downloaded by then (see setup/), so this fetches only Python and its packages.
  */
-export async function installVoice(): Promise<void> {
-  if (voiceReady()) return;
-  await run("uv", ["--version"]).catch(() => {
-    throw new Error("The voice needs uv. Install it with: brew install uv");
-  });
+export async function prepareVoice(uv: string, signal?: AbortSignal): Promise<void> {
+  const options = signal ? { signal } : {};
   await mkdir(dirname(environment), { recursive: true });
   await rm(environment, { recursive: true, force: true });
-  await run("uv", ["venv", "--quiet", "--python", "3.12", environment], { timeoutMs: 600_000 });
-  await run("uv", ["pip", "install", "--quiet", "--python", python, ...packages], {
-    timeoutMs: 900_000,
+  await run(uv, ["venv", "--quiet", "--python", "3.12", environment], {
+    timeoutMs: 600_000,
+    ...options,
   });
-  // The first line fetches the model, so it's ready before anyone is waiting on a reel.
+  await run(uv, ["pip", "install", "--quiet", "--python", python, ...packages], {
+    timeoutMs: 900_000,
+    ...options,
+  });
+  // One line proves the voice works before anyone is waiting on a reel.
   const check = await hf(
     ["tts", "Ready.", "-o", join(environment, "check.wav"), "--voice", defaultVoice, "--json"],
     {
@@ -146,6 +147,7 @@ export async function installVoice(): Promise<void> {
         HYPERFRAMES_NO_OPTIONAL_INSTALL: "",
       },
       timeoutMs: 1_800_000,
+      ...options,
     },
   );
   if (!json<{ ok: boolean }>(check).ok) throw new Error("The voice didn't finish installing.");

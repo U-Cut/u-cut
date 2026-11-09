@@ -20,6 +20,7 @@ import { Moments } from "./Moments";
 import { ScriptLines } from "./ScriptLines";
 import { Sort } from "./Sort";
 import { Stage, type StageHandle } from "./Stage";
+import { StyleField, StyleGallery } from "./StyleGallery";
 import { VoiceChoice } from "./VoiceChoice";
 
 type Reel = ReturnType<typeof useReel>;
@@ -28,6 +29,8 @@ interface Props {
   catalog: Catalog;
   reel: Reel;
   onConnections(): void;
+  /** Loads the catalog again, after new styles arrive. */
+  onCatalogChanged(): void;
 }
 
 const vibeNames = Object.keys(vibes) as Vibe[];
@@ -76,7 +79,7 @@ function Choice<T extends string | number>({
   );
 }
 
-export function Studio({ catalog, reel, onConnections }: Props) {
+export function Studio({ catalog, reel, onConnections, onCatalogChanged }: Props) {
   const { state, actions } = reel;
   const now = state.now;
   const stage = useRef<StageHandle>(null);
@@ -88,6 +91,7 @@ export function Studio({ catalog, reel, onConnections }: Props) {
   const [muted, setMuted] = useState(false);
   const [flash, setFlash] = useState(0);
   const [sorting, setSorting] = useState(false);
+  const [choosingStyle, setChoosingStyle] = useState(false);
 
   const plan = now?.plan;
   const demo = now?.settings.demo ?? null;
@@ -150,9 +154,11 @@ export function Studio({ catalog, reel, onConnections }: Props) {
 
   if (!now || !plan) return null;
   const { settings } = now;
-  const templates = catalog.templates
-    .filter((template) => !builtForOneJob.includes(template.manifest.id))
-    .map((template) => ({ value: template.manifest.id, label: template.manifest.name }));
+  const styles = catalog.templates.filter(
+    (template) => template.madeBy === "photos" && !builtForOneJob.includes(template.manifest.id),
+  );
+  const pickStyle = (template: string) =>
+    settings.recipe ? actions.forgetReel({ template }) : actions.change({ template });
 
   return (
     <div className="studio" ref={room}>
@@ -312,6 +318,8 @@ export function Studio({ catalog, reel, onConnections }: Props) {
         {demo ? (
           <>
             <BrandForm
+              speech={catalog.setup.find((part) => part.id === "speech")}
+              local={catalog.local}
               key={demo.media}
               demo={demo}
               onBrand={actions.setBrand}
@@ -387,13 +395,10 @@ export function Studio({ catalog, reel, onConnections }: Props) {
                 onChange={(event) => actions.rename(event.target.value)}
               />
             </label>
-            <Choice
-              label="Style"
-              options={templates}
-              value={settings.recipe ? "" : settings.template}
-              onChange={(template) =>
-                settings.recipe ? actions.forgetReel({ template }) : actions.change({ template })
-              }
+            <StyleField
+              styles={styles}
+              current={settings.recipe ? null : settings.template}
+              onOpen={() => setChoosingStyle(true)}
             />
             <Choice
               label="Length"
@@ -410,6 +415,15 @@ export function Studio({ catalog, reel, onConnections }: Props) {
               options={shapes}
               value={settings.aspect}
               onChange={(aspect) => actions.change({ aspect })}
+            />
+            <Choice
+              label="Sound effects"
+              options={[
+                { value: "on", label: "On" },
+                { value: "off", label: "Off" },
+              ]}
+              value={settings.sounds === false ? "off" : "on"}
+              onChange={(value) => actions.change({ sounds: value === "on" })}
             />
             <div className="media-note">
               <p>
@@ -470,6 +484,16 @@ export function Studio({ catalog, reel, onConnections }: Props) {
       )}
 
       {state.render ? <ExportSheet render={state.render} onClose={actions.cancelExport} /> : null}
+      {choosingStyle ? (
+        <StyleGallery
+          styles={styles}
+          current={settings.recipe ? null : settings.template}
+          local={catalog.local}
+          onPick={pickStyle}
+          onClose={() => setChoosingStyle(false)}
+          onAdded={onCatalogChanged}
+        />
+      ) : null}
       {sorting ? (
         <Sort
           catalog={catalog}

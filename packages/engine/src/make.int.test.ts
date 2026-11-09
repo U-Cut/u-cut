@@ -66,10 +66,40 @@ function messyPhoneFolder(): string {
   ffmpeg("-f", "lavfi", "-i", "testsrc2=size=480x640:rate=30", "-t", "2", "-pix_fmt", "yuv420p",
     join(folder, "IMG_7777.MOV")); // biome-ignore format: flags read better in pairs
   // Rotated 10-bit HLG HEVC, as an iPhone records by default.
+  // The Mac app's FFmpeg has no libx265, so it uses Apple's encoder, as the iPhone does.
+  const hevc = execFileSync("ffmpeg", ["-hide_banner", "-encoders"], { encoding: "utf8" }).includes(
+    " libx265 ",
+  )
+    ? [
+        "-vf",
+        "format=yuv420p10le",
+        "-c:v",
+        "libx265",
+        "-preset",
+        "ultrafast",
+        "-x265-params",
+        "log-level=error:colorprim=bt2020:transfer=arib-std-b67:colormatrix=bt2020nc",
+      ]
+    : [
+        "-vf",
+        "format=p010le",
+        "-c:v",
+        "hevc_videotoolbox",
+        "-profile:v",
+        "main10",
+        "-allow_sw",
+        "1",
+        "-b:v",
+        "6M",
+        "-color_primaries",
+        "bt2020",
+        "-color_trc",
+        "arib-std-b67",
+        "-colorspace",
+        "bt2020nc",
+      ];
   ffmpeg("-display_rotation", "90", "-f", "lavfi", "-i", "testsrc2=size=1280x720:rate=30", "-t", "4",
-    "-vf", "format=yuv420p10le", "-c:v", "libx265", "-preset", "ultrafast", "-tag:v", "hvc1",
-    "-x265-params", "log-level=error:colorprim=bt2020:transfer=arib-std-b67:colormatrix=bt2020nc",
-    join(folder, "IMG_2000.MOV")); // biome-ignore format: flags read better in pairs
+    ...hevc, "-tag:v", "hvc1", join(folder, "IMG_2000.MOV")); // biome-ignore format: flags read better in pairs
   writeFileSync(join(folder, "IMG_1234.AAE"), "<plist/>");
   writeFileSync(join(folder, ".DS_Store"), "junk");
   writeFileSync(join(folder, "broken.jpg"), "");
@@ -139,9 +169,20 @@ describe("composed projects", () => {
     ["travel-montage", "9:16"],
     ["weekend-recap", "1:1"],
     ["city-walk", "16:9"],
+    ["cafe-crawl", "9:16"],
+    ["day-in-my-life", "9:16"],
   ] as const)("%s at %s passes the HyperFrames check", async (template, aspect) => {
-    const { items } = await ingest([samplesDir]);
+    const read = await ingest([samplesDir]);
+    // An hour apart, so time stamps and stop labels are drawn and checked too.
+    const items = read.items.map((item, index) => ({
+      ...item,
+      takenAt: new Date(2026, 9, 31, 8 + index, (index * 7) % 60).toISOString(),
+    }));
     const plan = planFor(items, { ...defaults, template, aspect, title: "Long way home" }, music);
+    if (template === "day-in-my-life")
+      expect(plan.texts.some((text) => text.style === "stamp")).toBe(true);
+    if (template === "cafe-crawl")
+      expect(plan.texts.some((text) => text.style === "stop")).toBe(true);
     const project = join(home, `check-${template}`);
     await writeProject(plan, items, project);
     const report = JSON.parse(

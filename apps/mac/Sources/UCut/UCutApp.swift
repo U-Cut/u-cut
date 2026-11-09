@@ -37,7 +37,14 @@ struct ContentView: View {
     @State private var splashTimeUp = false
 
     private var isStarting: Bool {
-        if case .starting = engine.state { return true }
+        switch engine.state {
+        case .starting, .preparing: true
+        default: false
+        }
+    }
+
+    private var isPreparing: Bool {
+        if case .preparing = engine.state { return true }
         return false
     }
 
@@ -45,7 +52,8 @@ struct ContentView: View {
         ZStack {
             content
             if isStarting || !splashTimeUp {
-                SplashView().transition(.opacity)
+                SplashView(note: isPreparing ? "Setting up U-Cut. This happens once, and takes a few seconds." : nil)
+                    .transition(.opacity)
             }
         }
         .animation(.easeOut(duration: 0.4), value: isStarting || !splashTimeUp)
@@ -57,7 +65,7 @@ struct ContentView: View {
 
     @ViewBuilder private var content: some View {
         switch engine.state {
-        case .starting:
+        case .starting, .preparing:
             Color.black
         case .running(let url):
             // The page skips its own splash, since this app has just shown one.

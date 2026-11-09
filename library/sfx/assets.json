@@ -1,0 +1,44 @@
+[
+  {
+    "file": "whoosh.m4a",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-sfx.ts",
+    "use": "A cut between sections",
+    "length": 0.7
+  },
+  {
+    "file": "hit.m4a",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-sfx.ts",
+    "use": "The first beat, or the closing shot landing",
+    "length": 1.2
+  },
+  {
+    "file": "riser.m4a",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-sfx.ts",
+    "use": "Building into the closing shot",
+    "length": 2.4
+  },
+  {
+    "file": "swell.m4a",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-sfx.ts",
+    "use": "A soft opening",
+    "length": 2
+  },
+  {
+    "file": "shutter.m4a",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-sfx.ts",
+    "use": "A photo appearing, for nostalgic reels",
+    "length": 0.35
+  },
+  {
+    "file": "pop.m4a",
+    "licence": "CC0-1.0",
+    "source": "scripts/make-sfx.ts",
+    "use": "A label appearing",
+    "length": 0.18
+  }
+]

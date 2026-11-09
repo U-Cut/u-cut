@@ -22,9 +22,12 @@ sandbox-exec -f "$work/no-network.sb" \
 test -s "$work/out.mp4"
 
 # A recording with a sound track, so that it's listened to where the speech model is installed.
+# The Mac app's FFmpeg has no libx264, so a Mac uses Apple's encoder.
+h264=(-c:v libx264)
+[ "$(uname)" = "Darwin" ] && h264=(-c:v h264_videotoolbox -allow_sw 1 -b:v 6M)
 ffmpeg -hide_banner -loglevel error -y \
   -f lavfi -i "testsrc2=s=1280x720:r=30:d=4" -f lavfi -i "sine=f=220:d=4" \
-  -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest "$work/recording.mp4"
+  "${h264[@]}" -pix_fmt yuv420p -c:a aac -shortest "$work/recording.mp4"
 sandbox-exec -f "$work/no-network.sb" \
   node --conditions=source --import tsx "$root/packages/engine/src/bin.ts" \
   demo "$work/recording.mp4" -o "$work/demo.mp4" --name Acme --quality draft

@@ -97,4 +97,29 @@ describe("swapShots", () => {
   it("does nothing when dropped on itself", () => {
     expect(swapShots(plan, 1, 1, {})).toBe(plan);
   });
+
+  it("moves each time stamp with its photo", () => {
+    const morning = new Date(2026, 9, 31, 8, 15).toISOString();
+    const evening = new Date(2026, 9, 31, 19, 40).toISOString();
+    const items = {
+      a: { ...item("a", "photo"), takenAt: morning },
+      b: { ...item("b", "photo"), takenAt: evening },
+    };
+    const stamped: EditPlan = {
+      ...plan,
+      texts: [
+        { text: "8:15 am", start: 0, end: 2, style: "stamp" },
+        { text: "7:40 pm", start: 2, end: 6, style: "stamp" },
+      ],
+    };
+    const edited = swapShots(stamped, 0, 1, items);
+    const stamps = edited.texts.map((text) => [text.start, text.text]).sort();
+    expect(stamps).toEqual([
+      [0, "7:40 pm"],
+      [2, "8:15 am"],
+    ]);
+    // A photo with no time loses its stamp rather than keeping the old one.
+    const replaced = replaceShot(stamped, 0, item("c", "photo"));
+    expect(replaced.texts.map((text) => text.text)).toEqual(["7:40 pm"]);
+  });
 });
