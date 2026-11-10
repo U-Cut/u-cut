@@ -628,6 +628,18 @@ pre {
   gap: 20px;
 }
 
+.bottom-credits {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Quieter than the line above it, and still readable at 5.6:1 on black. */
+.credit {
+  font-size: 13px;
+  color: #86868b;
+}
+
 @media (max-width: 860px) {
   .top {
     background: #000;
